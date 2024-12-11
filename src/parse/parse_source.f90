@@ -177,8 +177,13 @@ contains
             call get_value(child, "beta", beta, 5._wp)
             call set_value(dict, "beta", beta)
 
-            call get_value(child, "radius_hi", rhi, 0.6_wp)
+            call get_value(child, "rhi", rhi, 0.6_wp)
             call set_value(dict, "rhi", rhi)
+
+            call get_value(child, "rlo", rlo, 0.5_wp)
+            call set_value(dict, "rlo", rlo)
+
+            print*, rhi, rlo
 
             call get_value(child, "annulus_type", annulus_type, "gaussian")
             call set_value(dict, "annulus_type", annulus_type)

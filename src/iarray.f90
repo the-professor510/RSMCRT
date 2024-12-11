@@ -12,4 +12,6 @@ module iarray
     real(kind=sp), allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
     !> absorption data array
     real(kind=sp), allocatable :: absorb(:,:,:), absorbGLOBAL(:,:,:)
+    !> emission location
+    real(kind=sp), allocatable :: emission(:,:,:), emissionGLOBAL(:,:,:)
 end module iarray

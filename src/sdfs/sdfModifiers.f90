@@ -22,6 +22,7 @@ module sdfModifiers
     !> Revoloution modifier. Revolves an SDF around the z axis (need to check this!!)
     type, extends(sdf_base) :: revolution
         real(kind=wp) :: o
+        type(vector) :: center
         class(sdf_base), pointer :: prim
         contains
         procedure :: evaluate => eval_revolution
@@ -234,13 +235,24 @@ contains
 
     end function repeat_init
 
-    type(revolution) function revolution_init(prim, o) result(out)
+    type(revolution) function revolution_init(prim, o, center) result(out)
         !! Initialise the Revolution modifier for a SDF.
 
         !> SDF to modify
         class(sdf_base), target :: prim
         !> Amount to revolve by.
         real(kind=wp), intent(IN) :: o
+        !> Centre of the shape
+        type(vector), optional, intent(IN) :: center
+
+        type(vector) :: cen
+        
+
+        if(present(center))then
+            cen = center
+        else
+            cen = vector(0.0_wp,0.0_wp,0.0_wp)
+        end if
 
         out%o = o
         out%prim => prim
@@ -249,6 +261,7 @@ contains
 
         out%layer = prim%layer
         out%transform = identity()
+        out%center = cen
 
     end function revolution_init
 
@@ -295,11 +308,14 @@ contains
         type(vector), intent(IN) :: pos
         real(kind=wp) :: res
 
-        type(vector) :: pxz, q
+        type(vector) :: pxz, q, p_in
 
-        pxz = vector(pos%x, pos%z, 0._wp)
+        p_in = pos
+        p_in = p_in - this%center
 
-        q = vector(length(pxz) - this%o, pos%y, 0._wp)
+        pxz = vector(p_in%x, 0._wp, p_in%z)
+
+        q = vector(length(pxz) - this%o, p_in%y, 0._wp)
         res = this%prim%evaluate(q)
     
     end function eval_revolution

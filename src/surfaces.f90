@@ -1,6 +1,6 @@
 module surfaces
 !! Contains the routines that handle reflection, and refraction via the Fresnel equations.
-   
+    
     use vector_class, only : vector
     use constants,    only : wp
 

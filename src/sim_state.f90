@@ -16,8 +16,10 @@ module sim_state_mod
         character(len=:), allocatable :: experiment
         !> Name of fluence output file
         character(len=:), allocatable :: outfile
-        !> Name of voxel render file
-        character(len=:), allocatable :: renderfile
+        !> Name of voxel render file for geometry
+        character(len=:), allocatable :: rendergeomfile
+        !> Name of voxel render file for source
+        character(len=:), allocatable :: rendersourcefile
         !> Light source used
         character(len=:), allocatable :: source
         !> Name of photon history file
@@ -28,6 +30,8 @@ module sim_state_mod
         type(cart_grid) :: grid
         !> Boolean to indicate whether to render SDF to voxels or not.
         logical :: render_geom
+        !> Boolean to indicate whether to render source emission to voxels or not.
+        logical :: render_source
         !> Boolean to indicate whether to use TEV as debug viewer.
         logical :: tev
         !> Boolean to indicate whether to use overwrite datafiles if they have the same name.

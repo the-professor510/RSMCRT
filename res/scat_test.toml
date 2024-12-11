@@ -1,9 +1,13 @@
 [source]
-name = "point"
+name = "annulus"
 nphotons = 100000
-position = [0.0, 0.0, 0.0]
+position = [0.0,0.0,0.0]
 spectrum_type = "constant"
-wavelength = 500.0
+direction = "x"
+beta = 10.0
+rlo = 0.9
+rhi = 1.0
+annulus_type = "gaussian"
 
 [grid]
 nxg = 200
@@ -14,13 +18,20 @@ ymax = 1.0
 zmax = 1.0
 
 [geometry]
-geom_name = "scat_test"
-tau = 10.0
+geom_name = "sphere"
+boundingBox = [2.0,2.0,2.0]
+sphereRadius = 1.0
+position = [0.0,0.0,0.0]
+numOptProp = 1
+mus = [10.0]
 
 [output]
 fluence = "fluence.nrrd"
-render = "geom_render.nrrd"
-render_geom = false
+render_geometry_name = "geom_render.nrrd"
+render_geometry = true
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [250,250,250]
 overwrite = true
 
 [simulation]

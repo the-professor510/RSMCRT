@@ -332,16 +332,30 @@ module sdf_baseMod
                     z = (k-ns(3)) * wid%z
                     pos = vector(x, y, z)
                     ds = 0._wp
+                    !do u = 1, size(ds)
+                    !    ds(u) = cnt(u)%evaluate(pos)
+                    !end do
+
+                    !image(i, j, k) = minval(ds)
+
+                    !image(i, j, k) = (product(ds))
+                    !if(image(i, j, k)>0) then
+                    !    image(i, j, k) = 1.0
+                    !else
+                    !    image(i, j, k) = -1.0
+                    !end if
+
                     do u = 1, size(ds)
                         ds(u) = cnt(u)%evaluate(pos)
+                        if(ds(u) > 0._wp)ds(u)=-999.0_wp
                     end do
-                    image(i, j, k) = minval(ds)
+                    image(i, j, k) = minloc(abs(ds),dim=1)
                 end do
             end do
             call bar%progress()
         end do
 !$OMP end  do
 !$OMP end parallel
-        call write_data(image, trim(fileplace)//state%renderfile, state, overwrite=.true.)
+        call write_data(image, trim(fileplace)//state%rendergeomfile, state, overwrite=.true.)
     end subroutine render_sub
 end module sdf_baseMod

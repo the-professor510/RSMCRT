@@ -56,7 +56,7 @@ contains
 
 #ifdef _OPENMP
         !is state%seed private, i dont think so...
-        !$omp parallel default(none) shared(dict, array, numproc, start, state, bar, jmean, tev, dects, spectrum)&
+        !$omp parallel default(none) shared(dict, array, numproc, start, state, bar, jmean, emission, tev, dects, spectrum)&
         !$omp& private(id, distances, image, dir, hpoint, history, weight_absorb, cellk, cellj, celli) &
         !$omp& reduction(+:nscatt) firstprivate(packet)
         numproc = omp_get_num_threads()
@@ -238,7 +238,7 @@ contains
 
 #ifdef _OPENMP
         tic=omp_get_wtime()
-!$omp parallel default(none) shared(dict, array, numproc, start, bar, jmean, input_file, phasor, tev, dects, spectrum)&
+!$omp parallel default(none) shared(dict, array, numproc, start, bar, jmean, emission, input_file, phasor, tev, dects, spectrum)&
         !$omp& private(ran, id, distances, image, dir, hpoint, history, seqs) reduction(+:nscatt) firstprivate(state, packet)
         numproc = omp_get_num_threads()
         id = omp_get_thread_num()
@@ -270,6 +270,7 @@ contains
 
             ! Release photon from point source
             call packet%emit(spectrum, dict, seqs)
+            if(state%render_source)call recordEmission(packet)
             packet%step = 0
             packet%id = id
             distances = 0._wp
@@ -447,6 +448,24 @@ toc=omp_get_wtime()
     call finalise(dict, dects, nscatt, start, history)
     end subroutine test_kernel
 
+    subroutine recordEmission(packet)
+        !! record emission using path length estimators. Uses voxel grid
+        use photonMod
+        use iarray,     only: phasor, jmean, emission, absorb
+        use constants , only : sp
+        
+        !> packet stores the photon related variables
+        type(photon),    intent(IN) :: packet
+        
+        integer       :: celli, cellj, cellk
+        celli = packet%xcell
+        cellj = packet%ycell
+        cellk = packet%zcell
+
+!$omp atomic
+        emission(celli,cellj,cellk) = emission(celli,cellj,cellk) + real(1.0, kind=sp)
+    end subroutine recordEmission
+
 
 !####################################################################################################
 !                           Setup and break down helper routines
@@ -508,6 +527,7 @@ toc=omp_get_wtime()
         
         call directory()
 
+        ! Read in the toml
         dict = toml_table()
         call parse_params("res/"//trim(input_file), packet, dects, spectrum, dict, error)
         if(allocated(error))then
@@ -550,7 +570,7 @@ subroutine finalise(dict, dects, nscatt, start, history)
     use constants,     only : wp, fileplace
     use detectors,     only : dect_array
     use historyStack,  only : history_stack_t
-    use iarray,        only : phasor, phasorGLOBAL, jmean, jmeanGLOBAL, absorb, absorbGLOBAL
+    use iarray,        only : phasor, phasorGLOBAL, jmean, jmeanGLOBAL, absorb, absorbGLOBAL, emission, emissionGLOBAL
     use sim_state_mod, only : state
     use setupMod,      only : dealloc_array
     use writer_mod,    only : normalise_fluence, write_data, write_detected_photons
@@ -580,11 +600,13 @@ subroutine finalise(dict, dects, nscatt, start, history)
     call mpi_reduce(jmean, jmeanGLOBAL, size(jmean),MPI_DOUBLE_PRECISION, MPI_SUM,0,MPI_COMM_WORLD)
     call mpi_reduce(absorb, absorbGLOBAL, size(absorb),MPI_DOUBLE_PRECISION, MPI_SUM,0,MPI_COMM_WORLD)
     call mpi_reduce(phasor, phasorGLOBAL, size(phasor),MPI_DOUBLE_COMPLEX, MPI_SUM,0,MPI_COMM_WORLD)
+    call mpi_reduce(emission, emissionGLOBAL, size(emission),MPI_DOUBLE_PRECISION, MPI_SUM,0,MPI_COMM_WORLD)
     call mpi_reduce(nscatt,nscattGLOBAL,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD)
 #else
     jmeanGLOBAL = jmean
     absorbGLOBAL = absorb
     phasorGLOBAL = phasor
+    emissionGLOBAL = emission
     nscattGLOBAL = nscatt
 #endif
 
@@ -608,6 +630,9 @@ subroutine finalise(dict, dects, nscatt, start, history)
 
         call normalise_fluence(state%grid, jmeanGLOBAL, state%nphotons)
         call write_data(jmeanGLOBAL, trim(fileplace)//"jmean/"//state%outfile, state, dict)
+
+        call normalise_fluence(state%grid, emissionGLOBAL, state%nphotons)
+        call write_data(emissionGLOBAL, trim(fileplace)//"emission/"//state%rendersourcefile, state, dict)
         ! if(state%absorb)call write_data(absorbGLOBAL, trim(fileplace)//"deposit/"//state%outfile_absorb, state, dict)
         !INTENSITY
         ! call write_data(abs(phasorGLOBAL)**2, trim(fileplace)//"phasor/"//state%outfile, state, dict)    

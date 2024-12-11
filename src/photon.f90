@@ -344,6 +344,7 @@ module photonMod
             use utils,         only : deg2rad
             use vector_class,  only : length
             use tomlf,         only : toml_table, get_value
+            use constants,     only : twoPI
             use piecewiseMod
 
             class(photon) :: this
@@ -359,7 +360,7 @@ module photonMod
 
             this%pos%x = ranu(-state%grid%xmax, state%grid%xmax)
             this%pos%y = ranu(-state%grid%ymax, state%grid%ymax)
-            this%pos%z = state%grid%zmax - 1e-8_wp
+            this%pos%z = state%grid%zmax - 9e-7_wp
 
             dist = length(this%pos)
 
@@ -384,6 +385,8 @@ module photonMod
             this%cnts = 0
             this%weight = 1.0_wp
             call spectrum%p%sample(this%wavelength, tmp)
+            this%energy = 1.0_wp
+            this%fact = TWOPI / this%wavelength
 
             ! Linear Grid 
             cell = state%grid%get_voxel(this%pos)
@@ -660,54 +663,80 @@ module photonMod
             real(kind=wp) :: beta, rlo, rhi, radius, tmp, mid, angle, x, y, z, phi, sinp, cosp
             type(vector)  :: pos
             integer       :: cell(3)
+            logical       :: inX, inY, inZ
 
             call get_value(dict, "beta", beta)
-            call get_value(dict, "radius", rlo)
-            call get_value(dict, "radius_hi", rhi)
+            call get_value(dict, "rlo", rlo)
+            call get_value(dict, "rhi", rhi)
             call get_value(dict, "annulus_type", beam_type)
 
-            if(beam_type == "tophat")then
-                radius = rlo + (rhi - rlo) * sqrt(ran2())
-            elseif(beam_type == "gaussian")then
-                mid = (rhi - rlo) / 2.
-                call rang(radius, tmp, mid, 0.04_wp)
-            else
-                error stop "No such beam type!"
-            end if
+            inX = .false.
+            inY = .false.
+            inZ = .false.
 
-            phi = TWOPI * ran2()
+            do while (.not.(inX) .or. .not.(inY) .or. .not.(inZ))
+                if(beam_type == "tophat")then
+                    radius = rlo + (rhi - rlo) * sqrt(ran2())
+                elseif(beam_type == "gaussian")then
+                    mid = (rhi + rlo) / 2._wp
+                    call rang(radius, tmp, mid, 0.04_wp)
+                else
+                    error stop "No such beam type!"
+                end if
 
-            angle = deg2rad(beta)
+                phi = TWOPI * ran2()
 
-            cosp = cos(phi)
-            sinp = sin(phi)
-            x = radius * cosp
-            y = radius * sinp
-            z = state%grid%zmax - 1e-8_wp! just inside surface of medium. TODO make this user configurable?
-            pos = vector(x, y, z)
-            this%pos = pos
+                angle = deg2rad(beta)
 
-            this%nxp = sin(angle) * cosp
-            this%nyp = sin(angle) * sinp
-            this%nzp = -cos(angle)
+                cosp = cos(phi)
+                sinp = sin(phi)
+                x = radius * cosp
+                y = radius * sinp
+                z = state%grid%zmax - 1e-8_wp! just inside surface of medium. TODO make this user configurable?
+                pos = vector(x, y, z)
+                this%pos = pos
 
-            this%phi = phi
-            this%cosp = cosp
-            this%sinp = sinp
-            this%cost = this%nzp
-            this%sint = sqrt(1._wp - this%cost**2)
+                this%nxp = sin(angle) * cosp
+                this%nyp = sin(angle) * sinp
+                this%nzp = -cos(angle)
 
-            this%tflag = .false.
-            this%bounces = 0
-            this%cnts = 0
-            this%weight = 1.0_wp
-            call spectrum%p%sample(this%wavelength, tmp)
+                this%phi = phi
+                this%cosp = cosp
+                this%sinp = sinp
+                this%cost = this%nzp
+                this%sint = sqrt(1._wp - this%cost**2)
 
-            ! Linear Grid 
-            cell = state%grid%get_voxel(this%pos)
-            this%xcell = cell(1)
-            this%ycell = cell(2)
-            this%zcell = cell(3)
+                this%tflag = .false.
+                this%bounces = 0
+                this%cnts = 0
+                this%weight = 1.0_wp
+                call spectrum%p%sample(this%wavelength, tmp)
+
+                ! Linear Grid 
+                cell = state%grid%get_voxel(this%pos)
+                this%xcell = cell(1)
+                this%ycell = cell(2)
+                this%zcell = cell(3)
+
+                if (cell(1) >= 1 .and. cell(1) <= state%grid%nxg) then
+                    inX = .true.
+                else
+                    inX = .false.
+                end if
+                if (cell(2) >= 1 .and. cell(2) <= state%grid%nyg) then
+                    inY = .true.
+                else
+                    inY = .false.
+                end if
+                if (cell(3) >= 1 .and. cell(3) <= state%grid%nzg) then
+                    inZ = .true.
+                else
+                    inZ = .false.
+                end if
+            end do
+            print*, inX, inY, inZ
+            print*, this%xcell, this%ycell, this%zcell
+
         end subroutine annulus
 
         subroutine scatter(this, hgg, g2, dects)

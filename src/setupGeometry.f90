@@ -7,48 +7,236 @@ module setupGeometry
 
 contains
 
-    function setup_egg() result(array)
-    !! setup an egg, with yolk, albumen and shell
-        use sdfs, only : sdf, sphere, box, egg
-        use sdfModifiers, only : onion, revolution
-        use vector_class
-        use opticalProperties
+    function setup_sphere(dict) result(array)
+        !! setup the sphere
 
+        use opticalProperties, only : opticalProp_t, mono
+        use sdfs,              only : sdf, sphere, box
+        use sdfHelpers,        only : translate
+        use vector_class,      only : vector
+        use mat_class,         only : invert
+
+        type(toml_table), intent(inout) :: dict
         type(sdf), allocatable :: array(:)
+
+        type(opticalProp_t) :: opt(2)
+        type(vector) :: pos
+        real(kind=wp), allocatable :: mus(:), mua(:), mur(:), hgg(:), n(:)
+        real(kind=wp) :: t(4,4), x, y, z, radius, xlength, ylength, zlength
+        integer :: numOptProp, i
+        character(4) :: string 
+
+        call get_value(dict, "numOptProp", numOptProp)
+        allocate(mus(numOptProp))
+        allocate(mua(numOptProp))
+        allocate(mur(numOptProp))
+        allocate(hgg(numOptProp))
+        allocate(n(numOptProp))
+                
+        do i = 1, numOptProp
+            write(string,'(I4)') i
+            call get_value(dict, "mua%"//string, mua(i))
+            call get_value(dict, "mus%"//string, mus(i))
+            call get_value(dict, "mur%"//string, mur(i))
+            call get_value(dict, "hgg%"//string, hgg(i))
+            call get_value(dict, "n%"//string, n(i))
+        end do
+        
+        write(string,'(I4)') 1
+        call get_value(dict, "position%"//string, x)
+        write(string,'(I4)') 2
+        call get_value(dict, "position%"//string, y)
+        write(string,'(I4)') 3
+        call get_value(dict, "position%"//string, z)
+
+        write(string,'(I4)') 1
+        call get_value(dict, "boundinglength%"//string, xlength)
+        write(string,'(I4)') 2
+        call get_value(dict, "boundinglength%"//string, ylength)
+        write(string,'(I4)') 3
+        call get_value(dict, "boundinglength%"//string, zlength)
+
+        call get_value(dict, "sphereRadius", radius)
+
+        allocate(array(2))
+        
+        pos = vector(x, y, z)
+        t = invert(translate(pos))
+
+        opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
+        array(1) = sphere(radius, opt(1), 1, transform=t)
+
+        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1._wp)
+        array(2) = box(vector(xlength, ylength, zlength), opt(2), 2)   
+    end function setup_sphere
+
+    function setup_box(dict) result(array)
+        !! setup an box
+
+        use opticalProperties, only : opticalProp_t, mono
+        use sdfs,              only : sdf, box
+        use sdfHelpers,        only : translate
+        use vector_class,      only : vector
+        use mat_class,         only : invert
+
+        type(toml_table), intent(inout) :: dict
+        type(sdf), allocatable :: array(:)
+
+        type(opticalProp_t) :: opt(2)
+        type(vector) :: pos
+        real(kind=wp), allocatable :: mus(:), mua(:), mur(:), hgg(:), n(:)
+        real(kind=wp) :: t(4,4), x, y, z, radius
+        real(kind=wp) :: ixlength, iylength, izlength, bxlength, bylength, bzlength
+        integer :: numOptProp, i
+        character(4) :: string 
+
+        call get_value(dict, "numOptProp", numOptProp)
+        allocate(mus(numOptProp))
+        allocate(mua(numOptProp))
+        allocate(mur(numOptProp))
+        allocate(hgg(numOptProp))
+        allocate(n(numOptProp))
+        mus = 0.0_wp
+        mua = 0.0_wp
+        mur = 0.0_wp
+        hgg = 0.0_wp
+        n = 0.0_wp
+        
+        do i = 1, numOptProp
+            write(string,'(I4)') i
+            call get_value(dict, "mua%"//string, mua(i))
+            call get_value(dict, "mus%"//string, mus(i))
+            call get_value(dict, "mur%"//string, mur(i))
+            call get_value(dict, "hgg%"//string, hgg(i))
+            call get_value(dict, "n%"//string, n(i))
+        end do
+        
+        write(string,'(I4)') 1
+        call get_value(dict, "position%"//string, x)
+        write(string,'(I4)') 2
+        call get_value(dict, "position%"//string, y)
+        write(string,'(I4)') 3
+        call get_value(dict, "position%"//string, z)
+
+        write(string,'(I4)') 1
+        call get_value(dict, "boundinglength%"//string, bxlength)
+        write(string,'(I4)') 2
+        call get_value(dict, "boundinglength%"//string, bylength)
+        write(string,'(I4)') 3
+        call get_value(dict, "boundinglength%"//string, bzlength)
+
+        write(string,'(I4)') 1
+        call get_value(dict, "BoxDimensions%"//string, ixlength)
+        write(string,'(I4)') 2
+        call get_value(dict, "BoxDimensions%"//string, iylength)
+        write(string,'(I4)') 3
+        call get_value(dict, "BoxDimensions%"//string, izlength)
+        
+        allocate(array(2))
+                
+        pos = vector(x, y, z)
+        t = invert(translate(pos))
+
+        !interior box
+        opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
+        array(1) = box(vector(ixlength, iylength, izlength), opt(1), 1, transform=t)
+
+        !bounding box
+        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1._wp)
+        array(2) = box(vector(bxlength, bylength, bzlength), opt(2), 2)   
+    end function setup_box
+
+    function setup_egg(dict) result(array)
+        !! setup an egg, with yolk, albumen and shell
+        use sdfs,              only : sdf, sphere, box, egg
+        use sdfModifiers,      only : revolution, extrude
+        use vector_class,      only : vector
+        use opticalProperties, only : opticalProp_t, mono
+        use sdfHelpers,        only : translate
+        use mat_class,         only : invert
+
+        type(toml_table), intent(inout) :: dict
+        type(sdf), allocatable :: array(:)
+
         type(box) :: bbox
-        type(revolution), save :: albumen, rev1
-        type(onion) :: shell
+        type(revolution), save :: albumen, shell
         type(sphere) :: yolk
         type(opticalProp_t) :: opt(4)
         type(egg), save :: egg_shell, egg_albumen
 
-        real(kind=wp) :: r1, r2, h
-        
-        r1 = 3._wp
-        r2 = 3._wp * sqrt(2._wp - sqrt(2._wp))
-        h = r2
-        
-        !width = 42mm
-        !height = 62mm
+        type(vector) :: pos
+        real(kind=wp), allocatable :: mus(:), mua(:), mur(:), hgg(:), n(:)
+        real(kind=wp) :: t(4,4), radius, x, y, z
+        real(kind=wp) :: bxlength, bylength, bzlength
+        real(kind=wp) :: bottomSphereRad, topSphereRad, SphereSep, ShellThickness, YolkRadius
+        integer :: numOptProp, i
+        character(4) :: string 
 
+        call get_value(dict, "numOptProp", numOptProp)
+        allocate(mus(numOptProp))
+        allocate(mua(numOptProp))
+        allocate(mur(numOptProp))
+        allocate(hgg(numOptProp))
+        allocate(n(numOptProp))
+        mus = 0.0_wp
+        mua = 0.0_wp
+        mur = 0.0_wp
+        hgg = 0.0_wp
+        n = 0.0_wp
+        
+        do i = 1, numOptProp
+            write(string,'(I4)') i
+            call get_value(dict, "mua%"//string, mua(i))
+            call get_value(dict, "mus%"//string, mus(i))
+            call get_value(dict, "mur%"//string, mur(i))
+            call get_value(dict, "hgg%"//string, hgg(i))
+            call get_value(dict, "n%"//string, n(i))
+        end do
+        
+        write(string,'(I4)') 1
+        call get_value(dict, "position%"//string, x)
+        write(string,'(I4)') 2
+        call get_value(dict, "position%"//string, y)
+        write(string,'(I4)') 3
+        call get_value(dict, "position%"//string, z)
+
+        write(string,'(I4)') 1
+        call get_value(dict, "boundinglength%"//string, bxlength)
+        write(string,'(I4)') 2
+        call get_value(dict, "boundinglength%"//string, bylength)
+        write(string,'(I4)') 3
+        call get_value(dict, "boundinglength%"//string, bzlength)
+
+        
+        call get_value(dict, "BottomSphereRadius", bottomSphereRad)
+        call get_value(dict, "TopSphereRadius", topSphereRad)
+        call get_value(dict, "SphereSep", SphereSep)
+        call get_value(dict, "ShellThickness", ShellThickness)
+        call get_value(dict, "YolkRadius", YolkRadius)
+
+        pos = vector(x, y, z)
+        t = invert(translate(pos))
+                
         !shell
-        opt(1) = mono(100._wp, 10._wp, 0.0_wp, 1.37_wp)
-        egg_shell = egg(r1, r2, h, opt(1), 2)
-        rev1 = revolution(egg_shell, .2_wp)
-        shell = onion(rev1, .2_wp)
+        opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
+        egg_shell = egg(bottomSphereRad, topSphereRad, SphereSep, opt(1), 2)
+        shell = revolution(egg_shell, .0_wp, center = pos)
+        !shell = extrude(egg_shell, .2_wp)
 
         !albumen
-        opt(2) = mono(1._wp, 0._wp, 0.0_wp, 1.37_wp)
-        egg_albumen = egg(r1-.2_wp, r2, h, opt(2), 3)
-        albumen = revolution(egg_albumen, .2_wp)
+        opt(2) = mono(mus(2), mua(2), hgg(2), n(2))
+        egg_albumen = egg(bottomSphereRad*(1-ShellThickness), topSphereRad*(1-ShellThickness),&
+                             SphereSep*(1-ShellThickness), opt(2), 3)
+        albumen = revolution(egg_albumen, .0_wp, center = pos)
+        !albumen = extrude(egg_albumen, .2_wp)
 
         !yolk
-        opt(3) = mono(10._wp, 1._wp, 0.9_wp, 1.37_wp)
-        yolk = sphere(1.5_wp, opt(3), 1)
+        opt(3) = mono(mus(3), mua(3), hgg(3), n(3))
+        yolk = sphere(YolkRadius, opt(3), 1, transform=t)
 
         !bounding box
         opt(4) = mono(0._wp, 0._wp, 0.0_wp, 1._wp)
-        bbox = box(vector(20.001_wp, 20.001_wp, 20.001_wp), opt(4), 4)
+        bbox = box(vector(bxlength, bylength, bzlength), opt(4), 4) 
         
         allocate(array(4))
         
@@ -144,7 +332,7 @@ contains
     end function setup_logo
 
 
-    function setup_sphere() result(array)
+    function setup_tran_and_jacques() result(array)
     !! setup the sphere test case from tran and jacques paper.
 
         use mat_class,         only : invert
@@ -172,8 +360,7 @@ contains
         t = invert(translate(a))
         array(1) = sphere(0.5_wp, opt(3), 1, transform=t)
 
-    end function setup_sphere
-
+    end function setup_tran_and_jacques
 
     function setup_exp(dict) result(array)
     !! Setup experimental geometry from Georgies paper. i.e a glass bottle with contents

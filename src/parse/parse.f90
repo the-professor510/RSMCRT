@@ -8,6 +8,7 @@ module parse_mod
 
     use parse_detectorsMod
     use parse_sourcesMod
+    use parse_geometryMod
     
     implicit none
 
@@ -48,7 +49,7 @@ module parse_mod
         call parse_grid(table, dict, error)
         if(allocated(error))return
 
-        call parse_geometry(table, dict, error)
+        call parse_geometry(table, dict, context, error)
         if(allocated(error))return
 
         call parse_detectors(table, dects, context, error)
@@ -83,7 +84,8 @@ module parse_mod
         call get_value(table, "grid", child)
 
         if(associated(child))then
-            call get_value(child, "nxg", nxg, 200)
+            call get_value(child, "nxg", nxg, 200) !200 is the default 
+            !value if it is no stated inside the toml
             call get_value(child, "nyg", nyg, 200)
             call get_value(child, "nzg", nzg, 200)
             call get_value(child, "xmax", xmax, 1.0_wp)
@@ -96,51 +98,10 @@ module parse_mod
             return
         end if
 
+        !set the grid variable inside the program
         state%grid = init_grid(nxg, nyg, nzg, xmax, ymax, zmax)
 
     end subroutine parse_grid
-
-    subroutine parse_geometry(table, dict, error)
-        !! parse geometry information
-        use sim_state_mod, only : state
-        
-        !> Input Toml table
-        type(toml_table),               intent(inout) :: table
-        !> Dictonary used to store metadata
-        type(toml_table),               intent(inout) :: dict
-        !> Error message
-        type(toml_error),  allocatable, intent(out)   :: error
-
-        type(toml_table), pointer :: child
-        real(kind=wp)             :: tau, musb, musc, muab, muac, hgg
-        integer                   :: num_spheres
-
-        call get_value(table, "geometry", child)
-
-        if(associated(child))then
-            call get_value(child, "geom_name", state%experiment, "sphere")
-            call get_value(child, "tau", tau, 10._wp)
-            call set_value(dict, "tau", tau)
-
-            call get_value(child, "num_spheres", num_spheres, 10)
-            call set_value(dict, "num_spheres", num_spheres)
-
-            call get_value(child, "musb", musb, 0.0_wp)
-            call set_value(dict, "musb", musb)
-            call get_value(child, "muab", muab, 0.01_wp)
-            call set_value(dict, "muab", muab)
-            call get_value(child, "musc", musc, 0.0_wp)
-            call set_value(dict, "musc", musc)
-            call get_value(child, "muac", muac, 0.01_wp)
-            call set_value(dict, "muac", muac)
-            call get_value(child, "hgg", hgg, 0.7_wp)
-            call set_value(dict, "hgg", hgg)
-        else
-            call make_error(error, "Need geometry table in input param file", -1)
-            return
-        end if
-
-    end subroutine parse_geometry
 
     subroutine parse_output(table, error)
         !! parse output file information
@@ -160,8 +121,10 @@ module parse_mod
         if(associated(child))then
             call get_value(child, "fluence", state%outfile, "fluence.nrrd")
             call get_value(child, "absorb", state%outfile_absorb, "absorb.nrrd")
-            call get_value(child, "render", state%renderfile, "geom_render.nrrd")
-            call get_value(child, "render_geom", state%render_geom, .false.)
+            call get_value(child, "render_geomerty_name", state%rendergeomfile, "geom_render.nrrd")
+            call get_value(child, "render_geomerty", state%render_geom, .false.)
+            call get_value(child, "render_source_name", state%rendersourcefile, "source_render.nrrd")
+            call get_value(child, "render_source", state%render_source, .false.)
 
             call get_value(child, "render_size", children, requested=.false.)
             if(associated(children))then

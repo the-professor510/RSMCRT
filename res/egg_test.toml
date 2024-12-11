@@ -1,0 +1,41 @@
+[source]
+name = "point"
+nphotons = 1000000
+position = [0.0,0.0,0.0]
+spectrum_type = "constant"
+wavelength = 500.0
+
+[grid]
+nxg = 500
+nyg = 500
+nzg = 500
+xmax = 5.0
+ymax = 5.0
+zmax = 5.0
+
+[geometry]
+geom_name = "egg"
+numOptProp = 3
+boundingBox = [15.0,15.0,15.0]
+position = [0.0,0.0,0.0]
+BottomSphereRadius = 2.0
+TopSphereRadius = 1.5
+SphereSep = 1.4
+ShellThickness = 0.02
+YolkRadius = 1.0
+
+[output]
+fluence = "fluence.nrrd"
+render_geometry_name = "geom_render.nrrd"
+render_geometry = false
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [250,250,250]
+overwrite = true
+
+[simulation]
+iseed = 123456789
+absorb=true
+load_checkpoint=false
+checkpoint_file="check.ckpt"
+checkpoint_every_n=10000

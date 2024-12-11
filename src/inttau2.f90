@@ -216,7 +216,7 @@ module inttau2
         use vector_class
         use photonMod
         use gridMod
-        use iarray,     only: phasor, jmean, absorb
+        use iarray,     only: phasor, jmean, emission, absorb
         use constants , only : sp
         
         !> grid stores voxel grid information (voxel walls and etc)

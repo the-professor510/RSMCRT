@@ -29,6 +29,8 @@ module setupMod
             call alloc_array(settings%grid%nxg, settings%grid%nyg, settings%grid%nzg)
             call zarray()
 
+            !print*, settings%experiment
+
             ! setup geometry using SDFs
             select case(settings%experiment)
                 case("logo")
@@ -40,13 +42,21 @@ module setupMod
                 case("scat_test2")
                     sdfarray = setup_scat_test2(dict)
                 case("aptran")
-                    sdfarray = setup_sphere()
+                    sdfarray = setup_tran_and_jacques()
                 case("vessels")
                     sdfarray = get_vessels()
                 case("sphere_scene")
                     sdfarray = setup_sphere_scene(dict)
-                case("test_egg")
-                    sdfarray = setup_egg()
+                !case("test_egg")
+                !    sdfarray = setup_egg()
+                case("test_box")
+                    sdfarray = setup_box(dict)
+                case("sphere")
+                    sdfarray = setup_sphere(dict)
+                case("box")
+                    sdfarray = setup_box(dict)
+                case("egg")
+                    sdfarray = setup_egg(dict)
                 case default
                     error stop "no such routine"
             end select
@@ -145,6 +155,8 @@ module setupMod
             jmeanGLOBAL = 0._wp
             absorb = 0.0_wp
             absorbGLOBAL = 0.0_wp
+            emission = 0._wp
+            emissionGLOBAL = 0._wp
 
         end subroutine zarray
 
@@ -161,6 +173,7 @@ module setupMod
             allocate(phasor(nxg, nyg, nzg), phasorGLOBAL(nxg, nyg, nzg))
             allocate(jmean(nxg, nyg, nzg), jmeanGLOBAL(nxg, nyg, nzg))
             allocate(absorb(nxg, nyg, nzg), absorbGLOBAL(nxg, nyg, nzg))
+            allocate(emission(nxg, nyg, nzg), emissionGLOBAL(nxg, nyg, nzg))
 
         end subroutine alloc_array
 
@@ -174,5 +187,7 @@ module setupMod
             deallocate(absorbGLOBAL)
             deallocate(phasor)
             deallocate(phasorGLOBAL)
+            deallocate(emission)
+            deallocate(emissionGLOBAL)
         end subroutine dealloc_array
 end module setupMod
