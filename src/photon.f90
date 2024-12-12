@@ -264,6 +264,23 @@ module photonMod
             t = matmul(t, invert(translate(photon_origin%pos)))
             ! transform point
             this%pos = this%pos .dot. t
+            this%pos = this%pos*-1.0_wp
+
+            if (this%pos%x == -state%grid%xmax) then
+                this%pos%x = this%pos%x + 7.9e-7_wp
+            else if (this%pos%x == state%grid%xmax) then
+                this%pos%x = this%pos%x - 7.9e-7_wp
+            end if
+            if (this%pos%y == -state%grid%ymax) then
+                this%pos%y = this%pos%y + 7.9e-7_wp
+            else if (this%pos%y == state%grid%ymax) then
+                this%pos%y = this%pos%y - 7.9e-7_wp
+            end if
+            if (this%pos%z == -state%grid%zmax) then
+                this%pos%z = this%pos%z + 7.9e-7_wp
+            else if (this%pos%z == state%grid%zmax) then
+                this%pos%z = this%pos%z - 7.9e-7_wp
+            end if
 
             this%phi  = atan2(this%nyp, this%nxp)
             this%cosp = cos(this%phi)
@@ -284,6 +301,8 @@ module photonMod
             this%xcell = cell(1)
             this%ycell = cell(2)
             this%zcell = cell(3)
+
+            !print*, cell
         end subroutine circular
 
 
@@ -439,12 +458,12 @@ module photonMod
 
                 if (cell(1) < 1) then
                     !move inwards in the x position
-                    stepSize = ( - state%grid%xmax - this%pos%x + 1e-8_wp)/this%nxp
+                    stepSize = ( - state%grid%xmax - this%pos%x + 7.9e-7_wp)/this%nxp
                     this%pos%x = this%pos%x + dir%x*stepSize
                     this%pos%y = this%pos%y + dir%y*stepSize
                     this%pos%z = this%pos%z + dir%z*stepSize
                 else if (cell(1) > state%grid%nxg) then
-                    stepSize = (  state%grid%xmax - this%pos%x - 1e-8_wp)/this%nxp
+                    stepSize = (  state%grid%xmax - this%pos%x - 7.9e-7_wp)/this%nxp
                     this%pos%x = this%pos%x + dir%x*stepSize
                     this%pos%y = this%pos%y + dir%y*stepSize
                     this%pos%z = this%pos%z + dir%z*stepSize
@@ -454,12 +473,12 @@ module photonMod
 
                 if (cell(2) < 1) then
                     !move inwards in the x position
-                    stepSize = ( - state%grid%ymax - this%pos%y + 1e-8_wp)/this%nyp
+                    stepSize = ( - state%grid%ymax - this%pos%y + 7.9e-7_wp)/this%nyp
                     this%pos%x = this%pos%x + dir%x*stepSize
                     this%pos%y = this%pos%y + dir%y*stepSize
                     this%pos%z = this%pos%z + dir%z*stepSize
                 else if (cell(2) > state%grid%nyg) then
-                    stepSize = (  state%grid%ymax - this%pos%y - 1e-8_wp)/this%nyp
+                    stepSize = (  state%grid%ymax - this%pos%y - 7.9e-7_wp)/this%nyp
                     this%pos%x = this%pos%x + dir%x*stepSize
                     this%pos%y = this%pos%y + dir%y*stepSize
                     this%pos%z = this%pos%z + dir%z*stepSize
@@ -493,7 +512,8 @@ module photonMod
 
             integer       :: cell(3)
             type(vector)  :: pos1, pos2, pos3
-            real(kind=wp) :: rx, ry, tmp
+            real(kind=wp) :: rx, ry, tmp, stepSize
+            logical       :: inX, inY, inZ
 
             this%nxp = photon_origin%nxp
             this%nyp = photon_origin%nyp
@@ -524,6 +544,22 @@ module photonMod
             this%pos%y = pos1%y + rx * pos2%y + ry * pos3%y
             this%pos%z = pos1%z + rx * pos2%z + ry * pos3%z
 
+            if (this%pos%x == -state%grid%xmax) then
+                this%pos%x = this%pos%x + 7.9e-7_wp
+            else if (this%pos%x == state%grid%xmax) then
+                this%pos%x = this%pos%x - 7.9e-7_wp
+            end if
+            if (this%pos%y == -state%grid%ymax) then
+                this%pos%y = this%pos%y + 7.9e-7_wp
+            else if (this%pos%y == state%grid%ymax) then
+                this%pos%y = this%pos%y - 7.9e-7_wp
+            end if
+            if (this%pos%z == -state%grid%zmax) then
+                this%pos%z = this%pos%z + 7.9e-7_wp
+            else if (this%pos%z == state%grid%zmax) then
+                this%pos%z = this%pos%z - 7.9e-7_wp
+            end if
+
             this%tflag = .false.
             this%cnts = 0
             this%bounces = 0
@@ -540,6 +576,8 @@ module photonMod
             this%xcell = cell(1)
             this%ycell = cell(2)
             this%zcell = cell(3)
+            !print*, cell
+            !print*, this%pos
 
         end subroutine uniform
 
@@ -562,6 +600,23 @@ module photonMod
             real(kind=wp) :: tmp
 
             this%pos = photon_origin%pos
+
+            if (this%pos%x == -state%grid%xmax) then
+                this%pos%x = this%pos%x + 7.9e-7_wp
+            else if (this%pos%x == state%grid%xmax) then
+                this%pos%x = this%pos%x - 7.9e-7_wp
+            end if
+            if (this%pos%y == -state%grid%ymax) then
+                this%pos%y = this%pos%y + 7.9e-7_wp
+            else if (this%pos%y == state%grid%ymax) then
+                this%pos%y = this%pos%y - 7.9e-7_wp
+            end if
+            if (this%pos%z == -state%grid%zmax) then
+                this%pos%z = this%pos%z + 7.9e-7_wp
+            else if (this%pos%z == state%grid%zmax) then
+                this%pos%z = this%pos%z - 7.9e-7_wp
+            end if
+
             this%nxp = photon_origin%nxp
             this%nyp = photon_origin%nyp
             this%nzp = photon_origin%nzp
