@@ -69,7 +69,7 @@ module setupMod
             use constants, only : homedir, fileplace, resdir
 
             character(len=256) :: cwd
-            logical :: dataExists, jmeanExists, depositExists, detectorsExists, phasorExists
+            logical :: dataExists, jmeanExists, depositExists, detectorsExists, phasorExists, emissionExists
 
             !get current working directory
             call get_environment_variable('PWD', cwd)
@@ -82,18 +82,21 @@ module setupMod
 #ifdef __GFORTRAN__
             inquire(file=trim(fileplace)//"/.", exist=dataExists)
             inquire(file=trim(fileplace)//"/jmean/.", exist=jmeanExists)
+            inquire(file=trim(fileplace)//"/emission/.", exist=emissionExists)
             inquire(file=trim(fileplace)//"/deposit/.", exist=depositExists)
             inquire(file=trim(fileplace)//"/detectors/.", exist=detectorsExists)
             inquire(file=trim(fileplace)//"/phasor/.", exist=phasorExists)
 #elif __INTEL_COMPILER
             inquire(directory=trim(fileplace), exist=dataExists)
             inquire(directory=trim(fileplace)//"/jmean", exist=jmeanExists)
+            inquire(directory=trim(fileplace)//"/emission", exist=emissionExists)
             inquire(directory=trim(fileplace)//"/deposit", exist=depositExists)
             inquire(directory=trim(fileplace)//"/detectors", exist=detectorsExists)
             inquire(directory=trim(fileplace)//"/phasor", exist=phasorExists)
 #else 
     dataExists=.true.
     jmeanExists=.true.
+    emissionExists=.true.
     depositExists=.true.
     detectorsExists=.true.
     phasorExists=.true.
@@ -102,11 +105,13 @@ module setupMod
             if(.not. dataExists)then
                 call create_directory("", dataExists, "", .false.)
                 call create_directory("jmean/", jmeanExists, "data/", .false.)
+                call create_directory("emission/", emissionExists, "data/", .false.)
                 call create_directory("deposit/", depositExists, "data/", .false.)
                 call create_directory("detectors/", detectorsExists, "data/", .false.)
                 call create_directory("phasor/", phasorExists, "data/", .false.)
             else
                 call create_directory("jmean/", jmeanExists, "data/", .true.)
+                call create_directory("emission/", emissionExists, "data/", .true.)
                 call create_directory("deposit/", depositExists, "data/", .true.)
                 call create_directory("detectors/", detectorsExists, "data/", .true.)
                 call create_directory("phasor/", phasorExists, "data/", .true.)
