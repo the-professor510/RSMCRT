@@ -339,7 +339,7 @@ module photonMod
 
         subroutine focus(this, spectrum, dict, seqs)
 
-            use random,        only : ranu, seq
+            use random,        only : ran2, rang, seq, ranu
             use sim_state_mod, only : state
             use utils,         only : deg2rad
             use vector_class,  only : length
@@ -352,19 +352,58 @@ module photonMod
             type(toml_table), optional, intent(inout) :: dict
             type(seq), optional, intent(inout) :: seqs(2)
 
-            type(vector)  :: targ, dir
-            real(kind=wp) :: dist, tmp
+            type(vector)  :: pos, targ, dir
+            real(kind=wp) :: dist, tmp, focalLength, radius, beam_size
             integer       :: cell(3)
 
-            targ = vector(0._wp,0._wp,0._wp)
+            character(len=:), allocatable :: focus_type
+            real(kind=wp) :: x, y, z, phi, sinp, cosp
+            real(kind=wp) :: xToMove, yToMove, zToMove, stepSize
+            logical       :: inX, inY, inZ
 
-            this%pos%x = ranu(-state%grid%xmax, state%grid%xmax)
-            this%pos%y = ranu(-state%grid%ymax, state%grid%ymax)
-            this%pos%z = state%grid%zmax - 9e-7_wp
+            call get_value(dict, "focalLength", focalLength)
+            call get_value(dict, "focus_type", focus_type)
+            call get_value(dict, "beam_size", beam_size)
 
-            dist = length(this%pos)
+            if (focus_type == "square") then 
+                this%pos%x = ranu(-beam_size, beam_size)
+                this%pos%y = ranu(-beam_size, beam_size)
+                this%pos%z = state%grid%zmax - 9e-7_wp
 
-            dir = (-1._wp)*this%pos / dist
+            else if(focus_type == "circle")then
+                radius = beam_size * sqrt(ran2())
+                phi = TWOPI * ran2()
+                cosp = cos(phi)
+                sinp = sin(phi)
+                x = radius * cosp
+                y = radius * sinp
+                z = state%grid%zmax - 9e-7_wp! just inside surface of medium. TODO make this user configurable?
+                pos = vector(x, y, z)
+                this%pos = pos
+
+            else if(focus_type == "gaussian")then
+                ![ref] https://omlc.org/classroom/ece532/class4/example.html
+                radius = beam_size * sqrt(-log(1-ran2()))
+                ! beam_size is the 1/e radius
+                phi = TWOPI * ran2()
+                cosp = cos(phi)
+                sinp = sin(phi)
+                x = radius * cosp
+                y = radius * sinp
+                z = state%grid%zmax - 9e-7_wp! just inside surface of medium. TODO make this user configurable?
+                pos = vector(x, y, z)
+                this%pos = pos
+            else
+                error stop "No such beam type!"
+            end if 
+
+
+
+            targ = vector(0._wp,0._wp,state%grid%zmax-focalLength)
+
+            dist = length(this%pos - targ)
+
+            dir = (-1._wp)*(this%pos-targ) / dist
             dir = dir%magnitude()
 
             this%nxp = dir%x
@@ -393,6 +432,47 @@ module photonMod
             this%xcell = cell(1)
             this%ycell = cell(2)
             this%zcell = cell(3)
+
+            inX = .false.
+            inY = .false.
+            do while (.not.(inX) .or. .not.(inY))
+
+                if (cell(1) < 1) then
+                    !move inwards in the x position
+                    stepSize = ( - state%grid%xmax - this%pos%x + 1e-8_wp)/this%nxp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                else if (cell(1) > state%grid%nxg) then
+                    stepSize = (  state%grid%xmax - this%pos%x - 1e-8_wp)/this%nxp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                else 
+                    inX = .true.
+                end if
+
+                if (cell(2) < 1) then
+                    !move inwards in the x position
+                    stepSize = ( - state%grid%ymax - this%pos%y + 1e-8_wp)/this%nyp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                else if (cell(2) > state%grid%nyg) then
+                    stepSize = (  state%grid%ymax - this%pos%y - 1e-8_wp)/this%nyp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                else 
+                    inY = .true.
+                end if
+
+                ! Linear Grid 
+                cell = state%grid%get_voxel(this%pos)
+                this%xcell = cell(1)
+                this%ycell = cell(2)
+                this%zcell = cell(3)                
+            end do
 
         end subroutine focus
 
@@ -660,82 +740,105 @@ module photonMod
             type(seq), optional, intent(inout) :: seqs(2)
 
             character(len=:), allocatable :: beam_type
-            real(kind=wp) :: beta, rlo, rhi, radius, tmp, mid, angle, x, y, z, phi, sinp, cosp
-            type(vector)  :: pos
+            real(kind=wp) :: focalLength, rlo, rhi, sigma, radius, tmp, mid, x, y, z, phi, sinp, cosp, dist
+            real(kind=wp) :: xToMove, yToMove, zToMove, stepSize
+            type(vector)  :: pos, dir, targ
             integer       :: cell(3)
             logical       :: inX, inY, inZ
 
-            call get_value(dict, "beta", beta)
+            call get_value(dict, "focalLength", focalLength)
             call get_value(dict, "rlo", rlo)
             call get_value(dict, "rhi", rhi)
+            call get_value(dict, "sigma", sigma)
             call get_value(dict, "annulus_type", beam_type)
+
+            if(beam_type == "tophat")then
+                radius = rlo + (rhi - rlo) * sqrt(ran2())
+            elseif(beam_type == "gaussian")then
+                mid = (rhi + rlo) / 2._wp
+                call rang(radius, tmp, mid, sigma)
+            else
+                error stop "No such beam type!"
+            end if 
+
+            phi = TWOPI * ran2()
+            cosp = cos(phi)
+            sinp = sin(phi)
+            x = radius * cosp
+            y = radius * sinp
+            z = state%grid%zmax - 9e-7_wp! just inside surface of medium. TODO make this user configurable?
+            pos = vector(x, y, z)
+            this%pos = pos
+
+
+            targ = vector(0._wp,0._wp,state%grid%zmax-focalLength)
+
+            dist = length(this%pos - targ)
+
+            dir = (-1._wp)*(this%pos-targ) / dist
+            dir = dir%magnitude()
+
+            this%nxp = dir%x
+            this%nyp = dir%y
+            this%nzp = dir%z
+            this%phi  = atan2(this%nyp, this%nxp)
+            this%cosp = cos(this%phi)
+            this%sinp = sin(this%phi)
+            this%cost = this%nzp
+            this%sint = sqrt(1._wp - this%cost**2)
+
+            this%tflag = .false.
+            this%bounces = 0
+            this%cnts = 0
+            this%weight = 1.0_wp
+            call spectrum%p%sample(this%wavelength, tmp)
+
+            ! Linear Grid 
+            cell = state%grid%get_voxel(this%pos)
+            this%xcell = cell(1)
+            this%ycell = cell(2)
+            this%zcell = cell(3)
 
             inX = .false.
             inY = .false.
-            inZ = .false.
+            do while (.not.(inX) .or. .not.(inY))
 
-            do while (.not.(inX) .or. .not.(inY) .or. .not.(inZ))
-                if(beam_type == "tophat")then
-                    radius = rlo + (rhi - rlo) * sqrt(ran2())
-                elseif(beam_type == "gaussian")then
-                    mid = (rhi + rlo) / 2._wp
-                    call rang(radius, tmp, mid, 0.04_wp)
-                else
-                    error stop "No such beam type!"
+                if (cell(1) < 1) then
+                    !move inwards in the x position
+                    stepSize = ( - state%grid%xmax - this%pos%x + 1e-8_wp)/this%nxp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                else if (cell(1) > state%grid%nxg) then
+                    stepSize = (  state%grid%xmax - this%pos%x - 1e-8_wp)/this%nxp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                else 
+                    inX = .true.
                 end if
 
-                phi = TWOPI * ran2()
-
-                angle = deg2rad(beta)
-
-                cosp = cos(phi)
-                sinp = sin(phi)
-                x = radius * cosp
-                y = radius * sinp
-                z = state%grid%zmax - 1e-8_wp! just inside surface of medium. TODO make this user configurable?
-                pos = vector(x, y, z)
-                this%pos = pos
-
-                this%nxp = sin(angle) * cosp
-                this%nyp = sin(angle) * sinp
-                this%nzp = -cos(angle)
-
-                this%phi = phi
-                this%cosp = cosp
-                this%sinp = sinp
-                this%cost = this%nzp
-                this%sint = sqrt(1._wp - this%cost**2)
-
-                this%tflag = .false.
-                this%bounces = 0
-                this%cnts = 0
-                this%weight = 1.0_wp
-                call spectrum%p%sample(this%wavelength, tmp)
+                if (cell(2) < 1) then
+                    !move inwards in the x position
+                    stepSize = ( - state%grid%ymax - this%pos%y + 1e-8_wp)/this%nyp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                else if (cell(2) > state%grid%nyg) then
+                    stepSize = (  state%grid%ymax - this%pos%y - 1e-8_wp)/this%nyp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                else 
+                    inY = .true.
+                end if
 
                 ! Linear Grid 
                 cell = state%grid%get_voxel(this%pos)
                 this%xcell = cell(1)
                 this%ycell = cell(2)
-                this%zcell = cell(3)
-
-                if (cell(1) >= 1 .and. cell(1) <= state%grid%nxg) then
-                    inX = .true.
-                else
-                    inX = .false.
-                end if
-                if (cell(2) >= 1 .and. cell(2) <= state%grid%nyg) then
-                    inY = .true.
-                else
-                    inY = .false.
-                end if
-                if (cell(3) >= 1 .and. cell(3) <= state%grid%nzg) then
-                    inZ = .true.
-                else
-                    inZ = .false.
-                end if
+                this%zcell = cell(3)                
             end do
-            print*, inX, inY, inZ
-            print*, this%xcell, this%ycell, this%zcell
 
         end subroutine annulus
 

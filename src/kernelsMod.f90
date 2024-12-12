@@ -270,6 +270,13 @@ contains
 
             ! Release photon from point source
             call packet%emit(spectrum, dict, seqs)
+
+            do while (packet%xcell < 1 .or. packet%xcell > state%grid%nxg .or. &
+                        packet%ycell < 1 .or. packet%ycell > state%grid%nyg .or. &
+                        packet%zcell < 1 .or. packet%zcell > state%grid%nzg)
+                call packet%emit(spectrum, dict, seqs)
+            end do
+
             if(state%render_source)call recordEmission(packet)
             packet%step = 0
             packet%id = id

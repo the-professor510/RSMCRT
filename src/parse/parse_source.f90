@@ -39,10 +39,10 @@ contains
         type(toml_array), pointer :: children
 
         type(vector) :: poss, dirr
-        real(kind=wp) :: dir(3), pos(3), corners(3, 3), radius, beta, rlo, rhi
+        real(kind=wp) :: dir(3), pos(3), corners(3, 3), radius, focalLength, rlo, rhi, sigma, beam_size
         integer :: i, nlen, origin
         character(len=1) :: axis(3)
-        character(len=:), allocatable :: direction, annulus_type
+        character(len=:), allocatable :: direction, annulus_type, focus_type
 
         axis = ["x", "y", "z"]
         pos = 0._wp
@@ -173,9 +173,9 @@ contains
             call get_value(child, "radius", radius, 0.5_wp)
             call set_value(dict, "radius", radius)
 
-            ! parameters for annulus beam type
-            call get_value(child, "beta", beta, 5._wp)
-            call set_value(dict, "beta", beta)
+            ! parameters for annulus beam and focus beam types
+            call get_value(child, "focalLength", focalLength, 5._wp)
+            call set_value(dict, "focalLength", focalLength)
 
             call get_value(child, "rhi", rhi, 0.6_wp)
             call set_value(dict, "rhi", rhi)
@@ -183,10 +183,17 @@ contains
             call get_value(child, "rlo", rlo, 0.5_wp)
             call set_value(dict, "rlo", rlo)
 
-            print*, rhi, rlo
+            call get_value(child, "sigma", sigma, 0.04_wp)
+            call set_value(dict, "sigma", sigma)
 
             call get_value(child, "annulus_type", annulus_type, "gaussian")
             call set_value(dict, "annulus_type", annulus_type)
+
+            call get_value(child, "focus_type", focus_type, "gaussian")
+            call set_value(dict, "focus_type", focus_type)
+
+            call get_value(child, "beam_size", beam_size, 0.5_wp)
+            call set_value(dict, "beam_size", beam_size)
 
             ! parse spectrum
             call parse_spectrum(child, spectrum, dict, context, error)
