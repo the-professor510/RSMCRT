@@ -18,3 +18,4 @@ a.out
 *.gcda
 *.gcno
 *.gcov
+*.ckpt

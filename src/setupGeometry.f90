@@ -150,7 +150,7 @@ contains
         !! setup an egg, with yolk, albumen and shell
         use sdfs,              only : sdf, sphere, box, egg
         use sdfModifiers,      only : revolution, extrude
-        use vector_class,      only : vector
+        use vector_class
         use opticalProperties, only : opticalProp_t, mono
         use sdfHelpers,        only : translate
         use mat_class,         only : invert

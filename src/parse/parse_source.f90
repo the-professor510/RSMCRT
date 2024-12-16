@@ -18,6 +18,7 @@ contains
     !! Parse sources
     !! any updates here MUST be reflected in docs/config.md
         use sim_state_mod, only : state
+        use vector_class,  only : length, magnitude
         use photonmod
         use piecewiseMod
         use tomlf_error
@@ -38,8 +39,8 @@ contains
         type(toml_table), pointer :: child
         type(toml_array), pointer :: children
 
-        type(vector) :: poss, dirr
-        real(kind=wp) :: dir(3), pos(3), corners(3, 3), radius, focalLength, rlo, rhi, sigma, beam_size
+        type(vector) :: poss, dirr, rotation
+        real(kind=wp) :: dir(3), pos(3), rot(3), corners(3, 3), radius, focalLength, rlo, rhi, sigma, beam_size, tempCoord
         integer :: i, nlen, origin
         character(len=1) :: axis(3)
         character(len=:), allocatable :: direction, annulus_type, focus_type
@@ -47,6 +48,8 @@ contains
         axis = ["x", "y", "z"]
         pos = 0._wp
         dir = 0._wp
+        tempCoord = 0._wp
+        rot = 0._wp
         corners = reshape((/ -1._wp, -1._wp, 1._wp, &
                               2._wp,  0._wp, 0._wp, &
                               0._wp,  2._wp, 0._wp /), &
@@ -63,6 +66,39 @@ contains
             end if
 
             children => null()
+
+            if(state%source /= "unifrom" .and. state%source /= "point" .and. &
+                state%source /= "circular" .and. state%source /= "pencil")then
+                call get_value(child, "rotation", children, requested=.false., origin=origin)
+                if(associated(children))then
+                    nlen = len(children)
+                    if(nlen /= 3)then
+                        call make_error(error, &
+                        context%report("Need a matrix row for points", origin, "expected matrix row of size 3"), -1)
+                        return
+                    end if
+                    do i = 1, len(children)
+                        call get_value(children, i, rot(i))
+                        call set_value(dict, "rotation%"//axis(i), rot(i))
+                    end do
+                else
+                    call make_error(error, &
+                    context%report("Source requires rotation variable", origin, "expected rotation variable"), -1)
+                    return
+                end if
+
+                
+                rotation%x = rot(1)
+                rotation%y = rot(2)
+                rotation%z = rot(3)
+                if(length(rotation) < 1e-8_wp) then
+                    print'(a)',context%report(&
+                    "Need to specify rotation that has length greater than 0.0", origin, level=toml_level%warning)
+                    return
+                else 
+                    rotation = rotation%magnitude()
+                end if
+            end if
             
             dirr = get_vector(child, "direction", error, context)
             if(allocated(error))then
@@ -71,6 +107,16 @@ contains
                     if(state%source == "point")then
                         print'(a)',context%report(&
                         "Point source needs no direction!!", origin, level=toml_level%warning)
+                    end if
+
+                    if(state%source == "annulus")then
+                        print'(a)',context%report(&
+                        "Annulus source needs no direction!!", origin, level=toml_level%warning)
+                    end if
+
+                    if(state%source == "focus")then
+                        print'(a)',context%report(&
+                        "Focus source needs no direction!!", origin, level=toml_level%warning)
                     end if
     
                     select case(direction)
@@ -91,7 +137,7 @@ contains
                                                 "Expected cardinal direction"), -1)
                         return 
                     end select
-                elseif(state%source /= "point")then
+                elseif(state%source /= "point" .and. state%source /= "annulus" .and. state%source /= "focus")then
                     call make_error(error, context%report("Need to specify direction for source type!", origin, &
                                               "No direction specified"), -1)
                     return
@@ -100,10 +146,15 @@ contains
                 if(state%source == "point")then
                     print'(a)',context%report(&
                     "Point source needs no direction!!", origin, level=toml_level%warning)
-                elseif(state%source == "circular")then
+                end if
+                if(state%source == "annulus")then
                     print'(a)',context%report(&
-                    "Direction not yet fully tested for source type Circular. Results may not be accurate!", origin,&
-                    level=toml_level%warning)
+                    "Annulus source needs no direction!!", origin, level=toml_level%warning)
+                end if
+
+                if(state%source == "focus")then
+                    print'(a)',context%report(&
+                    "Focus source needs no direction!!", origin, level=toml_level%warning)
                 end if
                 return
             end if
@@ -174,7 +225,7 @@ contains
             call set_value(dict, "radius", radius)
 
             ! parameters for annulus beam and focus beam types
-            call get_value(child, "focalLength", focalLength, 5._wp)
+            call get_value(child, "focalLength", focalLength, 1._wp)
             call set_value(dict, "focalLength", focalLength)
 
             call get_value(child, "rhi", rhi, 0.6_wp)

@@ -61,8 +61,8 @@ contains
             call set_value(dict, "musc", musc)
             call get_value(child, "muac", muac, 0.01_wp)
             call set_value(dict, "muac", muac)
-            call get_value(child, "hgg", hgg, 0.7_wp)
-            call set_value(dict, "hgg", hgg)
+            call get_value(child, "hgga", hgg, 0.7_wp)
+            call set_value(dict, "hgga", hgg)
             !end of old stuff
 
             ! "egg", "sphere", "box"

@@ -264,7 +264,9 @@ module photonMod
             t = matmul(t, invert(translate(photon_origin%pos)))
             ! transform point
             this%pos = this%pos .dot. t
-            this%pos = this%pos*-1.0_wp
+            this%pos%x = - this%pos%x
+            this%pos%y = - this%pos%y
+            this%pos%z = - this%pos%z
 
             if (this%pos%x == -state%grid%xmax) then
                 this%pos%x = this%pos%x + 7.9e-7_wp
@@ -363,6 +365,8 @@ module photonMod
             use utils,         only : deg2rad
             use vector_class,  only : length
             use tomlf,         only : toml_table, get_value
+            use sdfHelpers,    only : rotationAlign, translate
+            use mat_class,     only : invert
             use constants,     only : twoPI
             use piecewiseMod
 
@@ -371,23 +375,27 @@ module photonMod
             type(toml_table), optional, intent(inout) :: dict
             type(seq), optional, intent(inout) :: seqs(2)
 
-            type(vector)  :: pos, targ, dir
+            type(vector)  :: pos, targ, dir, rotation, startPos, a, b
             real(kind=wp) :: dist, tmp, focalLength, radius, beam_size
-            integer       :: cell(3)
+            integer       :: cell(3), counter
 
             character(len=:), allocatable :: focus_type
-            real(kind=wp) :: x, y, z, phi, sinp, cosp
+            real(kind=wp) :: x, y, z, phi, sinp, cosp, t(4,4), rotationx, rotationy, rotationz
             real(kind=wp) :: xToMove, yToMove, zToMove, stepSize
-            logical       :: inX, inY, inZ
+            logical       :: inX, inY, inZ, triedX, triedY, triedZ
 
             call get_value(dict, "focalLength", focalLength)
             call get_value(dict, "focus_type", focus_type)
             call get_value(dict, "beam_size", beam_size)
 
+            call get_value(dict, "rotation%x", rotationx)
+            call get_value(dict, "rotation%y", rotationy)
+            call get_value(dict, "rotation%z", rotationz)
+
             if (focus_type == "square") then 
                 this%pos%x = ranu(-beam_size, beam_size)
                 this%pos%y = ranu(-beam_size, beam_size)
-                this%pos%z = state%grid%zmax - 9e-7_wp
+                this%pos%z = 0._wp
 
             else if(focus_type == "circle")then
                 radius = beam_size * sqrt(ran2())
@@ -396,7 +404,7 @@ module photonMod
                 sinp = sin(phi)
                 x = radius * cosp
                 y = radius * sinp
-                z = state%grid%zmax - 9e-7_wp! just inside surface of medium. TODO make this user configurable?
+                z = 0._wp ! just inside surface of medium. TODO make this user configurable?
                 pos = vector(x, y, z)
                 this%pos = pos
 
@@ -409,21 +417,62 @@ module photonMod
                 sinp = sin(phi)
                 x = radius * cosp
                 y = radius * sinp
-                z = state%grid%zmax - 9e-7_wp! just inside surface of medium. TODO make this user configurable?
+                z = 0._wp ! just inside surface of medium. TODO make this user configurable?
                 pos = vector(x, y, z)
                 this%pos = pos
             else
                 error stop "No such beam type!"
             end if 
 
-
-
-            targ = vector(0._wp,0._wp,state%grid%zmax-focalLength)
+            targ = vector(0._wp,0._wp,-focalLength)
 
             dist = length(this%pos - targ)
 
             dir = (-1._wp)*(this%pos-targ) / dist
+            dir = dir * sign(1._wp, focalLength)
             dir = dir%magnitude()
+
+
+            !set inital vector from which the source points
+            a = vector(0._wp, 0._wp, -1._wp)
+            a = a%magnitude()
+            !set vector to rotate to. User defined.
+            b = vector(rotationx, rotationy, rotationz)
+            b = b%magnitude()
+
+            startPos = photon_origin%pos
+            startPos%x = -startPos%x 
+            startPos%y = -startPos%y 
+            startPos%z = -startPos%z 
+            
+            if (a == b) then 
+                t(:, 1) = [1._wp, 0._wp, 0._wp, 0._wp]
+                t(:, 2) = [0._wp, 1._wp, 0._wp, 0._wp]
+                t(:, 3) = [0._wp, 0._wp, 1._wp, 0._wp]
+                t(:, 4) = [0._wp, 0._wp, 0._wp, 1._wp]
+            else if (abs(a) == abs(b)) then
+                t(:, 1) = [1._wp, 0._wp, 0._wp, 0._wp]
+                t(:, 2) = [0._wp, 1._wp, 0._wp, 0._wp]
+                t(:, 3) = [0._wp, 0._wp, -1._wp, 0._wp]
+                t(:, 4) = [0._wp, 0._wp, 0._wp, 1._wp]
+
+                startPos%z =  startPos%z 
+            else 
+                t = rotationAlign(a, b)
+            end if
+            
+
+            ! get rotation matrix
+            dir = dir .dot. t 
+            dir = dir%magnitude()
+
+            if (abs(a) == abs(b) .and. .not.(a == b)) then
+                t(3,3) = 1._wp
+            end if
+            
+            t = matmul(t, invert(translate(startPos)))
+            ! transform point
+            this%pos = this%pos .dot. t
 
             this%nxp = dir%x
             this%nyp = dir%y
@@ -434,10 +483,6 @@ module photonMod
             this%cost = this%nzp
             this%sint = sqrt(1._wp - this%cost**2)
 
-            this%nxp = this%sint * this%cosp
-            this%nyp = this%sint * this%sinp
-            this%nzp = this%cost
-
             this%tflag = .false.
             this%bounces = 0
             this%cnts = 0
@@ -446,53 +491,75 @@ module photonMod
             this%energy = 1.0_wp
             this%fact = TWOPI / this%wavelength
 
+            inX = .false.
+            inY = .false.
+            inZ = .false.
+            triedX = .false. 
+            triedY = .false. 
+            triedZ = .false.
+            counter = 0
+
+            do while (.not.(inX) .or. .not.(inY) .or. .not.(inZ))
+                if(this%pos%x <= - state%grid%xmax) then
+                    stepSize = ( - state%grid%xmax - this%pos%x + 9e-7_wp)/this%nxp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedX = .true.
+                else if(this%pos%x >= state%grid%xmax) then
+                    stepSize = (  state%grid%xmax - this%pos%x - 9e-7_wp)/this%nxp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedX = .true.
+                else 
+                    inX = .true.
+                end if 
+
+                if(this%pos%y <= - state%grid%ymax) then
+                    stepSize = ( - state%grid%ymax - this%pos%y + 9e-7_wp)/this%nyp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedY = .true.
+                else if(this%pos%y >= state%grid%ymax) then
+                    stepSize = (  state%grid%ymax - this%pos%y - 9e-7_wp)/this%nyp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedY = .true.
+                else 
+                    inY = .true.
+                end if 
+
+                if(this%pos%z <= - state%grid%zmax) then
+                    stepSize = ( - state%grid%zmax - this%pos%z + 9e-7_wp)/this%nzp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedZ = .true.
+                else if(this%pos%z >= state%grid%zmax) then
+                    stepSize = (  state%grid%zmax - this%pos%z - 9e-7_wp)/this%nzp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedZ = .true.
+                else 
+                    inZ = .true.
+                end if 
+
+                if ((triedX .and. triedY .and. triedZ) .or. counter >4) then
+                    !This will never be within the grid
+                    exit
+                end if
+                counter = counter +1
+            end do
+
             ! Linear Grid 
             cell = state%grid%get_voxel(this%pos)
             this%xcell = cell(1)
             this%ycell = cell(2)
             this%zcell = cell(3)
-
-            inX = .false.
-            inY = .false.
-            do while (.not.(inX) .or. .not.(inY))
-
-                if (cell(1) < 1) then
-                    !move inwards in the x position
-                    stepSize = ( - state%grid%xmax - this%pos%x + 7.9e-7_wp)/this%nxp
-                    this%pos%x = this%pos%x + dir%x*stepSize
-                    this%pos%y = this%pos%y + dir%y*stepSize
-                    this%pos%z = this%pos%z + dir%z*stepSize
-                else if (cell(1) > state%grid%nxg) then
-                    stepSize = (  state%grid%xmax - this%pos%x - 7.9e-7_wp)/this%nxp
-                    this%pos%x = this%pos%x + dir%x*stepSize
-                    this%pos%y = this%pos%y + dir%y*stepSize
-                    this%pos%z = this%pos%z + dir%z*stepSize
-                else 
-                    inX = .true.
-                end if
-
-                if (cell(2) < 1) then
-                    !move inwards in the x position
-                    stepSize = ( - state%grid%ymax - this%pos%y + 7.9e-7_wp)/this%nyp
-                    this%pos%x = this%pos%x + dir%x*stepSize
-                    this%pos%y = this%pos%y + dir%y*stepSize
-                    this%pos%z = this%pos%z + dir%z*stepSize
-                else if (cell(2) > state%grid%nyg) then
-                    stepSize = (  state%grid%ymax - this%pos%y - 7.9e-7_wp)/this%nyp
-                    this%pos%x = this%pos%x + dir%x*stepSize
-                    this%pos%y = this%pos%y + dir%y*stepSize
-                    this%pos%z = this%pos%z + dir%z*stepSize
-                else 
-                    inY = .true.
-                end if
-
-                ! Linear Grid 
-                cell = state%grid%get_voxel(this%pos)
-                this%xcell = cell(1)
-                this%ycell = cell(2)
-                this%zcell = cell(3)                
-            end do
-
         end subroutine focus
 
 
@@ -785,6 +852,8 @@ module photonMod
             use constants,     only : TWOPI 
             use utils,         only : deg2rad
             use tomlf,         only : toml_table, get_value
+            use sdfHelpers,    only : rotationAlign, translate
+            use mat_class,     only : invert
             use random,        only : ran2, rang, seq
             use sim_state_mod, only : state
             use piecewiseMod
@@ -796,16 +865,20 @@ module photonMod
 
             character(len=:), allocatable :: beam_type
             real(kind=wp) :: focalLength, rlo, rhi, sigma, radius, tmp, mid, x, y, z, phi, sinp, cosp, dist
-            real(kind=wp) :: xToMove, yToMove, zToMove, stepSize
-            type(vector)  :: pos, dir, targ
-            integer       :: cell(3)
-            logical       :: inX, inY, inZ
+            real(kind=wp) :: t(4,4), xToMove, yToMove, zToMove, stepSize, rotationx, rotationy, rotationz
+            type(vector)  :: pos, dir, targ, a, b, startPos
+            integer       :: cell(3), counter
+            logical       :: inX, inY, inZ, triedX, triedY, triedZ
 
             call get_value(dict, "focalLength", focalLength)
             call get_value(dict, "rlo", rlo)
             call get_value(dict, "rhi", rhi)
             call get_value(dict, "sigma", sigma)
             call get_value(dict, "annulus_type", beam_type)
+
+            call get_value(dict, "rotation%x", rotationx)
+            call get_value(dict, "rotation%y", rotationy)
+            call get_value(dict, "rotation%z", rotationz)
 
             if(beam_type == "tophat")then
                 radius = rlo + (rhi - rlo) * sqrt(ran2())
@@ -821,17 +894,69 @@ module photonMod
             sinp = sin(phi)
             x = radius * cosp
             y = radius * sinp
-            z = state%grid%zmax - 9e-7_wp! just inside surface of medium. TODO make this user configurable?
+            z = 0.0_wp! just inside surface of medium. TODO make this user configurable?
             pos = vector(x, y, z)
             this%pos = pos
 
-
-            targ = vector(0._wp,0._wp,state%grid%zmax-focalLength)
+            
+            targ = vector(0._wp,0._wp,-focalLength)
 
             dist = length(this%pos - targ)
 
             dir = (-1._wp)*(this%pos-targ) / dist
+            dir = dir * sign(1._wp, focalLength)
             dir = dir%magnitude()
+
+            !print*, ""
+            !print*, "Before"
+            !print*, "pos", this%pos
+            !print*, "dir", dir
+
+            !set inital vector from which the source points
+            a = vector(0._wp, 0._wp, -1._wp)
+            a = a%magnitude()
+            !set vector to rotate to. User defined.
+            b = vector(rotationx, rotationy, rotationz)
+            b = b%magnitude()
+
+            startPos = photon_origin%pos
+            startPos%x = -startPos%x 
+            startPos%y = -startPos%y 
+            startPos%z = -startPos%z 
+            
+            if (a == b) then 
+                t(:, 1) = [1._wp, 0._wp, 0._wp, 0._wp]
+                t(:, 2) = [0._wp, 1._wp, 0._wp, 0._wp]
+                t(:, 3) = [0._wp, 0._wp, 1._wp, 0._wp]
+                t(:, 4) = [0._wp, 0._wp, 0._wp, 1._wp]
+            else if (abs(a) == abs(b)) then
+                t(:, 1) = [1._wp, 0._wp, 0._wp, 0._wp]
+                t(:, 2) = [0._wp, 1._wp, 0._wp, 0._wp]
+                t(:, 3) = [0._wp, 0._wp, -1._wp, 0._wp]
+                t(:, 4) = [0._wp, 0._wp, 0._wp, 1._wp]
+
+                startPos%z =  startPos%z 
+            else 
+                t = rotationAlign(a, b)
+            end if
+            
+
+            ! get rotation matrix
+            dir = dir .dot. t 
+            dir = dir%magnitude()
+
+            if (abs(a) == abs(b) .and. .not.(a == b)) then
+                t(3,3) = 1._wp
+            end if
+            
+            t = matmul(t, invert(translate(startPos)))
+            ! transform point
+            this%pos = this%pos .dot. t
+
+            !print*, ""
+            !print*, "After"
+            !print*, "pos", this%pos
+            !print*, "dir", dir
 
             this%nxp = dir%x
             this%nyp = dir%y
@@ -848,53 +973,75 @@ module photonMod
             this%weight = 1.0_wp
             call spectrum%p%sample(this%wavelength, tmp)
 
+            inX = .false.
+            inY = .false.
+            inZ = .false.
+            triedX = .false. 
+            triedY = .false. 
+            triedZ = .false.
+            counter = 0
+
+            do while (.not.(inX) .or. .not.(inY) .or. .not.(inZ))
+                if(this%pos%x <= - state%grid%xmax) then
+                    stepSize = ( - state%grid%xmax - this%pos%x + 9e-7_wp)/this%nxp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedX = .true.
+                else if(this%pos%x >= state%grid%xmax) then
+                    stepSize = (  state%grid%xmax - this%pos%x - 9e-7_wp)/this%nxp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedX = .true.
+                else 
+                    inX = .true.
+                end if 
+
+                if(this%pos%y <= - state%grid%ymax) then
+                    stepSize = ( - state%grid%ymax - this%pos%y + 9e-7_wp)/this%nyp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedY = .true.
+                else if(this%pos%y >= state%grid%ymax) then
+                    stepSize = (  state%grid%ymax - this%pos%y - 9e-7_wp)/this%nyp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedY = .true.
+                else 
+                    inY = .true.
+                end if 
+
+                if(this%pos%z <= - state%grid%zmax) then
+                    stepSize = ( - state%grid%zmax - this%pos%z + 9e-7_wp)/this%nzp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedZ = .true.
+                else if(this%pos%z >= state%grid%zmax) then
+                    stepSize = (  state%grid%zmax - this%pos%z - 9e-7_wp)/this%nzp
+                    this%pos%x = this%pos%x + dir%x*stepSize
+                    this%pos%y = this%pos%y + dir%y*stepSize
+                    this%pos%z = this%pos%z + dir%z*stepSize
+                    triedZ = .true.
+                else 
+                    inZ = .true.
+                end if 
+
+                if ((triedX .and. triedY .and. triedZ) .or. counter > 3) then
+                    !This will never be within the grid
+                    exit
+                end if
+                counter = counter +1
+            end do
+
             ! Linear Grid 
             cell = state%grid%get_voxel(this%pos)
             this%xcell = cell(1)
             this%ycell = cell(2)
             this%zcell = cell(3)
-
-            inX = .false.
-            inY = .false.
-            do while (.not.(inX) .or. .not.(inY))
-
-                if (cell(1) < 1) then
-                    !move inwards in the x position
-                    stepSize = ( - state%grid%xmax - this%pos%x + 1e-8_wp)/this%nxp
-                    this%pos%x = this%pos%x + dir%x*stepSize
-                    this%pos%y = this%pos%y + dir%y*stepSize
-                    this%pos%z = this%pos%z + dir%z*stepSize
-                else if (cell(1) > state%grid%nxg) then
-                    stepSize = (  state%grid%xmax - this%pos%x - 1e-8_wp)/this%nxp
-                    this%pos%x = this%pos%x + dir%x*stepSize
-                    this%pos%y = this%pos%y + dir%y*stepSize
-                    this%pos%z = this%pos%z + dir%z*stepSize
-                else 
-                    inX = .true.
-                end if
-
-                if (cell(2) < 1) then
-                    !move inwards in the x position
-                    stepSize = ( - state%grid%ymax - this%pos%y + 1e-8_wp)/this%nyp
-                    this%pos%x = this%pos%x + dir%x*stepSize
-                    this%pos%y = this%pos%y + dir%y*stepSize
-                    this%pos%z = this%pos%z + dir%z*stepSize
-                else if (cell(2) > state%grid%nyg) then
-                    stepSize = (  state%grid%ymax - this%pos%y - 1e-8_wp)/this%nyp
-                    this%pos%x = this%pos%x + dir%x*stepSize
-                    this%pos%y = this%pos%y + dir%y*stepSize
-                    this%pos%z = this%pos%z + dir%z*stepSize
-                else 
-                    inY = .true.
-                end if
-
-                ! Linear Grid 
-                cell = state%grid%get_voxel(this%pos)
-                this%xcell = cell(1)
-                this%ycell = cell(2)
-                this%zcell = cell(3)                
-            end do
-
         end subroutine annulus
 
         subroutine scatter(this, hgg, g2, dects)

@@ -47,8 +47,6 @@ module setupMod
                     sdfarray = get_vessels()
                 case("sphere_scene")
                     sdfarray = setup_sphere_scene(dict)
-                !case("test_egg")
-                !    sdfarray = setup_egg()
                 case("test_box")
                     sdfarray = setup_box(dict)
                 case("sphere")
@@ -57,6 +55,8 @@ module setupMod
                     sdfarray = setup_box(dict)
                 case("egg")
                     sdfarray = setup_egg(dict)
+                case("exp")
+                    sdfarray = setup_exp(dict)
                 case default
                     error stop "no such routine"
             end select

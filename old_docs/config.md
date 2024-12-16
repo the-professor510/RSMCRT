@@ -14,15 +14,19 @@ This table defines the parameters for the light source used in the simulation it
 |:---------:|:----:|:-------:|:-------:|:----:|
 | name | string | point, circular, uniform, pencil, annulus, focus | point | - |
 | nphotons | integer | - | 1000000 | - |
-| position | float array size 3 | - | [0.0, 0.0, 0.0] | Default value only set for point source type|
-| direction | float array size 3 or string | - | -z | String type applies to all source types bar: Uniform and circular |
+| position | float array size 3 | - | [0.0, 0.0, 0.0] | Default value only set for point, annular, and focus source type |
+| direction | float array size 3 or string | - | -z | String type applies to circular, uniform and pencil sources |
 | point1 | float array size 3 | - | [-1.0, -1.0, -1.0] | Used by uniform source only to set location and size of source |
 | point2 | float array size 3 | - | [2.0, 0.0, 0.0] | See Above |
 | point3 | float array size 3 | - | [0.0, 2.0, 0.0] | See Above |
-| Radius | float | - | 0.5 | Used by circular source and annular source (as lower radius) |
+| radius | float | - | 0.5 | Used by circular source  |
 | rhi | float | - | 0.6 | Annular source upper radius |
-| Beta | float | - | 5.0 | Annular source convergence angle (Bessel beam beta parameter) |
+| rlo | float | - | 0.5 | Annular source lower radius |
 | annulus_type | string | gaussian, tophat | gaussian | Type of annular beam |
+| focalLength | float | - | 1.0 | Used by annular and focus, the distance from zmax to the focus point of the annular and focus sources, positive for converging beam, negative for diverging beam |
+| rotation | float array size 3 | - | [1.0, 0.0, 0.0] | Beam direction for annular and focus |
+| focus_type | string | gaussian, circle, square | gaussian | Shape of focus source |
+| beam_size | float | - | 0.5 | size of focus beam, gaussian: 1/e radius, circle: radius, square: half height/width |
 | spectrum_type | string | constant, 1D, 2D | constant | Type of spectrum used |
 | spectrum_file | string | - | - | filename of 1D or 2D spectrum/image |
 | cell_size | float array size 2 | - | - | size of pixel in 2D spectrum in simulation units. |
@@ -44,16 +48,31 @@ This table defines the parameters for the light source used in the simulation it
 
 ## Geometry
 
-| Parameter | Type | Default | Notes |
-|:---------:|:----:|:-------:|:-----:|
-| geom_name | string | sphere | Name of experiment for metadata |
-| tau | float | 10.0 | Tau value for MCRT scattering test experiment |
-| num_spheres | integer | 10 | Number of random spheres for sphere scene |
-| musb | float | 0.0 | Optical properties for experimental geometry for whiskey Raman sensing paper |
-| muab | float | 0.01 | See above |
-| musc | float | 0.0 | See Above |
-| muac | float | 0.01 | See Above |
-| hgg | float | 0.7 | See Above |
+| Parameter | Type | Options | Default | Notes |
+|:---------:|:----:|:-------:|:-------:|:-----:|
+| geom_name | string | sphere, box, egg, exp | sphere | Name of experiment for metadata |
+| numOptProp | integer | - | 1 | Size of optical property arrays, for egg and box scene must be of size 1, for egg scene must be of size 3 |
+| mua | float array size numOptProp | - | 0.0 | Absorption Coefficient |
+| mus | float array size numOptProp | - | 1.0 | Scattering Coefficient |
+| mur | float array size numOptProp | - | 0.0 | Raman Coefficient |
+| hgg | float array size numOptProp | - | 0.0 | Henyey-Greenstein Coefficient |
+| n | float array size numOptProp | - | 0.0 | Refractive Index | 
+| position | float array size 3 | - | [0.0, 0.0, 0.0] | Position of the sphere, box, and egg | 
+| boundingBox | float array size 3 | - | [2.0, 2.0, 2.0] | Dimensions of bounding box with optical properties of a vacuum | 
+| sphereRadius | float | - | 1.0 | Radius of Sphere | 
+| BoxDimensions | float array size 3 | - | [1.0, 1.0, 1.0] | Dimensions of box | 
+| BottomSphereRadius | float | - | 3.0 | Radius of Bottom Sphere of Moss egg |
+| SphereSep | float | - | 3.0 * sqrt( 2.0 - sqrt(2.0))  | Seperation between top and bottom sphere of Moss egg, must be equal or less than above |
+| TopSphereRadius | float | - | 3.0 * sqrt( 2.0 - sqrt(2.0)) | Radius of Top Sphere of Moss egg, must be equal or less than above |
+| ShellThickness | float | 1.0 <-> 0.0 | 0.05 | Corresponds to thickness of the shell, 1.0 corresponds to no shell, 0.0 corresponds to no albumen |
+| YolkRadius | float | - | 1.5 | Radius of yolk inside the egg |
+| tau | float | - | 10.0 | Tau value for MCRT scattering test experiment |
+| num_spheres | integer | - | 10 | Number of random spheres for sphere scene, not supported |
+| musb | float | - | 0.0 | Optical properties for experimental geometry for whiskey Raman sensing paper |
+| muab | float | - | 0.01 | See above |
+| musc | float | - | 0.0 | See Above |
+| muac | float | - | 0.01 | See Above |
+| hgga | float | - | 0.7 | See Above |
 
 
 ## Detectors
@@ -80,8 +99,10 @@ This table defines the parameters for the light source used in the simulation it
 |:---------:|:----:|:-------:|:-----:|
 | fluence | string | fluence.nrrd | Filename for fluence output |
 | absorb | string | absorb.nrrd | Filename for energy absorbed output |
-| render | string | geom_render.nrrd | Filename for render geometry output |
-| render_geom | boolean | false | Render geometry out. For debugging purposes |
+| render_geomerty_name | string | geom_render.nrrd | Filename for render geometry output |
+| render_geomerty | boolean | false | Render geometry out. For debugging purposes |
+| render_source_name | string | source_render.nrrd | Filename for render source emission locations output |
+| render_source | boolean | false | Render source emision locations out. For debugging purposes |
 | render_size | integer array size 3 | [200, 200, 200] | Size in voxels of render |
 | overwrite | boolean | false | Overwrite files if they have the same name |
 
