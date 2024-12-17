@@ -190,7 +190,7 @@ contains
             return
         end if
 #endif
-        dects(counts) = circle_dect(pos, dir, layer, radius, nbins, maxval, trackHistory)
+        dects(counts) = circle_dect(pos, dir, layer, radius, nbins, trackHistory)
         counts = counts + 1
 
     end subroutine handle_circle_dect

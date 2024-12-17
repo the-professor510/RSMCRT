@@ -1,9 +1,8 @@
 [source]
-name = "pencil"
+name = "annulus"
 nphotons = 100000
 position = [0.0,0.0,1.0]
 rotation = [0.0,0.0,-1.0]
-direction
 focalLength = 1.0
 spectrum_type = "constant"
 wavelength = 500.0
@@ -18,7 +17,17 @@ zmax = 1.0
 
 [geometry]
 geom_name = "box"
-BoxDimensions = [2.0,2.0,2.0]
+BoxDimensions = [1.0,1.0,1.0]
+mua = [0.0]
+
+[[detectors]]
+type="circle"
+position=[0.0, 0.0, -1.0]
+direction=[0.0, 0.0, -1.0]
+radius1=1
+nbins=1000
+maxval = 1.0
+trackHistory=false
 
 [output]
 fluence = "fluence.nrrd"

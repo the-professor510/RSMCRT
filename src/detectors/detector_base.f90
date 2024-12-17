@@ -120,6 +120,7 @@ contains
 
         if(this%check_hit(hitpoint))then
             value = hitpoint%value
+
             idx = min(nint(value / this%bin_wid) + 1, this%nbins)
             !$omp atomic
             this%data(idx) = this%data(idx) + 1

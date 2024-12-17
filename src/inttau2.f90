@@ -57,6 +57,9 @@ module inttau2
 
             if(d_sdf < eps)then
                 packet%tflag=.true.
+                !print*, minloc(abs(ds),dim=1), packet%layer
+                !print*, packet%pos
+                !print*, "Round off"
                 exit
             end if
 

@@ -340,6 +340,196 @@ toc=omp_get_wtime()
     call finalise(dict, dects, nscatt, start, history)
     end subroutine pathlength_scatter
 
+
+    !!!!Developing this to add roulette to pathlength scattering
+    !I want a partial weight reduction as the photon travels along the path, 
+    !eventually with it being killed once it's weight is below a threshold  
+    !The weight that is dropped should either be the roulette amount to be absorbed,
+    ! or it should be weight of the particle minus the amount absorbed in the previous run
+    ! or maybe something else, however, it is done check that it works by verifying against an
+    ! external checker such as 2slabs from MCML from steve jacques
+    ! to verify that, I need to measure the diffuse transmission and reflection
+    ! which means I need to understand the detectors first
+    subroutine pathlength_scatter2(input_file)
+
+        !Shared data
+        use iarray
+        use constants, only : wp
+
+        !subroutines
+        use detector_mod,  only : hit_t
+        use detectors,     only : dect_array
+        use historyStack,  only : history_stack_t
+        use inttau2,       only : tauint2
+        use photonMod,     only : photon
+        use piecewiseMod
+        use random,        only : ran2, init_rng, seq
+        use sdfs,          only : sdf
+        use sim_state_mod, only : state
+        use utils,         only : pbar
+        use vec4_class,    only : vec4
+        use vector_class,  only : vector
+        use writer_mod,    only : checkpoint
+
+        !external deps
+        use tev_mod, only : tevipc
+        use tomlf,   only : toml_table
+#ifdef _OPENMP
+        use omp_lib
+#endif
+        character(len=*), intent(in) :: input_file
+        
+        integer                       :: numproc, id, j, i
+        type(history_stack_t)         :: history
+        type(pbar)                    :: bar
+        type(photon)                  :: packet
+        type(toml_table)              :: dict
+        real(kind=wp),    allocatable :: distances(:), image(:,:,:)
+        type(hit_t)                   :: hpoint
+        type(vector)                  :: dir
+        type(dect_array), allocatable :: dects(:)
+        type(sdf),        allocatable :: array(:)
+        real(kind=wp)                 :: ran, nscatt, start
+        type(tevipc)                  :: tev
+        type(seq)                     :: seqs(2)
+        type(spectrum_t)              :: spectrum
+        real                          :: tic, toc
+        real(kind=wp)                 :: weightAbsorbed
+        real(kind=wp)                 :: rouletteSurvival
+
+        integer :: nphotons_run,pos
+        character(len=128) :: line
+        character(len=:), allocatable :: checkpt_input_file
+
+        if(state%loadckpt)then
+            call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .false.)
+            open(newunit=j,file=state%ckptfile, access="stream", form="formatted")
+            read(j,"(a)")line
+            pos = scan(line, "=")
+            checkpt_input_file = trim(line(pos+1:))
+
+            read(j,"(a)")line
+            pos = scan(line, "=")
+            read(line(pos+1:),*) nphotons_run
+
+            inquire(j,pos=pos)
+            close(j)
+
+            open(newunit=j,file=state%ckptfile, access="stream", form="unformatted")
+            read(j,pos=pos)jmean
+            close(j)
+
+            call setup(checkpt_input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
+            state%iseed=state%iseed*101
+            state%nphotons = state%nphotons - nphotons_run
+        else
+            call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
+        end if
+
+#ifdef _OPENMP
+        tic=omp_get_wtime()
+!$omp parallel default(none) shared(dict, array, numproc, start, bar, jmean, emission, input_file, phasor, tev, dects, spectrum)&
+        !$omp& private(ran, id, distances, image, dir, hpoint, history, seqs) reduction(+:nscatt) firstprivate(state, packet)
+        numproc = omp_get_num_threads()
+        id = omp_get_thread_num()
+        if(numproc > state%nphotons .and. id == 0)print*,"Warning, simulation may be underministic due to low photon count!"
+        if(state%trackHistory)history = history_stack_t(state%historyFilename, id)
+#elif MPI
+    !nothing
+#else
+        call cpu_time(tic)
+        numproc = 1
+        id = 0
+        if(state%trackHistory)history = history_stack_t(state%historyFilename, id)
+#endif
+        if(id == 0)print("(a,I3.1,a)"),'Photons now running on', numproc,' cores.'
+        state%iseed = state%iseed + id
+        ! set seed for rnd generator. id to change seed for each process
+        call init_rng(spread(state%iseed, 1, 8), fwd=.true.)
+        seqs = [seq((id+1)*(state%nphotons/numproc), 2),&
+                seq((id+1)*(state%nphotons/numproc), 3)]
+
+        bar = pbar(state%nphotons/ 10)
+
+        !$OMP BARRIER
+        !$OMP do
+        !loop over photons
+        do j = 1, state%nphotons
+            if(mod(j, 10) == 0)call bar%progress()
+            if(mod(j, state%ckptfreq) == 0 .and. id==0)call checkpoint(input_file, state%ckptfile, j, .true.)
+
+            ! Release photon from point source
+            call packet%emit(spectrum, dict, seqs)
+
+            do while (packet%xcell < 1 .or. packet%xcell > state%grid%nxg .or. &
+                        packet%ycell < 1 .or. packet%ycell > state%grid%nyg .or. &
+                        packet%zcell < 1 .or. packet%zcell > state%grid%nzg)
+                call packet%emit(spectrum, dict, seqs)
+            end do
+
+            if(state%render_source)call recordEmission(packet)
+            packet%step = 0
+            packet%id = id
+            distances = 0._wp
+            do i = 1, size(distances)
+                distances(i) = array(i)%evaluate(packet%pos)
+                if(distances(i) > 0._wp)distances(i)=-999.0_wp
+            end do
+            packet%layer=minloc(abs(distances),dim=1)
+            if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
+            ! Find scattering location
+            call tauint2(state%grid, packet, array)
+
+            do while(.not. packet%tflag)
+                if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
+                ran = ran2()
+
+                if(ran < array(packet%layer)%getAlbedo())then!interacts with tissue
+                    call packet%scatter(array(packet%layer)%gethgg(), &
+                                        array(packet%layer)%getg2(), dects)
+                    nscatt = nscatt + 1
+                    packet%step = packet%step + 1
+                else
+                    packet%tflag = .true.
+                    exit
+                end if
+                ! !Find next scattering location
+                call tauint2(state%grid, packet, array)
+            end do
+
+            dir = vector(packet%nxp, packet%nyp, packet%nzp)
+            hpoint = hit_t(packet%pos, dir, sqrt(packet%pos%x**2+packet%pos%y**2), packet%layer)
+            do i = 1, size(dects)
+                call dects(i)%p%record_hit(hpoint, history)
+            end do
+            if(id == 0 .and. mod(j,1000) == 0)then
+                if(state%tev)then
+!$omp critical
+                    image = reshape(jmean(:,100:100,:), [state%grid%nxg,state%grid%nzg,1])
+                    call tev%update_image(state%experiment, real(image(:,:,1:1)), ["I"], 0, 0, .false., .false.)
+
+                    image = reshape(phasor(100:100,:,:), [state%grid%nyg,state%grid%nzg,1])
+                    call tev%update_image(state%experiment, real(image(:,:,1:1)), ["J"], 0, 0, .false., .false.)
+
+                    image = reshape(phasor(:,:,100:100), [state%grid%nxg,state%grid%nyg,1])
+                    call tev%update_image(state%experiment, real(image(:,:,1:1)), ["K"], 0, 0, .false., .false.)
+!$omp end critical
+                end if
+            end if
+        end do
+
+#ifdef _OPENMP
+!$OMP end  do
+!$OMP end parallel
+toc=omp_get_wtime()
+#else
+    call cpu_time(toc)
+#endif
+    print*,"Photons/s: ",(state%nphotons / (toc - tic))
+
+    call finalise(dict, dects, nscatt, start, history)
+    end subroutine pathlength_scatter2
+
     subroutine test_kernel(input_file, end_early)
 
         !Shared data

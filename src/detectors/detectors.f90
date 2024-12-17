@@ -71,7 +71,7 @@ module detectors
 
     contains
     
-    function init_circle_dect(pos, dir, layer, radius, nbins, maxval, trackHistory) result(out)
+    function init_circle_dect(pos, dir, layer, radius, nbins, trackHistory) result(out)
         !! Initalise Circle detector
         !> Centre of detector
         type(vector),  intent(in) :: pos
@@ -83,8 +83,6 @@ module detectors
         integer,       intent(in) :: nbins
         !> Radius of the detector
         real(kind=wp), intent(in) :: radius
-        !> Maximum value to store in bins
-        real(kind=wp), intent(in) :: maxval
         !> Boolean on if to store photon's history prior to hitting the detector.
         logical,       intent(in) :: trackHistory
 
@@ -101,7 +99,7 @@ module detectors
         if(nbins == 0)then
             out%bin_wid = 1._wp
         else
-            out%bin_wid = maxval / real(nbins-1, kind=wp)
+            out%bin_wid = radius / real(nbins, kind=wp)
         end if
         out%trackHistory = trackHistory
 
@@ -119,7 +117,7 @@ module detectors
         real(kind=wp) :: t 
 
         check_hit_circle = .false.
-        if(this%layer /= hitpoint%layer)return
+        !if(this%layer /= hitpoint%layer)return
         check_hit_circle = intersectCircle(this%dir, this%pos, this%radius, hitpoint%pos, hitpoint%dir, t)
         if(check_hit_circle)then
             if(t > 5e-3_wp)check_hit_circle=.false.

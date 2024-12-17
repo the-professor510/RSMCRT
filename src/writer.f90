@@ -45,7 +45,9 @@ module writer_mod
             ymax = grid%ymax
             zmax = grid%zmax
 
-array  = array * ((2._sp*xmax*2._sp*ymax)/(nphotons * (2._sp * xmax / nxg) * (2._sp * ymax / nyg) * (2._sp * zmax / nzg)))
+            array  = array * ((2._sp*xmax*2._sp*ymax*2._sp*zmax)&
+                            /(nphotons * (2._sp * xmax / nxg) * &
+                            (2._sp * ymax / nyg) * (2._sp * zmax / nzg)))
 
         end subroutine normalise_fluence
 
@@ -62,15 +64,23 @@ array  = array * ((2._sp*xmax*2._sp*ymax)/(nphotons * (2._sp * xmax / nxg) * (2.
             character(len=:), allocatable :: hdr
 
             do i = 1, size(dects)
-                open(newunit=u, file=trim(fileplace)//"detectors/detector_"//str(i)//".dat")
+                !open(newunit=u,  access="stream",&
+                !     status='REPLACE', file=trim(fileplace)//"detectors/detector_"//str(i)//".dat")
+
+                open(newunit=u,file=trim(fileplace)//"detectors/detector_"//str(i)//".dat",&
+                    access='stream',status='REPLACE',form='unformatted')
                 associate(x => dects(i)%p)
                     select type(x)
                     type is(circle_dect)
                         ! hdr = "# pos, layer, nbins, bin_wid, radius"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%radius)
                         ! write(u, "(a)")hdr
                         ! write(u, "(a)")"#data:"
+                        write(u)  1.0_wp
+                        write(u)  x%radius
+                        write(u)  x%pos
+                        write(u)  x%dir
                         do j = 1, x%nbins
-                            write(u,*)real(j,kind=wp) * x%bin_wid, x%data(j)
+                            write(u)real(j,kind=wp) * x%bin_wid, x%data(j)
                         end do
                     type is(annulus_dect)
                         ! hdr = "#pos, layer, nbins, bin_wid, radius1, radius2"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%r1)//","//str(x%r2)

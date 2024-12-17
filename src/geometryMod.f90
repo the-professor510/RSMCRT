@@ -236,7 +236,7 @@ module geometry
             p0l0 = p0 - l0
             t = p0l0 .dot. n
             t = t / denom
-            if(t >= 0._wp)intersectPlane=.true.
+            if(t > -1e-6_wp)intersectPlane=.true.
         end if
     end function intersectPlane
 
@@ -265,7 +265,7 @@ module geometry
             p = l0 + l * t
             v = p - p0
             d2 = v .dot. v
-            if(sqrt(d2) <= radius)intersectCircle=.true.
+            if(d2 <= (radius * radius))intersectCircle=.true.
         end if
     end function intersectCircle
 
