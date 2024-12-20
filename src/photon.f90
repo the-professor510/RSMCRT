@@ -953,11 +953,6 @@ module photonMod
             ! transform point
             this%pos = this%pos .dot. t
 
-            !print*, ""
-            !print*, "After"
-            !print*, "pos", this%pos
-            !print*, "dir", dir
-
             this%nxp = dir%x
             this%nyp = dir%y
             this%nzp = dir%z
@@ -1060,10 +1055,7 @@ module photonMod
             !> array of detectors. Only used if biased scattering is enabled.
             type(dect_array), optional, intent(in) :: dects(:)
 
-            real(kind=wp) :: temp, uxx, uyy, uzz, a, p
-
-            a = 0.9_wp
-            p = 0.0_wp
+            real(kind=wp) :: temp, uxx, uyy, uzz
 
             if(hgg == 0.0_wp)then
                 !isotropic scattering
@@ -1072,25 +1064,24 @@ module photonMod
                 temp = (1.0_wp - hgg*hgg) / (1.0_wp - hgg + 2._wp*hgg*ran2())
                 this%cost = (1.0_wp + hgg*hgg - temp**2) / (2._wp*hgg)
             end if
-
             this%sint = sqrt(1._wp - this%cost**2)
 
             this%phi = TWOPI * ran2()
             this%cosp = cos(this%phi)
-            if(this%phi < PI)then
-                this%sinp = sqrt(1._wp - this%cosp**2)
-            else
-                this%sinp = -sqrt(1._wp - this%cosp**2)
-            end if
+            this%sinp = sin(this%phi)
 
-            if(1._wp - abs(this%nzp) <= 1e-12_wp)then ! near perpindicular               
+            if(this%nzp > 1._wp - 1e-12_wp)then ! near perpindicular               
                 uxx = this%sint * this%cosp
                 uyy = this%sint * this%sinp
-                uzz = sign(this%nzp, this%cost)
+                uzz = this%cost
+            else if (this%nzp < -1._wp + 1e-12_wp)then ! near perpindicular               
+                uxx = this%sint * this%cosp
+                uyy = this%sint * this%sinp
+                uzz = -this%cost
             else
                 temp = sqrt(1._wp - this%nzp**2)
-                uxx = this%sint * (this%nxp * this%nzp * this%cosp - this%nyp * this%sinp) / temp + this%nxp * this%cost
-                uyy = this%sint * (this%nyp * this%nzp * this%cosp + this%nxp * this%sinp) / temp + this%nyp * this%cost
+                uxx = this%sint * ((this%nxp * this%nzp * this%cosp - this%nyp * this%sinp) / temp) + this%nxp * this%cost
+                uyy = this%sint * ((this%nyp * this%nzp * this%cosp + this%nxp * this%sinp) / temp) + this%nyp * this%cost
                 uzz = -1._wp*this%sint * this%cosp * temp + this%nzp * this%cost
             end if
 

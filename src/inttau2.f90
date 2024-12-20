@@ -80,14 +80,6 @@ module inttau2
                 end do
                 packet%cnts = packet%cnts + size(ds)
                 smallStepLayer=maxloc(ds,dim=1, mask=(ds<=0._wp))
-
-                !print*, ""
-                !print*, packet%layer
-                !print*, pos
-                !print*, smallStepLayer
-                !print*, smallStepPos
-                !print*, dir
-
                 
                 if (smallStepLayer == packet%layer) then
                     !print*, "forward"
@@ -105,7 +97,6 @@ module inttau2
                         d_sdf = (tau - taurun) / sdfs_array(packet%layer)%getkappa()
                         taurun = taurun + t_sdf
                         call update_grids(grid, oldpos, dir, d_sdf, packet, sdfs_array(packet%layer)%getmua())
-                        packet%tflag = .true.
                     end if
                 
                 else
@@ -125,7 +116,6 @@ module inttau2
                         d_sdf = (tau - taurun) / sdfs_array(packet%layer)%getkappa()
                         pos = pos - d_sdf*dir
                         call update_grids(grid, oldpos, dir, d_sdf, packet, sdfs_array(packet%layer)%getmua())
-                        packet%tflag = .true.
                     end if
 
                 end if
@@ -148,20 +138,17 @@ module inttau2
                 dstmp = ds
 
                 !check if outside all sdfs
-                if(minval(ds) > -eps)then
+                if(minval(ds) > 0._wp)then
                     packet%tflag = .true.
                 end if
             end if
 
             !exit early if conditions met
             if(taurun >= tau .or. packet%tflag)then
+                !print*, taurun>= tau, packet%tflag
                 exit
             end if
             
-            !print*, ""
-            !print*, pos
-            !print*, packet%layer
-            !print*, sdfs_array(packet%layer)%getkappa()
             !move to the edge or till the packet has moved the full optical depth
             do while(d_sdf >= eps)
                 t_sdf = d_sdf * sdfs_array(packet%layer)%getkappa()
@@ -195,7 +182,7 @@ module inttau2
                 dstmp = ds
 
                 !check if outside all sdfs
-                if(minval(ds) > -eps)then
+                if(minval(ds) > 0._wp)then
                     packet%tflag = .true.
                     exit
                 end if
@@ -213,6 +200,7 @@ module inttau2
 
             !exit early if conditions met
             if(taurun >= tau .or. packet%tflag)then
+                !print*, taurun>= tau, packet%tflag
                 exit
             end if
 
@@ -231,8 +219,11 @@ module inttau2
             packet%cnts = packet%cnts + size(ds)
             new_layer = maxloc(ds,dim=1, mask=(ds<=0._wp))
 
-            !print*, pos
-            !print*, smallStepPos
+            if (new_layer == 0) then
+                ! There is no new layer and we are outside of the SDFs
+                packet%tflag = .true.
+                exit 
+            end if
 
             !Get n1 and n2
             n1 = sdfs_array(packet%layer)%getn()

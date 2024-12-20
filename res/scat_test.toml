@@ -24,7 +24,7 @@ mua = [0.1]
 
 [[detectors]]
 type="circle"
-position=[0.0, 0.0, -1.101]
+position=[0.0, 0.0, -1.001]
 direction=[0.0, 0.0, -1.0]
 radius1=20
 nbins=100

@@ -79,10 +79,10 @@ def read_data(file, header):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    file = "RSMCRT/data/jmean/fluence.nrrd"
+    file = "RSMCRT/data/absorb/absorb.nrrd"
     grid, hdr = read_nrrd(file)
 
-    plt.imshow(grid[100, :, :])
+    plt.imshow(grid[499, :, :])
     plt.show()
     
-    print(sum(sum(grid[100, :, :]))/1000000)
+    print(sum(sum(grid[499, :, :]))/1000000)

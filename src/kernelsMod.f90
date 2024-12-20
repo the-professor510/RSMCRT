@@ -501,8 +501,7 @@ toc=omp_get_wtime()
                 end if
 
                 ! scatter the particle
-                call packet%scatter(array(packet%layer)%gethgg(), &
-                                        array(packet%layer)%getg2())
+                call packet%scatter(array(packet%layer)%gethgg(), array(packet%layer)%getg2())
                 nscatt = nscatt + 1
                 packet%step = packet%step + 1
 
@@ -510,11 +509,38 @@ toc=omp_get_wtime()
                 call tauint2(state%grid, packet, array, dects, history)
             end do
 
-            if(packet%weight > THRESHOLD)then
-                !the packet has left the scene, not been absorbed
-                !record the weight as either diffuse transmission or diffuse reflection
-                
-            end if
+            ! Used to test if the detectors were working, they are
+            !if(packet%weight > THRESHOLD)then
+            !    !the packet has left the scene, not been absorbed
+            !    !record the weight as either diffuse transmission or diffuse reflection
+            !    !print*, packet%xcell, packet%ycell, packet%zcell 
+            !    !print*, packet%pos%x, packet%pos%y, packet%pos%z
+            !
+            !    if(packet%xcell == -1) then
+            !        if(packet%pos%x >= 0.0_wp) then
+            !            packet%xcell = state%grid%nxg
+            !        else if(packet%pos%x < 0.0_wp) then
+            !            packet%xcell = 1
+            !        end if
+            !    end if
+            !    if (packet%ycell == -1) then
+            !        if(packet%pos%y >= 0.0_wp) then
+            !            packet%ycell = state%grid%nyg
+            !        else if(packet%pos%y < 0.0_wp) then
+            !            packet%ycell = 1
+            !        end if
+            !    end if
+            !    if (packet%zcell == -1) then
+            !        if(packet%pos%z >= 0.0_wp) then
+            !            packet%zcell = state%grid%nzg
+            !        else if(packet%pos%z < 0.0_wp) then
+            !            packet%zcell = 1
+            !        end if
+            !    end if
+            !    !print*, packet%xcell, packet%ycell, packet%zcell
+            !    !print*, packet%pos%x, packet%pos%y, packet%pos%z
+            !    call recordWeight(packet, packet%weight)
+            !end if
 
             if(id == 0 .and. mod(j,1000) == 0)then
                 if(state%tev)then
