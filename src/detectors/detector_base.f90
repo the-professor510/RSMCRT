@@ -11,10 +11,12 @@ module detector_mod
         type(vector)  :: pos
         !> Direction the photon came from
         type(vector)  :: dir
-        !> Value to deposit
+        !> Distance over which if -t is greater than then the particle does not interact
+        real(kind=wp) :: pointSep
+        !> Where to deposit
         real(kind=wp) :: value
-        !> Layer ID of interaction
-        integer       :: layer
+        !> Weight of the packet
+        real(kind=wp) :: weight
     end type hit_t
 
     !only needed if using a stack to init with a single null value
@@ -45,7 +47,7 @@ module detector_mod
             import detector, hit_t
 
             class(detector), intent(inout) :: this
-            type(hit_t),     intent(in)    :: hitpoint
+            type(hit_t),     intent(inout) :: hitpoint
         end function checkHitInterface
 
         subroutine recordHitInterface(this, hitpoint, history)
@@ -55,7 +57,7 @@ module detector_mod
             import detector, hit_t
 
             class(detector),       intent(inout) :: this
-            type(hit_t),           intent(in)    :: hitpoint
+            type(hit_t),           intent(inout) :: hitpoint
             type(history_stack_t), intent(inout) :: history
         end subroutine recordHitInterface
     end interface
@@ -99,7 +101,7 @@ contains
 
         tmp = vector(val, val, val)
 
-        hit_init = hit_t(tmp, tmp, val, int(val))
+        hit_init = hit_t(tmp, tmp, val, val, val)
 
     end function hit_init
    
@@ -111,7 +113,7 @@ contains
 
         class(detector1D),     intent(inout) :: this
         !> Interaction information
-        type(hit_t),           intent(in)    :: hitpoint
+        type(hit_t),           intent(inout) :: hitpoint
         !> Photon packet history
         type(history_stack_t), intent(inout) :: history
 
@@ -123,7 +125,7 @@ contains
 
             idx = min(nint(value / this%bin_wid) + 1, this%nbins)
             !$omp atomic
-            this%data(idx) = this%data(idx) + 1
+            this%data(idx) = this%data(idx) + hitpoint%weight
             if(this%trackHistory)then
                 call history%write()
             end if
@@ -139,7 +141,7 @@ contains
 
         class(detector2D),     intent(inout) :: this
         !> Interaction information
-        type(hit_t),           intent(in)    :: hitpoint
+        type(hit_t),           intent(inout)    :: hitpoint
         !> Photon packet history
         type(history_stack_t), intent(inout) :: history
 

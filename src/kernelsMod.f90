@@ -4,7 +4,7 @@ module kernels
     implicit none
     
     private
-    public :: weight_scatter, pathlength_scatter, test_kernel
+    public :: weight_scatter, pathlength_scatter, pathlength_scatter2, test_kernel
 
 contains
 !###############################################################################
@@ -73,7 +73,7 @@ contains
         if(id == 0)print("(a,I3.1,a)"),'Photons now running on', numproc,' cores.'
 
         ! set seed for rnd generator. id to change seed for each process
-        call init_rng(spread(state%iseed+id, 1, 8), fwd=.true.)
+        call init_rng(state%iseed, fwd=.true.)
 
         bar = pbar(state%nphotons/ 10)
         !$OMP BARRIER
@@ -89,12 +89,12 @@ contains
             distances = 0._wp
             do i = 1, size(distances)
                 distances(i) = array(i)%evaluate(packet%pos)
-                if(distances(i) > 0._wp)distances(i)=-999.0_wp
+                !if(distances(i) > 0._wp)distances(i)=-999.0_wp
             end do
-            packet%layer=minloc(abs(distances),dim=1)
+            packet%layer=maxloc(distances,dim=1, mask=(distances<=0._wp))
             if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
             ! Find scattering location
-            call tauint2(state%grid, packet, array)
+            call tauint2(state%grid, packet, array, dects, history)
 
             do while(.not. packet%tflag)
                 if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
@@ -130,11 +130,11 @@ contains
                 end if
 
                 ! !Find next scattering location
-                call tauint2(state%grid, packet, array)
+                call tauint2(state%grid, packet, array, dects, history)
             end do
 
             dir = vector(packet%nxp, packet%nyp, packet%nzp)
-            hpoint = hit_t(packet%pos, dir, packet%weight, packet%layer)
+            hpoint = hit_t(packet%pos, dir, packet%weight, packet%layer, packet%weight)
             do i = 1, size(dects)
                 call dects(i)%p%record_hit(hpoint, history)
             end do
@@ -255,7 +255,7 @@ contains
         if(id == 0)print("(a,I3.1,a)"),'Photons now running on', numproc,' cores.'
         state%iseed = state%iseed + id
         ! set seed for rnd generator. id to change seed for each process
-        call init_rng(spread(state%iseed, 1, 8), fwd=.true.)
+        call init_rng(state%iseed, fwd=.true.)
         seqs = [seq((id+1)*(state%nphotons/numproc), 2),&
                 seq((id+1)*(state%nphotons/numproc), 3)]
 
@@ -283,20 +283,21 @@ contains
             distances = 0._wp
             do i = 1, size(distances)
                 distances(i) = array(i)%evaluate(packet%pos)
-                if(distances(i) > 0._wp)distances(i)=-999.0_wp
+                !if(distances(i) > 0._wp)distances(i)=-999.0_wp
             end do
-            packet%layer=minloc(abs(distances),dim=1)
+            packet%layer=maxloc(distances,dim=1, mask=(distances<=0._wp))
+            
             if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
             ! Find scattering location
-            call tauint2(state%grid, packet, array)
+            call tauint2(state%grid, packet, array, dects, history)
 
             do while(.not. packet%tflag)
                 if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
                 ran = ran2()
 
-                if(ran < array(packet%layer)%getAlbedo())then!interacts with tissue
+                if(ran < array(packet%layer)%getAlbedo()) then !interacts with tissue
                     call packet%scatter(array(packet%layer)%gethgg(), &
-                                        array(packet%layer)%getg2(), dects)
+                                        array(packet%layer)%getg2())
                     nscatt = nscatt + 1
                     packet%step = packet%step + 1
                 else
@@ -304,14 +305,9 @@ contains
                     exit
                 end if
                 ! !Find next scattering location
-                call tauint2(state%grid, packet, array)
+                call tauint2(state%grid, packet, array, dects, history)
             end do
 
-            dir = vector(packet%nxp, packet%nyp, packet%nzp)
-            hpoint = hit_t(packet%pos, dir, sqrt(packet%pos%x**2+packet%pos%y**2), packet%layer)
-            do i = 1, size(dects)
-                call dects(i)%p%record_hit(hpoint, history)
-            end do
             if(id == 0 .and. mod(j,1000) == 0)then
                 if(state%tev)then
 !$omp critical
@@ -354,7 +350,7 @@ toc=omp_get_wtime()
 
         !Shared data
         use iarray
-        use constants, only : wp
+        use constants, only : wp, CHANCE, THRESHOLD
 
         !subroutines
         use detector_mod,  only : hit_t
@@ -389,13 +385,11 @@ toc=omp_get_wtime()
         type(vector)                  :: dir
         type(dect_array), allocatable :: dects(:)
         type(sdf),        allocatable :: array(:)
-        real(kind=wp)                 :: ran, nscatt, start
+        real(kind=wp)                 :: ran, nscatt, start, weight_absorb
         type(tevipc)                  :: tev
         type(seq)                     :: seqs(2)
         type(spectrum_t)              :: spectrum
-        real                          :: tic, toc
-        real(kind=wp)                 :: weightAbsorbed
-        real(kind=wp)                 :: rouletteSurvival
+        real :: tic, toc
 
         integer :: nphotons_run,pos
         character(len=128) :: line
@@ -428,8 +422,10 @@ toc=omp_get_wtime()
 
 #ifdef _OPENMP
         tic=omp_get_wtime()
-!$omp parallel default(none) shared(dict, array, numproc, start, bar, jmean, emission, input_file, phasor, tev, dects, spectrum)&
-        !$omp& private(ran, id, distances, image, dir, hpoint, history, seqs) reduction(+:nscatt) firstprivate(state, packet)
+!$omp parallel default(none)& 
+        !$omp& shared(dict, array, numproc, start, bar, jmean, emission, absorb, input_file, phasor, tev, dects, spectrum)&
+        !$omp& private(ran, id, distances, image, dir, hpoint, history, seqs, weight_absorb)& 
+        !$omp& reduction(+:nscatt) firstprivate(state, packet)
         numproc = omp_get_num_threads()
         id = omp_get_thread_num()
         if(numproc > state%nphotons .and. id == 0)print*,"Warning, simulation may be underministic due to low photon count!"
@@ -445,7 +441,7 @@ toc=omp_get_wtime()
         if(id == 0)print("(a,I3.1,a)"),'Photons now running on', numproc,' cores.'
         state%iseed = state%iseed + id
         ! set seed for rnd generator. id to change seed for each process
-        call init_rng(spread(state%iseed, 1, 8), fwd=.true.)
+        call init_rng(state%iseed, fwd=.true.)
         seqs = [seq((id+1)*(state%nphotons/numproc), 2),&
                 seq((id+1)*(state%nphotons/numproc), 3)]
 
@@ -473,35 +469,53 @@ toc=omp_get_wtime()
             distances = 0._wp
             do i = 1, size(distances)
                 distances(i) = array(i)%evaluate(packet%pos)
-                if(distances(i) > 0._wp)distances(i)=-999.0_wp
+                !if(distances(i) > 0._wp)distances(i)=-999.0_wp
             end do
-            packet%layer=minloc(abs(distances),dim=1)
+            packet%layer=maxloc(distances,dim=1, mask=(distances<=0._wp))
+            
             if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
             ! Find scattering location
-            call tauint2(state%grid, packet, array)
+            call tauint2(state%grid, packet, array, dects, history)
 
             do while(.not. packet%tflag)
                 if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
                 ran = ran2()
 
-                if(ran < array(packet%layer)%getAlbedo())then!interacts with tissue
-                    call packet%scatter(array(packet%layer)%gethgg(), &
-                                        array(packet%layer)%getg2(), dects)
-                    nscatt = nscatt + 1
-                    packet%step = packet%step + 1
-                else
-                    packet%tflag = .true.
-                    exit
+                !Reduce the packet weight
+                weight_absorb = packet%weight * (1._wp - array(packet%layer)%getAlbedo())
+                packet%weight = packet%weight - weight_absorb
+            
+                call recordWeight(packet, weight_absorb)
+
+                ! is the packet weight below a threshold
+                if(packet%weight < THRESHOLD)then
+                    !yes, then put through roulette
+                    if(ran < CHANCE)then
+                        ! survive, continue emission with higher weight
+                        packet%weight = packet%weight / CHANCE
+                    else
+                        !doesn't survive, don't re-emit
+                        packet%tflag = .true.
+                        exit
+                    end if
                 end if
+
+                ! scatter the particle
+                call packet%scatter(array(packet%layer)%gethgg(), &
+                                        array(packet%layer)%getg2())
+                nscatt = nscatt + 1
+                packet%step = packet%step + 1
+
                 ! !Find next scattering location
-                call tauint2(state%grid, packet, array)
+                call tauint2(state%grid, packet, array, dects, history)
             end do
 
-            dir = vector(packet%nxp, packet%nyp, packet%nzp)
-            hpoint = hit_t(packet%pos, dir, sqrt(packet%pos%x**2+packet%pos%y**2), packet%layer)
-            do i = 1, size(dects)
-                call dects(i)%p%record_hit(hpoint, history)
-            end do
+            if(packet%weight > THRESHOLD)then
+                !the packet has left the scene, not been absorbed
+                !record the weight as either diffuse transmission or diffuse reflection
+                
+            end if
+
             if(id == 0 .and. mod(j,1000) == 0)then
                 if(state%tev)then
 !$omp critical
@@ -581,7 +595,7 @@ toc=omp_get_wtime()
         if(id == 0)print("(a,I3.1,a)"),'Photons now running on', numproc,' cores.'
 
         ! set seed for rnd generator. id to change seed for each process
-        call init_rng(spread(state%iseed+id, 1, 8), fwd=.true.)
+        call init_rng(state%iseed, fwd=.true.)
 
         ! bar = pbar(state%nphotons/ 10)
         !loop over photons 
@@ -595,12 +609,12 @@ toc=omp_get_wtime()
             distances = 0._wp
             do i = 1, size(distances)
                 distances(i) = array(i)%evaluate(packet%pos)
-                if(distances(i) > 0._wp)distances(i)=-999.0_wp
+                !if(distances(i) > 0._wp)distances(i)=-999.0_wp
             end do
-            packet%layer=minloc(abs(distances),dim=1)
+            packet%layer=maxloc(distances,dim=1, mask=(distances<=0._wp))
 
             ! Find scattering location
-            call tauint2(state%grid, packet, array)
+            call tauint2(state%grid, packet, array, dects, history)
 
 
             do while(.not. packet%tflag)
@@ -630,7 +644,7 @@ toc=omp_get_wtime()
                     exit
                 end if
                 ! !Find next scattering location
-                call tauint2(state%grid, packet, array)
+                call tauint2(state%grid, packet, array, dects, history)
             end do
         end do
 
@@ -662,6 +676,26 @@ toc=omp_get_wtime()
 !$omp atomic
         emission(celli,cellj,cellk) = emission(celli,cellj,cellk) + real(1.0, kind=sp)
     end subroutine recordEmission
+
+    subroutine recordWeight(packet, weightAbsorbed)
+        !! record weight absorbed
+        use photonMod
+        use iarray,     only: phasor, jmean, emission, absorb
+        use constants , only : wp
+
+        !> packet stores the photon related variables
+        type(photon),    intent(IN) :: packet
+        !> weight absorbed at this point in space
+        real(kind=wp),   intent(IN) :: weightAbsorbed
+        
+        integer       :: celli, cellj, cellk
+        celli = packet%xcell
+        cellj = packet%ycell
+        cellk = packet%zcell
+
+!$omp atomic
+        absorb(celli, cellj, cellk) = absorb(celli, cellj, cellk) + weightAbsorbed
+    end subroutine recordWeight
 
 
 !####################################################################################################
@@ -743,7 +777,7 @@ toc=omp_get_wtime()
         end if
 
         nscatt = 0._wp
-        call init_rng(spread(state%iseed+0, 1, 8), fwd=.true.)
+        !call init_rng(state%iseed, fwd=.true.)
         
         call setup_simulation(array, dict)
         ! render geometry to voxel format for debugging
@@ -830,6 +864,8 @@ subroutine finalise(dict, dects, nscatt, start, history)
 
         call normalise_fluence(state%grid, emissionGLOBAL, state%nphotons)
         call write_data(emissionGLOBAL, trim(fileplace)//"emission/"//state%rendersourcefile, state, dict)
+
+        call write_data(absorbGLOBAL, trim(fileplace)//"absorb/"//"absorb.nrrd", state, dict)
         ! if(state%absorb)call write_data(absorbGLOBAL, trim(fileplace)//"deposit/"//state%outfile_absorb, state, dict)
         !INTENSITY
         ! call write_data(abs(phasorGLOBAL)**2, trim(fileplace)//"phasor/"//state%outfile, state, dict)    

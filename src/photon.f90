@@ -1069,20 +1069,8 @@ module photonMod
                 !isotropic scattering
                 this%cost = 2._wp * ran2() - 1._wp
             else
-                !henyey-greenstein scattering
-                if(ran2() < p .and. present(dects))then
-                    !bias scattering
-                    temp = ran2()*((1._wp / (1._wp - a)) - (1._wp / sqrt(a**2 + 1._wp))) + (1._wp/sqrt(a**2 + 1._wp))
-                    temp = temp**(-2._wp)
-                    this%cost = (1._wp/(2._wp*a)) * (a**2 +1._wp - temp)
-                    this%nxp = dects(1)%p%pos%x - this%pos%x
-                    this%nyp = dects(1)%p%pos%y - this%pos%y
-                    this%nzp = dects(1)%p%pos%z - this%pos%z
-                else
-                    !unbiased
-                    temp = (1.0_wp - g2) / (1.0_wp - hgg + 2._wp*hgg*ran2())
-                    this%cost = (1.0_wp + g2 - temp**2) / (2._wp*hgg)
-                end if
+                temp = (1.0_wp - hgg*hgg) / (1.0_wp - hgg + 2._wp*hgg*ran2())
+                this%cost = (1.0_wp + hgg*hgg - temp**2) / (2._wp*hgg)
             end if
 
             this%sint = sqrt(1._wp - this%cost**2)
@@ -1095,16 +1083,24 @@ module photonMod
                 this%sinp = -sqrt(1._wp - this%cosp**2)
             end if
 
-            if(1._wp - abs(this%nzp) <= 1e-12_wp)then ! near perpindicular
+            if(1._wp - abs(this%nzp) <= 1e-12_wp)then ! near perpindicular               
                 uxx = this%sint * this%cosp
                 uyy = this%sint * this%sinp
-                uzz = sign(this%cost, this%nzp)
+                uzz = sign(this%nzp, this%cost)
             else
                 temp = sqrt(1._wp - this%nzp**2)
                 uxx = this%sint * (this%nxp * this%nzp * this%cosp - this%nyp * this%sinp) / temp + this%nxp * this%cost
                 uyy = this%sint * (this%nyp * this%nzp * this%cosp + this%nxp * this%sinp) / temp + this%nyp * this%cost
                 uzz = -1._wp*this%sint * this%cosp * temp + this%nzp * this%cost
             end if
+
+            temp = sqrt(uxx**2 + uyy**2 + uzz**2)
+            do while(abs(temp-1) > 1e-12_wp)
+                uxx = uxx/temp
+                uyy = uyy/temp
+                uzz = uzz/temp
+                temp = sqrt(uxx**2 + uyy**2 + uzz**2)
+            end do 
 
             this%nxp = uxx
             this%nyp = uyy

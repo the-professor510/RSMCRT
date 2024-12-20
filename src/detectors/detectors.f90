@@ -112,15 +112,15 @@ module detectors
 
         class(circle_dect), intent(INOUT) :: this
         !> Hitpoint to check
-        type(hit_t),        intent(IN)    :: hitpoint
+        type(hit_t),        intent(inout) :: hitpoint
         
         real(kind=wp) :: t 
 
         check_hit_circle = .false.
-        !if(this%layer /= hitpoint%layer)return
-        check_hit_circle = intersectCircle(this%dir, this%pos, this%radius, hitpoint%pos, hitpoint%dir, t)
+        check_hit_circle = intersectCircle(this%dir, this%pos, this%radius, hitpoint%pos, hitpoint%dir, t, hitpoint%value)
         if(check_hit_circle)then
-            if(t > 5e-3_wp)check_hit_circle=.false.
+            if(t <= 0.0_wp .or. t > hitpoint%pointSep)check_hit_circle=.false.
+            !is the interaction point outside of the packet path
         end if
     end function check_hit_circle
 
@@ -168,12 +168,12 @@ module detectors
         !! Check if a hitpoint is in the annulus
         class(annulus_dect), intent(INOUT) :: this
         !> Hitpoint to check
-        type(hit_t),         intent(IN)    :: hitpoint
+        type(hit_t),         intent(inout)    :: hitpoint
 
         real(kind=wp) :: newpos
 
         check_hit_annulus = .false.
-        if(this%layer /= hitpoint%layer)return
+        !if(this%layer /= hitpoint%layer)return
         newpos = sqrt((hitpoint%pos%x - this%pos%x)**2 + (hitpoint%pos%y - this%pos%y)**2 + (hitpoint%pos%z - this%pos%z)**2)
         if(newpos >= this%r1 .and. newpos <= this%r2)then
             check_hit_annulus = .true.
@@ -231,13 +231,13 @@ module detectors
         !! [ref](https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection)
         class(camera), intent(inout) :: this
         !> Hitpoint to check
-        type(hit_t),   intent(in)    :: hitpoint
+        type(hit_t),   intent(inout)    :: hitpoint
 
         real(kind=wp) :: t, proj1, proj2
         type(vector)  :: v
 
         check_hit_camera = .false.
-        if(this%layer /= hitpoint%layer)return
+        !if(this%layer /= hitpoint%layer)return
 
         t = ((this%pos - hitpoint%pos) .dot. this%n) / (hitpoint%dir .dot. this%n)
         if(t >= 0._wp)then

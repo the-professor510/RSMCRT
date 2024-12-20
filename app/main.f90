@@ -1,6 +1,6 @@
 program mcpolar
 !! Entry point for program
-    use kernels, only : weight_scatter, pathlength_scatter
+    use kernels, only : weight_scatter, pathlength_scatter, pathlength_scatter2
 
     integer :: num_args, i
     character(len=64), allocatable :: args(:)
@@ -17,6 +17,6 @@ program mcpolar
     end if
     
     ! call weight_scatter(trim(args(1)))
-    call pathlength_scatter(trim(args(1)))
+    call pathlength_scatter2(trim(args(1)))
 
 end program

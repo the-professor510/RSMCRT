@@ -347,9 +347,9 @@ module sdf_baseMod
 
                     do u = 1, size(ds)
                         ds(u) = cnt(u)%evaluate(pos)
-                        if(ds(u) > 0._wp)ds(u)=-999.0_wp
+                        !if(ds(u) > 0._wp)ds(u)=-999.0_wp
                     end do
-                    image(i, j, k) = minloc(abs(ds),dim=1)
+                    image(i, j, k) = maxloc(ds,dim=1, mask=(ds<=0._wp))
                 end do
             end do
             call bar%progress()

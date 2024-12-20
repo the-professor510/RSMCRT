@@ -12,7 +12,7 @@ module inttau2
 
     contains
 
-    subroutine tauint2(grid, packet, sdfs_array)
+    subroutine tauint2(grid, packet, sdfs_array, dects, history)
     !! optical depth integration subroutine
     !! Moves photons to interaction location
     !! Calculated is any reflection or refraction happens whilst moving
@@ -23,20 +23,30 @@ module inttau2
         use sdfs,         only : sdf, calcNormal
         use surfaces,     only : reflect_refract
         use vector_class, only : vector
+        use detector_mod,  only : hit_t
+        use detectors,     only : dect_array
+        use historyStack,  only : history_stack_t
 
-        type(cart_grid),   intent(in)    :: grid
-        type(photon),      intent(inout) :: packet
-        type(sdf),   intent(in)    :: sdfs_array(:)
+        type(cart_grid),       intent(in)    :: grid
+        type(photon),          intent(inout) :: packet
+        type(sdf),             intent(in)    :: sdfs_array(:)
+        type(dect_array),      intent(inout) :: dects(:)
+        type(history_stack_t), intent(inout) :: history
 
         real(kind=wp) :: tau, d_sdf, t_sdf, taurun, ds(size(sdfs_array)), dstmp(size(sdfs_array))
         real(kind=wp) :: eps, dtot, old(size(sdfs_array)), new(size(sdfs_array)), n1, n2, Ri
-        integer       :: i, oldlayer, new_layer
-        type(vector)  :: pos, dir, oldpos, N
+        integer       :: i, oldlayer, new_layer, smallStepLayer
+        type(vector)  :: pos, dir, oldpos, N, smallStepPos
         logical       :: rflag
+
+        real(kind=wp) :: pointSep
+        type(vector)  :: startPos
+        type(hit_t)   :: hpoint
 
         !setup temp variables
         pos = packet%pos
         oldpos = pos
+        startPos = pos
         dir = vector(packet%nxp, packet%nyp, packet%nzp)
 
 
@@ -44,35 +54,126 @@ module inttau2
         eps = 1e-8_wp
         !get random tau
         tau = -log(ran2())
-        taurun = 0.
-        dtot = 0.
-        do
-            !setup sdf distance and current layer
-            ds = 0.
+        taurun = 0._wp
+        dtot = 0._wp
+        do while (taurun <= tau)
+            !setup sdf distance
+            ds = 0._wp
             do i = 1, size(ds)
-                ds(i) = abs(sdfs_array(i)%evaluate(pos))
+                ds(i) = sdfs_array(i)%evaluate(pos)
             end do
             packet%cnts = packet%cnts + size(ds)
-            d_sdf = minval(ds)
+            d_sdf = minval(abs(ds), dim=1) ! what is the minimum distance to a SDF
+            dstmp = ds
 
-            if(d_sdf < eps)then
-                packet%tflag=.true.
-                !print*, minloc(abs(ds),dim=1), packet%layer
-                !print*, packet%pos
-                !print*, "Round off"
-                exit
+
+
+            if(d_sdf <eps)then
+                ! packet is on a boundary, step backwards or forwards by a small 
+                ! amount to stay in the same medium
+                
+                d_sdf = minval(abs(ds), dim=1) + 2._wp*eps
+                smallStepPos = pos + d_sdf*dir
+                ds = 0._wp
+                do i = 1, size(ds)
+                    ds(i) = sdfs_array(i)%evaluate(smallStepPos)
+                end do
+                packet%cnts = packet%cnts + size(ds)
+                smallStepLayer=maxloc(ds,dim=1, mask=(ds<=0._wp))
+
+                !print*, ""
+                !print*, packet%layer
+                !print*, pos
+                !print*, smallStepLayer
+                !print*, smallStepPos
+                !print*, dir
+
+                
+                if (smallStepLayer == packet%layer) then
+                    !print*, "forward"
+                    !move the packet forwards slightly to stay in the same layer
+
+                    oldpos = pos
+                    t_sdf = d_sdf * sdfs_array(packet%layer)%getkappa()
+
+                    if(taurun + t_sdf < tau)then
+                    !comment out for phase screen
+                        pos = pos + d_sdf*dir
+                        taurun = taurun + t_sdf
+                        call update_grids(grid, oldpos, dir, d_sdf, packet, sdfs_array(packet%layer)%getmua())
+                    else 
+                        d_sdf = (tau - taurun) / sdfs_array(packet%layer)%getkappa()
+                        taurun = taurun + t_sdf
+                        call update_grids(grid, oldpos, dir, d_sdf, packet, sdfs_array(packet%layer)%getmua())
+                        packet%tflag = .true.
+                    end if
+                
+                else
+                    !move the packet backwards slightly to stay in the same layer
+                    !print*, "backward"
+
+                    oldpos = pos
+                    t_sdf = d_sdf * sdfs_array(packet%layer)%getkappa()
+                    
+                    !can we move the full amount
+                    if(taurun + t_sdf < tau)then
+                        pos = pos - d_sdf*dir
+                        taurun = taurun + t_sdf
+                        !comment out for phase screen
+                        call update_grids(grid, oldpos, dir, d_sdf, packet, sdfs_array(packet%layer)%getmua())
+                    else
+                        d_sdf = (tau - taurun) / sdfs_array(packet%layer)%getkappa()
+                        pos = pos - d_sdf*dir
+                        call update_grids(grid, oldpos, dir, d_sdf, packet, sdfs_array(packet%layer)%getmua())
+                        packet%tflag = .true.
+                    end if
+
+                end if
+            
+                !Have we moved through a detector?
+                pointSep = sqrt((pos%x - startPos%x)**2 + (pos%y - startPos%y)**2 + (pos%z - startPos%z)**2)
+                hpoint = hit_t(startPos, dir, pointSep, sqrt(pos%x**2+pos%y**2), packet%weight)
+                do i = 1, size(dects)
+                    call dects(i)%p%record_hit(hpoint, history)
+                end do
+                startPos = pos
+                
+                !setup sdf distance and current layer
+                ds = 0._wp
+                do i = 1, size(ds)
+                    ds(i) = sdfs_array(i)%evaluate(pos)
+                end do
+                packet%cnts = packet%cnts + size(ds)
+                d_sdf = minval(abs(ds), dim=1)
+                dstmp = ds
+
+                !check if outside all sdfs
+                if(minval(ds) > -eps)then
+                    packet%tflag = .true.
+                end if
             end if
 
-            do while(d_sdf > eps)
+            !exit early if conditions met
+            if(taurun >= tau .or. packet%tflag)then
+                exit
+            end if
+            
+            !print*, ""
+            !print*, pos
+            !print*, packet%layer
+            !print*, sdfs_array(packet%layer)%getkappa()
+            !move to the edge or till the packet has moved the full optical depth
+            do while(d_sdf >= eps)
                 t_sdf = d_sdf * sdfs_array(packet%layer)%getkappa()
-                if(taurun + t_sdf <= tau)then
+
+                if(taurun + t_sdf < tau)then
                     !move full distance to sdf surface
                     taurun = taurun + t_sdf
                     oldpos = pos
                     !comment out for phase screen
                     call update_grids(grid, oldpos, dir, d_sdf, packet, sdfs_array(packet%layer)%getmua())
                     pos = pos + d_sdf * dir
-                    dtot = dtot + d_sdf
+                    !dtot = dtot + d_sdf
                 else
                     !run out of tau so move remaining tau and exit
                     d_sdf = (tau - taurun) / sdfs_array(packet%layer)%getkappa()
@@ -89,69 +190,68 @@ module inttau2
                 do i = 1, size(ds)
                     ds(i) = sdfs_array(i)%evaluate(pos)
                 end do
-                d_sdf = minval(abs(ds),dim=1)
+                d_sdf = minval(abs(ds), dim=1)
                 packet%cnts = packet%cnts + size(ds)
+                dstmp = ds
 
                 !check if outside all sdfs
-                if(minval(ds) >= 0._wp)then
+                if(minval(ds) > -eps)then
                     packet%tflag = .true.
                     exit
                 end if
             end do
 
+
+            ! From the the last startPos has the packet interacted with a detector?
+            ! This check will only occur if we need to move the particle across a boundary
+            pointSep = sqrt((pos%x - startPos%x)**2 + (pos%y - startPos%y)**2 + (pos%z - startPos%z)**2)
+            hpoint = hit_t(startPos, dir, pointSep, sqrt(pos%x**2+pos%y**2), packet%weight)
+            do i = 1, size(dects)
+                call dects(i)%p%record_hit(hpoint, history)
+            end do
+            startPos = pos
+
             !exit early if conditions met
             if(taurun >= tau .or. packet%tflag)then
                 exit
             end if
-            
-            ds = 0._wp
-            do i = 1, size(ds)
-                ds(i) = sdfs_array(i)%evaluate(pos)
-            end do
-            packet%cnts = packet%cnts + size(ds)
-            
-            dstmp = ds
-            ds = abs(ds)
-            
-            !step a bit into next sdf to get n2
-            d_sdf = minval(ds) + 2._wp*eps
-            oldpos = pos
-            pos = pos + d_sdf*dir
-            ds = 0._wp
-            do i = 1, size(ds)
-                ds(i) = sdfs_array(i)%evaluate(pos)
-            end do
-            packet%cnts = packet%cnts + size(ds)
-            
-            new = 0._wp
-            old = 0._wp
-            do i = 1, size(ds)
-                if(dstmp(i) < 0.)then
-                    old(i)=-1._wp
-                    exit
-                end if
-            end do
-            do i = 1, size(ds)
-                if(ds(i) < 0.)then
-                    new(i)=-1._wp     
-                    exit
-                end if
-            end do
 
-            !check for fresnel reflection
+            ! Otherwise the particle must cross a boundary,
+            ! we must now consider refraction
+
+            !print*, "across boundary"
+            
+            !step a small bit into next sdf to get n2
+            d_sdf = minval(abs(ds), dim=1) + 2.0_wp*eps
+            smallStepPos = pos + d_sdf*dir
+            ds = 0._wp
+            do i = 1, size(ds)
+                ds(i) = sdfs_array(i)%evaluate(smallStepPos)
+            end do
+            packet%cnts = packet%cnts + size(ds)
+            new_layer = maxloc(ds,dim=1, mask=(ds<=0._wp))
+
+            !print*, pos
+            !print*, smallStepPos
+
+            !Get n1 and n2
             n1 = sdfs_array(packet%layer)%getn()
-            new_layer = minloc(new, dim=1)
+            n2 = sdfs_array(new_layer)%getn()           
 
-            n2 = sdfs_array(new_layer)%getn()
             !carry out refelction/refraction
-            if (n1 /= n2)then
+            if (n1 /= n2) then !check for fresnel reflection
+                print*, "n are different"
+                !Need to test and understand
                 !get correct sdf normal
                 if(ds(packet%layer) < 0._wp .and. ds(new_layer) < 0._wp)then
                     oldlayer = minloc(abs([ds(packet%layer), ds(new_layer)]), dim=1)
+
                 elseif(dstmp(packet%layer) < 0._wp .and. dstmp(new_layer) < 0._wp)then
-                    oldlayer=maxloc([dstmp(packet%layer), dstmp(new_layer)],dim=1)
+                    oldlayer = maxloc([dstmp(packet%layer), dstmp(new_layer)], dim=1)
+
                 elseif(ds(packet%layer) > 0._wp .and. ds(new_layer) < 0._wp)then
                     oldlayer = packet%layer
+
                 elseif(ds(packet%layer) > 0._wp .and. ds(new_layer) > 0._wp)then
                     packet%tflag = .true.
                     exit
@@ -163,27 +263,63 @@ module inttau2
                 else
                     oldlayer = new_layer
                 end if
+
+                !print*, oldlayer
+                !print*, new_layer
+                !print*, pos
+                !print*, smallStepPos
                 N = calcNormal(pos, sdfs_array(oldlayer))
+                !print*, N
 
                 rflag = .false.
                 call reflect_refract(dir, N, n1, n2, rflag, Ri)
                 packet%weight = packet%weight * Ri
-                tau = -log(ran2())
-                taurun = 0._wp
+                ! Why on earth are we doing this
+                !tau = -log(ran2())
+                !taurun = 0._wp
                 if(.not.rflag)then
+                    !update layer and step across the boundary
                     packet%layer = new_layer
+                    pos = smallStepPos
+
+                    pointSep = sqrt((pos%x - startPos%x)**2 + (pos%y - startPos%y)**2 + (pos%z - startPos%z)**2)
+                    hpoint = hit_t(startPos, dir, pointSep, sqrt(pos%x**2+pos%y**2), packet%weight)
+                    do i = 1, size(dects)
+                        call dects(i)%p%record_hit(hpoint, history)
+                    end do
+                    startPos = pos
                 else
                     !step back inside original sdf
                     pos = oldpos
+                    startPos = oldpos
+                    
                     !reflect so incrment bounce counter
                     packet%bounces = packet%bounces + 1
-                    if(packet%bounces > 1000)then
-                        packet%tflag=.true.
-                        exit
-                    end if
+                    ! Also why on earth are we doing this
+                    !if(packet%bounces > 1000)then
+                    !    packet%tflag=.true.
+                    !    exit
+                    !end if
                 end if
             else
+                ! n are equal, no change to the direction
+                ! update layer and step across the boundary by a small amount
                 packet%layer = new_layer
+
+                oldpos = pos
+                !comment out for phase screen
+                call update_grids(grid, oldpos, dir, d_sdf, packet, sdfs_array(packet%layer)%getmua())
+                t_sdf = d_sdf * sdfs_array(packet%layer)%getkappa()
+                taurun = taurun + t_sdf
+                pos = smallStepPos
+
+                pointSep = sqrt((pos%x - startPos%x)**2 + (pos%y - startPos%y)**2 + (pos%z - startPos%z)**2)
+                hpoint = hit_t(startPos, dir, pointSep, sqrt(pos%x**2+pos%y**2), packet%weight)
+                do i = 1, size(dects)
+                    call dects(i)%p%record_hit(hpoint, history)
+                end do
+                startPos = pos
+
             end if
             if(packet%tflag)exit
         end do
@@ -210,6 +346,7 @@ module inttau2
         if(abs(packet%pos%z) > grid%zmax)then
             packet%tflag = .true.
         end if
+
     end subroutine tauint2
 
 

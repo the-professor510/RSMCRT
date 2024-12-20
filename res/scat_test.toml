@@ -1,9 +1,8 @@
 [source]
-name = "annulus"
-nphotons = 100000
-position = [0.0,0.0,1.0]
-rotation = [0.0,0.0,-1.0]
-focalLength = 1.0
+name = "pencil"
+nphotons = 1000000
+direction = "z"
+position = [0.0,0.0,-1.0]
 spectrum_type = "constant"
 wavelength = 500.0
 
@@ -11,21 +10,33 @@ wavelength = 500.0
 nxg = 500
 nyg = 500
 nzg = 500
-xmax = 1.0
-ymax = 1.0
-zmax = 1.0
+xmax = 50.0
+ymax = 50.0
+zmax = 1.5
 
 [geometry]
 geom_name = "box"
-BoxDimensions = [1.0,1.0,1.0]
-mua = [0.0]
+BoxDimensions = [100.0,100.0,2.0]
+boundingBox = [100.0,100.0,3.0]
+mus = [0.9]
+hgg = [0.75]
+mua = [0.1]
 
 [[detectors]]
 type="circle"
-position=[0.0, 0.0, -1.0]
+position=[0.0, 0.0, -1.101]
 direction=[0.0, 0.0, -1.0]
-radius1=1
-nbins=1000
+radius1=20
+nbins=100
+maxval = 1.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+position=[0.0, 0.0, +1.001]
+direction=[0.0, 0.0, +1.0]
+radius1=100
+nbins=100
 maxval = 1.0
 trackHistory=false
 

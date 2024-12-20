@@ -66,7 +66,7 @@ contains
         opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
         array(1) = sphere(radius, opt(1), 1, transform=t)
 
-        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1._wp)
+        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
         array(2) = box(vector(xlength, ylength, zlength), opt(2), 2)   
     end function setup_sphere
 
@@ -142,7 +142,7 @@ contains
         array(1) = box(vector(ixlength, iylength, izlength), opt(1), 1, transform=t)
 
         !bounding box
-        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1._wp)
+        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
         array(2) = box(vector(bxlength, bylength, bzlength), opt(2), 2)   
     end function setup_box
 
@@ -235,7 +235,7 @@ contains
         yolk = sphere(YolkRadius, opt(3), 1, transform=t)
 
         !bounding box
-        opt(4) = mono(0._wp, 0._wp, 0.0_wp, 1._wp)
+        opt(4) = mono(0._wp, 0._wp, 0.0_wp, 1.0_wp)
         bbox = box(vector(bxlength, bylength, bzlength), opt(4), 4) 
         
         allocate(array(4))

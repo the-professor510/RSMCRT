@@ -44,7 +44,7 @@ module random
         subroutine init_rng(input_seed, fwd)
         !! initiate RNG state with reproducible state
             !> input seed
-            integer, optional, intent(IN) :: input_seed(:)
+            integer, optional, intent(IN) :: input_seed
             !> boolean that if True runs the generator for 100 steps before returning
             logical, optional, intent(IN) :: fwd
 

@@ -37,7 +37,11 @@ match detectorType:
 #print(numBins)        
 #print(radius)
 #print(count)
-    
+totalCounts = sum(count)
+
+#print(count)
+#print("Total counts: " + str(totalCounts))
+print("Total Diffuse ...: " + str(totalCounts/1000000))
 
 
 fig = plt.figure(1)
@@ -47,4 +51,4 @@ ax1.plot(radius, count)
 ax1.set_xlabel("Radius (m)")
 ax1.set_ylabel("Counts (Arb. Units)")
 ax1.set_title("Radius Detector")
-plt.show()
+#plt.show()
