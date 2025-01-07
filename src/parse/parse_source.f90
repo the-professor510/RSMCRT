@@ -67,7 +67,7 @@ contains
 
             children => null()
 
-            if(state%source /= "unifrom" .and. state%source /= "point" .and. &
+            if(state%source /= "uniform" .and. state%source /= "point" .and. &
                 state%source /= "circular" .and. state%source /= "pencil")then
                 call get_value(child, "rotation", children, requested=.false., origin=origin)
                 if(associated(children))then

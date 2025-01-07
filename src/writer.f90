@@ -242,13 +242,9 @@ module writer_mod
             integer :: i
 
             string = ""
-            do i = 1, size(sizes)
-                if(i == 1)then
-                    string = str(sizes(i))            
-                else
-                    string = trim(string) // " " // str(sizes(i))
-                end if
-            end do
+            string = str(sizes(3))
+            string = trim(string) // " " // str(sizes(2))
+            string = trim(string) // " " // str(sizes(1))
 
             write(u,"(A)")"NRRD0004"
             write(u,"(A)")"type: "//type

@@ -1,37 +1,30 @@
 [source]
-name = "pencil"
-nphotons = 10000000
-direction = "z"
-position = [0.0,0.0,-2.45]
+name = "uniform"
+nphotons = 1000000
+direction = "-z"
+point1 = [ -5.0, -5.0, 2.0]
+point2 = [ 10.0, 0.0, 0.0]
+point3 = [ 0.0, 10.0, 0.0]
 spectrum_type = "constant"
 wavelength = 500.0
 
 [grid]
-nxg = 500
-nyg = 500
-nzg = 500
+nxg = 250
+nyg = 250
+nzg = 1000
 xmax = 50.0
 ymax = 50.0
-zmax = 5.0
+zmax = 2.0
 
 [geometry]
 geom_name = "box"
-BoxDimensions = [100.0,100.0,4.9]
-boundingBox = [100.0,100.0,5.0]
+BoxDimensions = [100.0,100.0,3.9]
+boundingBox = [100.0,100.0,4.0]
 position = [0.0,0.0,0.0]
-mus = [90]
-hgg = [0]
-mua = [10]
-n = [1.5]
-
-[[detectors]]
-type="circle"
-position=[0.0, 0.0, -2.46]
-direction=[0.0, 0.0, -1.0]
-radius1=20
-nbins=100
-maxval = 1.0
-trackHistory=false
+mus = [820]
+hgg = [0.9]
+mua = [1.8]
+n = [1.38]
 
 [output]
 fluence = "fluence.nrrd"

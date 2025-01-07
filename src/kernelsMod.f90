@@ -505,7 +505,7 @@ toc=omp_get_wtime()
                 nscatt = nscatt + 1
                 packet%step = packet%step + 1
 
-                ! !Find next scattering location
+                ! Find next scattering location
                 call tauint2(state%grid, packet, array, dects, history)
             end do
 

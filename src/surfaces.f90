@@ -98,7 +98,6 @@ module surfaces
         real(kind=wp) :: costt, sintt, sint2, cost2, tir, f1, f2
 
         costt = abs(I .dot. N)
-
         sintt = sqrt(1._wp - costt * costt)
         sint2 = n1/n2 * sintt
         if(sint2 > 1._wp)then
@@ -112,9 +111,11 @@ module surfaces
             cost2 = sqrt(1._wp - sint2 * sint2)
             f1 = abs((n1*costt - n2*cost2) / (n1*costt + n2*cost2))**2
             f2 = abs((n1*cost2 - n2*costt) / (n1*cost2 + n2*costt))**2
-
+            
             tir = 0.5_wp * (f1 + f2)
-        if(ieee_is_nan(tir) .or. tir > 1._wp .or. tir < 0._wp)print*,'TIR: ', tir, f1, f2, costt,sintt,cost2,sint2
+        end if
+        if(ieee_is_nan(tir) .or. tir > 1._wp .or. tir < 0._wp) then
+            print*,'TIR: ', tir, f1, f2, costt,sintt,cost2,sint2
             return
         end if
     end function fresnel

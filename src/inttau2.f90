@@ -34,8 +34,9 @@ module inttau2
         type(history_stack_t), intent(inout) :: history
 
         real(kind=wp) :: tau, d_sdf, t_sdf, taurun, ds(size(sdfs_array)), dstmp(size(sdfs_array))
+        real(kind=wp) :: dsNew(size(sdfs_array))
         real(kind=wp) :: eps, dtot, old(size(sdfs_array)), new(size(sdfs_array)), n1, n2, Ri
-        integer       :: i, oldlayer, new_layer, smallStepLayer
+        integer       :: i, old_layer, new_layer, smallStepLayer, layer
         type(vector)  :: pos, dir, oldpos, N, smallStepPos
         logical       :: rflag
 
@@ -148,7 +149,7 @@ module inttau2
                 !print*, taurun>= tau, packet%tflag
                 exit
             end if
-            
+
             !move to the edge or till the packet has moved the full optical depth
             do while(d_sdf >= eps)
                 t_sdf = d_sdf * sdfs_array(packet%layer)%getkappa()
@@ -210,14 +211,19 @@ module inttau2
             !print*, "across boundary"
             
             !step a small bit into next sdf to get n2
+            ! choose a different step distance to ensure that you actually move into the next medium
+            !
+            !
+            !
             d_sdf = minval(abs(ds), dim=1) + 2.0_wp*eps
             smallStepPos = pos + d_sdf*dir
-            ds = 0._wp
+            dsNew = 0._wp
             do i = 1, size(ds)
-                ds(i) = sdfs_array(i)%evaluate(smallStepPos)
+                dsNew(i) = sdfs_array(i)%evaluate(smallStepPos)
             end do
-            packet%cnts = packet%cnts + size(ds)
-            new_layer = maxloc(ds,dim=1, mask=(ds<=0._wp))
+            packet%cnts = packet%cnts + size(dsNew)
+            new_layer = maxloc(dsNew,dim=1, mask=(dsNew<=0._wp))
+            old_layer = packet%layer
 
             if (new_layer == 0) then
                 ! There is no new layer and we are outside of the SDFs
@@ -231,46 +237,50 @@ module inttau2
 
             !carry out refelction/refraction
             if (n1 /= n2) then !check for fresnel reflection
-                print*, "n are different"
+                !print*, "n are different"
                 !Need to test and understand
                 !get correct sdf normal
-                if(ds(packet%layer) < 0._wp .and. ds(new_layer) < 0._wp)then
-                    oldlayer = minloc(abs([ds(packet%layer), ds(new_layer)]), dim=1)
-
-                elseif(dstmp(packet%layer) < 0._wp .and. dstmp(new_layer) < 0._wp)then
-                    oldlayer = maxloc([dstmp(packet%layer), dstmp(new_layer)], dim=1)
-
-                elseif(ds(packet%layer) > 0._wp .and. ds(new_layer) < 0._wp)then
-                    oldlayer = packet%layer
-
-                elseif(ds(packet%layer) > 0._wp .and. ds(new_layer) > 0._wp)then
-                    packet%tflag = .true.
-                    exit
-                else
-                    error stop "This should not be reached!"
-                end if
-                if(oldlayer == 1)then
-                    oldlayer = packet%layer
-                else
-                    oldlayer = new_layer
-                end if
-
-                !print*, oldlayer
-                !print*, new_layer
+                !print*, packet%layer
+                !print*, pos
+                !print*, old_layer, new_layer
+                !print*, ds
+                !print*, dsNew
+                
                 !print*, pos
                 !print*, smallStepPos
-                N = calcNormal(pos, sdfs_array(oldlayer))
+                !print*, dir
+                                
+                layer = -1
+                if(dsNew(new_layer) < 0._wp .and. ds(new_layer) >= 0.0_wp) then
+                    !entered new layer
+                    layer = new_layer
+                else if (dsNew(old_layer) > 0._wp .and. ds(old_layer) <= 0.0_wp) then
+                    !left old_layer
+                    layer = old_layer
+                else 
+                    error stop "This should not be reached!"
+                end if
+
+                !print*, layer
+                
+                N = calcNormal(pos, sdfs_array(layer))
                 !print*, N
 
                 rflag = .false.
                 call reflect_refract(dir, N, n1, n2, rflag, Ri)
-                packet%weight = packet%weight * Ri
-                ! Why on earth are we doing this
-                !tau = -log(ran2())
-                !taurun = 0._wp
+
                 if(.not.rflag)then
+                    !print*, "Transmitted"
                     !update layer and step across the boundary
+
+                    !move to boundary, then move a small step over the boundary in the new direction
+
                     packet%layer = new_layer
+                    oldpos = pos
+                    !comment out for phase screen
+                    call update_grids(grid, oldpos, dir, d_sdf, packet, sdfs_array(packet%layer)%getmua())
+                    t_sdf = d_sdf * sdfs_array(packet%layer)%getkappa()
+                    taurun = taurun + t_sdf
                     pos = smallStepPos
 
                     pointSep = sqrt((pos%x - startPos%x)**2 + (pos%y - startPos%y)**2 + (pos%z - startPos%z)**2)
@@ -280,17 +290,14 @@ module inttau2
                     end do
                     startPos = pos
                 else
+                    !print*, "Reflected"
                     !step back inside original sdf
-                    pos = oldpos
-                    startPos = oldpos
+                    oldpos = pos
+                    startPos = pos
                     
                     !reflect so incrment bounce counter
                     packet%bounces = packet%bounces + 1
-                    ! Also why on earth are we doing this
-                    !if(packet%bounces > 1000)then
-                    !    packet%tflag=.true.
-                    !    exit
-                    !end if
+                    
                 end if
             else
                 ! n are equal, no change to the direction

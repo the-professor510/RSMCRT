@@ -1,8 +1,8 @@
 [source]
 name = "pencil"
-nphotons = 10000000
+nphotons = 1000000
 direction = "z"
-position = [0.0,0.0,-2.45]
+position = [0.0,0.0,-0.01]
 spectrum_type = "constant"
 wavelength = 500.0
 
@@ -12,22 +12,31 @@ nyg = 500
 nzg = 500
 xmax = 50.0
 ymax = 50.0
-zmax = 5.0
+zmax = 0.015
 
 [geometry]
 geom_name = "box"
-BoxDimensions = [100.0,100.0,4.9]
-boundingBox = [100.0,100.0,5.0]
+BoxDimensions = [100.0,100.0,0.02]
+boundingBox = [100.0,100.0,0.03]
 position = [0.0,0.0,0.0]
 mus = [90]
-hgg = [0]
+hgg = [0.75]
 mua = [10]
-n = [1.5]
+n = [1.0]
 
 [[detectors]]
 type="circle"
-position=[0.0, 0.0, -2.46]
+position=[0.0, 0.0, -0.011]
 direction=[0.0, 0.0, -1.0]
+radius1=20
+nbins=100
+maxval = 1.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+position=[0.0, 0.0, 0.011]
+direction=[0.0, 0.0, 1.0]
 radius1=20
 nbins=100
 maxval = 1.0
