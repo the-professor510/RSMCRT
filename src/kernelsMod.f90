@@ -162,6 +162,8 @@ contains
     call finalise(dict, dects, nscatt, start, history)
     end subroutine weight_scatter
 
+
+    !Full weight reduction
     subroutine pathlength_scatter(input_file)
 
         !Shared data
@@ -201,7 +203,7 @@ contains
         type(vector)                  :: dir
         type(dect_array), allocatable :: dects(:)
         type(sdf),        allocatable :: array(:)
-        real(kind=wp)                 :: ran, nscatt, start
+        real(kind=wp)                 :: ran, nscatt, start, weight_absorb
         type(tevipc)                  :: tev
         type(seq)                     :: seqs(2)
         type(spectrum_t)              :: spectrum
@@ -238,8 +240,10 @@ contains
 
 #ifdef _OPENMP
         tic=omp_get_wtime()
-!$omp parallel default(none) shared(dict, array, numproc, start, bar, jmean, emission, input_file, phasor, tev, dects, spectrum)&
-        !$omp& private(ran, id, distances, image, dir, hpoint, history, seqs) reduction(+:nscatt) firstprivate(state, packet)
+!$omp parallel default(none)& 
+        !$omp& shared(dict, array, numproc, start, bar, jmean, emission, absorb, input_file, phasor, tev, dects, spectrum)& 
+        !$omp& private(ran, id, distances, image, dir, hpoint, history, seqs)& 
+        !$omp& reduction(+:nscatt) firstprivate(state, packet)
         numproc = omp_get_num_threads()
         id = omp_get_thread_num()
         if(numproc > state%nphotons .and. id == 0)print*,"Warning, simulation may be underministic due to low photon count!"
@@ -302,9 +306,10 @@ contains
                     packet%step = packet%step + 1
                 else
                     packet%tflag = .true.
+                    call recordWeight(packet, 1.0_wp)
                     exit
                 end if
-                ! !Find next scattering location
+                ! Find next scattering location
                 call tauint2(state%grid, packet, array, dects, history)
             end do
 
@@ -337,15 +342,7 @@ toc=omp_get_wtime()
     end subroutine pathlength_scatter
 
 
-    !!!!Developing this to add roulette to pathlength scattering
-    !I want a partial weight reduction as the photon travels along the path, 
-    !eventually with it being killed once it's weight is below a threshold  
-    !The weight that is dropped should either be the roulette amount to be absorbed,
-    ! or it should be weight of the particle minus the amount absorbed in the previous run
-    ! or maybe something else, however, it is done check that it works by verifying against an
-    ! external checker such as 2slabs from MCML from steve jacques
-    ! to verify that, I need to measure the diffuse transmission and reflection
-    ! which means I need to understand the detectors first
+    !Partial weight reduction with survival biasing as a variance reduction technique
     subroutine pathlength_scatter2(input_file)
 
         !Shared data
@@ -885,8 +882,10 @@ subroutine finalise(dict, dects, nscatt, start, history)
         call set_value(dict, "source", state%source)
         call set_value(dict, "experiment", state%experiment)
 
+#ifdef pathlength
         call normalise_fluence(state%grid, jmeanGLOBAL, state%nphotons)
         call write_data(jmeanGLOBAL, trim(fileplace)//"jmean/"//state%outfile, state, dict)
+#endif
 
         call normalise_fluence(state%grid, emissionGLOBAL, state%nphotons)
         call write_data(emissionGLOBAL, trim(fileplace)//"emission/"//state%rendersourcefile, state, dict)

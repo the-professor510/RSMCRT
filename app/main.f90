@@ -20,6 +20,10 @@ program mcpolar
     end if
     
     ! call weight_scatter(trim(args(1)))
+#ifdef survivalBias
     call pathlength_scatter2(trim(args(1)))
+#else
+    call pathlength_scatter(trim(args(1)))
+#endif
 
 end program

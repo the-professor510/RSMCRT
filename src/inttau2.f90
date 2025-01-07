@@ -50,7 +50,6 @@ module inttau2
         startPos = pos
         dir = vector(packet%nxp, packet%nyp, packet%nzp)
 
-
         !round off distance
         eps = 1e-8_wp
         !get random tau
@@ -389,6 +388,7 @@ module inttau2
         packet%ycell = cellj
         packet%zcell = cellk
 
+#ifdef pathlength
         d = 0._wp
         !if packet outside grid return
         if(celli == -1 .or. cellj == -1 .or. cellk == -1)then
@@ -426,6 +426,24 @@ module inttau2
         packet%xcell = celli
         packet%ycell = cellj
         packet%zcell = cellk
+#else
+        !move the packet through the grid without pathlength scattering
+        old_pos%x = old_pos%x + dir%x*d_sdf 
+        old_pos%y = old_pos%y + dir%y*d_sdf 
+        old_pos%z = old_pos%z + dir%z*d_sdf 
+
+        !update the voxels
+        call update_voxels(grid, old_pos, celli, cellj, cellk)
+
+        if(celli == -1 .or. cellj == -1 .or. cellk == -1)then
+            packet%tflag = .true.
+        end if
+
+        pos = vector(old_pos%x-grid%xmax, old_pos%y-grid%ymax, old_pos%z-grid%zmax)
+        packet%xcell = celli
+        packet%ycell = cellj
+        packet%zcell = cellk
+#endif
 
     end subroutine update_grids
 
