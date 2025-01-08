@@ -22,6 +22,39 @@ module detectors
         module procedure init_circle_dect
     end interface circle_dect
 
+    !> Fibre detector
+    type, extends(detector1D) :: fibre_dect
+        !> focal length of the front lens of the 4f imaging system
+        real(kind=wp) :: focalLength1
+        !> focal length of the back lens of the 4f imaging system
+        real(kind=wp) :: focalLength2
+        !> radius/size of the front lens
+        real(kind=wp) :: f1Aperture
+        !> radius/size of the back lens
+        real(kind=wp) :: f2Aperture
+        !> distance between the detector plane and the front lens
+        real(kind=wp) :: frontOffset
+        !> distance between the fibre plance and the back lens
+        real(kind=wp) :: backOffset
+        !> distance between front lens and a pinhole in between the front and back lens
+        real(kind=wp) :: frontToPinSep
+        !> distance between pinhole and back lens
+        real(kind=wp) :: pinToBackSep
+        !> radius/size of pinhole
+        real(kind=wp) :: pinAperture
+        !> maximum fibre acceptance angle above the optical axis
+        real(kind=wp) :: acceptAngle
+        !> size of the fibre core
+        real(kind=wp) :: coreDiameter
+        contains
+        procedure :: check_hit  => check_hit_fibre
+    end type fibre_dect
+
+    interface fibre_dect
+        !> Initialise circular detector
+        module procedure init_fibre_dect
+    end interface fibre_dect
+
     !> Annuluar detector
     type, extends(detector1D) :: annulus_dect
         !> Inner radius
@@ -67,7 +100,7 @@ module detectors
     end type dect_array
 
     private
-    public :: camera, annulus_dect, circle_dect, dect_array
+    public :: camera, annulus_dect, circle_dect, dect_array, fibre_dect
 
     contains
     
@@ -117,7 +150,7 @@ module detectors
         real(kind=wp) :: t 
 
         check_hit_circle = .false.
-        check_hit_circle = intersectCircle(this%dir, this%pos, this%radius, hitpoint%pos, hitpoint%dir, t, hitpoint%value)
+        check_hit_circle = intersectCircle(this%dir, this%pos, this%radius, hitpoint%pos, hitpoint%dir, t, hitpoint%value1D)
         if(check_hit_circle)then
             if(t <= 0.0_wp .or. t > hitpoint%pointSep)check_hit_circle=.false.
             !is the interaction point outside of the packet path
@@ -180,6 +213,158 @@ module detectors
         end if
 
     end function check_hit_annulus
+
+    function init_fibre_dect(pos, dir, layer, nbins, maxval, trackHistory, & 
+        focalLength1, focalLength2, f1Aperture, f2Aperture, frontOffset, backOffset, & 
+        frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter) result(out)
+        !! Initialise fibre detector
+        
+        !> Centre of detector
+        type(vector),  intent(in) :: pos
+        !> Normal of the detector
+        type(vector),  intent(in) :: dir
+        !> Layer ID
+        integer,       intent(in) :: layer
+        !> Number of bins in the detector
+        integer,       intent(in) :: nbins
+        !> Maximum value to store in bins
+        real(kind=wp), intent(in) :: maxval
+        !> Boolean on if to store photon's history prior to hitting the detector.
+        logical,       intent(in) :: trackHistory
+        !> focal length of the front lens of the 4f imaging system
+        real(kind=wp), intent(in) :: focalLength1
+        !> focal length of the back lens of the 4f imaging system
+        real(kind=wp), intent(in) :: focalLength2
+        !> radius/size of the front lens
+        real(kind=wp), intent(in) :: f1Aperture
+        !> radius/size of the back lens
+        real(kind=wp), intent(in) :: f2Aperture
+        !> distance between the detector plane and the front lens
+        real(kind=wp), intent(in) :: frontOffset
+        !> distance between the fibre plance and the back lens
+        real(kind=wp), intent(in) :: backOffset
+        !> distance between front lens and a pinhole in between the front and back lens
+        real(kind=wp), intent(in) :: frontToPinSep
+        !> distance between pinhole and back lens
+        real(kind=wp), intent(in) :: pinToBackSep
+        !> radius/size of pinhole
+        real(kind=wp), intent(in) :: pinAperture
+        !> maximum fibre acceptance angle above the optical axis
+        real(kind=wp), intent(in) :: acceptAngle
+        !> size of the fibre core
+        real(kind=wp), intent(in) :: coreDiameter
+
+        type(fibre_dect) :: out
+
+        out%pos = pos
+        out%dir = dir
+        out%layer = layer
+        
+        out%focalLength1 = focalLength1
+        out%focalLength2 = focalLength2
+        out%f1Aperture = f1Aperture
+        out%f2Aperture = f2Aperture
+        out%frontOffset = frontOffset
+        out%backOffset = backOffset
+        out%frontToPinSep = frontToPinSep
+        out%pinToBackSep = pinToBackSep
+        out%pinAperture = pinAperture
+        out%acceptAngle = acceptAngle
+        out%coreDiameter = coreDiameter
+
+        !extra bin for data beyond end of array
+        out%nbins = nbins + 1
+        allocate(out%data(out%nbins))
+        out%data = 0.0_wp
+        if(nbins == 0)then
+            out%bin_wid = 1._wp
+        else
+            out%bin_wid = coreDiameter / 2 / real(nbins, kind=wp)
+        end if
+        out%trackHistory = trackHistory
+
+    end function init_fibre_dect
+
+    logical function check_hit_fibre(this, hitpoint)
+
+        use constants, only : TWOPI
+        use geometry, only : intersectCircle
+
+        !! Check if a hitpoint is in the annulus
+        class(fibre_dect), intent(INOUT) :: this
+        !> Hitpoint to check
+        type(hit_t),         intent(inout) :: hitpoint
+
+        real(kind=wp) :: t 
+        real(kind=wp) :: angle
+        real(kind=wp) :: gradient
+        real(kind=wp) :: radius
+        real(kind=wp) :: costt, sintt
+
+        check_hit_fibre = .false.
+        check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*this%frontOffset, & 
+                                            this%f1Aperture, hitpoint%pos, hitpoint%dir, t, hitpoint%value1D)
+        if( check_hit_fibre) then
+            if(t <= 0.0_wp .or. t > hitpoint%pointSep)check_hit_fibre=.false.
+        end if
+
+        !print*,this%pos
+        !print*, this%pos + this%dir*this%frontOffset
+
+        if(.not. check_hit_fibre) then
+            ! The packet won't interact with the first lens stop following it
+            return
+        end if
+
+        costt = this%dir .dot. hitpoint%dir
+        if(costt>1.0_wp)costt=1.0_wp
+        sintt = sqrt(1._wp - costt * costt)
+        gradient = sintt/costt
+        radius = hitpoint%value1D
+
+        !print*, gradient, radius
+
+        ! change gradient as the packet moves through the lens
+        ! use thin lens approximation
+        gradient = -radius/this%focalLength1 + gradient
+
+        !print*, gradient, radius
+
+        ! move to the pinhole
+        radius = radius + gradient*this%frontToPinSep
+
+        ! is the packet blocked by the aperture
+        if(radius > this%pinAperture) then
+            check_hit_fibre = .false.
+            return
+        end if
+
+        ! move to the second lens
+        radius = radius + gradient*this%pinToBackSep
+
+        !print*, gradient, radius
+        ! does the packet enter the second lens
+        if(radius > this%f2Aperture) then
+            check_hit_fibre = .false.
+            return
+        end if
+
+        ! change gradient as the packet moves through the lens
+        gradient = -radius/this%focalLength2 + gradient
+
+        !move to the fibre
+        radius = radius + gradient*this%backOffset
+
+        !does the packet enter the fibre?
+        angle = abs(atan(gradient))*360/TWOPI
+
+        !print*, gradient, radius
+        if(angle > this%acceptAngle .or. radius > (this%coreDiameter/2)) then
+            check_hit_fibre = .false.
+        end if    
+        
+        hitpoint%value1D = radius
+    end function check_hit_fibre
 
     function init_camera(p1, p2, p3, layer, nbins, maxval, trackHistory) result(out)
         !! Initalise Camera detector

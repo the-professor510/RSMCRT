@@ -895,6 +895,7 @@ subroutine finalise(dict, dects, nscatt, start, history)
         !INTENSITY
         ! call write_data(abs(phasorGLOBAL)**2, trim(fileplace)//"phasor/"//state%outfile, state, dict)    
     end if
+    
     !write out detected photons
     if(size(dects) > 0)then
         call write_detected_photons(dects)

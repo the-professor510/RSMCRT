@@ -71,6 +71,7 @@ module writer_mod
                     access='stream',status='REPLACE',form='unformatted')
                 associate(x => dects(i)%p)
                     select type(x)
+                    !write out different data for different detector types
                     type is(circle_dect)
                         ! hdr = "# pos, layer, nbins, bin_wid, radius"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%radius)
                         ! write(u, "(a)")hdr
@@ -86,6 +87,14 @@ module writer_mod
                         ! hdr = "#pos, layer, nbins, bin_wid, radius1, radius2"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%r1)//","//str(x%r2)
                     type is(camera)
                         print*,"Warning not yet implmented!"
+                    type is(fibre_dect)
+                        write(u)  1.0_wp
+                        write(u)  x%coreDiameter
+                        write(u)  x%pos
+                        write(u)  x%dir
+                        do j = 1, x%nbins
+                            write(u)real(j,kind=wp) * x%bin_wid, x%data(j)
+                        end do
                     end select
                     end associate
                 close(u)

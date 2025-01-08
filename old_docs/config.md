@@ -79,11 +79,23 @@ This table defines the parameters for the light source used in the simulation it
 
 | Parameter | Type | Options | Default | Notes |
 |:---------:|:----:|:-------:|:-------:|:----:|
-| type | string | annulus, circle, camera | - | - |
+| type | string | annulus, circle, fibre, camera | - | - |
 | position | float array size 3 | - | NO DEFAULT! | Central position of detector |
 | direction | float array size 3 | - | [0.0, 0.0, -1.0] | Propagation direction of accepted rays |
-| radius1 | float | - | - | Radius of circular detector. Inner radius of annular detector |
+| radius | float | - | 1.0 | Radius of circular detector |
+| radius1 | float | - | - | Inner radius of annular detector |
 | radius2 | float | - | - | Outer radius of annulus detector. Must be larger than radius1 |
+| focalLength1 | float | - | 1.0 | Front lens focal length in a 4f system fibre collection system |
+| focalLength2 | float | - | 1.0 | Back lens focal length in a 4f system fibre collection system |
+| f1Aperture | float | - | 1.0 | Front lens radius in a 4f system fibre collection system |
+| f2Aperture | float | - | 1.0 | Back lens radius in a 4f system fibre collection system |
+| frontOffset | float | - | 0.0 | distance between position and the front lens in a 4f system fibre collection system |
+| backOffset | float | - | focalLenght2 | distance between fibre and back lens in a 4f system fibre collection system |
+| frontToPinSep | float | - | focalLength1 | distance between front lens and a pinhole aperture in a 4f system fibre collection system |
+| pinToBackSep | float | - | focalLength2 | distance between back lens and a pinhole aperture in a 4f system fibre collection system |
+| pinAperture | float | - | max(f1Aperture, f2Aperture) | pinhole radius/size in a 4f system fibre collection system |
+| acceptAngle | float | - | 90.0 | acceptance angle above the optical axis in degrees of the fibre in a 4f system fibre collection system |
+| coreDiameter | float | - | 0.01 | diameter of the fibre core of the fibre in a 4f collection system |
 | p1 | float array size 3 | - | [-1.0, -1.0, -1.0] | Used by camera detector only to set location and size of source|
 | p2 | float array size 3 | - | [2.0, 0.0, 0.0] | See above |
 | p3 | float array size 3 | - | [0.0, 2.0, 0.0] | See above |

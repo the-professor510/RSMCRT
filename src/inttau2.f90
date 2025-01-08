@@ -33,7 +33,7 @@ module inttau2
         type(dect_array),      intent(inout) :: dects(:)
         type(history_stack_t), intent(inout) :: history
 
-        real(kind=wp) :: tau, d_sdf, t_sdf, taurun, ds(size(sdfs_array)), dstmp(size(sdfs_array))
+        real(kind=wp) :: tau, d_sdf, glancing_d_sdf, t_sdf, taurun, ds(size(sdfs_array)), dstmp(size(sdfs_array))
         real(kind=wp) :: dsNew(size(sdfs_array))
         real(kind=wp) :: eps, dtot, old(size(sdfs_array)), new(size(sdfs_array)), n1, n2, Ri
         integer       :: i, old_layer, new_layer, smallStepLayer, layer
@@ -50,6 +50,8 @@ module inttau2
         startPos = pos
         dir = vector(packet%nxp, packet%nyp, packet%nzp)
 
+        !print*, "Move in a straight line"
+
         !round off distance
         eps = 1e-8_wp
         !get random tau
@@ -65,7 +67,7 @@ module inttau2
             packet%cnts = packet%cnts + size(ds)
             d_sdf = minval(abs(ds), dim=1) ! what is the minimum distance to a SDF
             dstmp = ds
-
+            !print*, ds
 
 
             if(d_sdf <eps)then
@@ -122,7 +124,7 @@ module inttau2
             
                 !Have we moved through a detector?
                 pointSep = sqrt((pos%x - startPos%x)**2 + (pos%y - startPos%y)**2 + (pos%z - startPos%z)**2)
-                hpoint = hit_t(startPos, dir, pointSep, sqrt(pos%x**2+pos%y**2), packet%weight)
+                hpoint = hit_t(startPos, dir, pointSep, packet%layer, packet%weight)
                 do i = 1, size(dects)
                     call dects(i)%p%record_hit(hpoint, history)
                 end do
@@ -180,6 +182,7 @@ module inttau2
                 d_sdf = minval(abs(ds), dim=1)
                 packet%cnts = packet%cnts + size(ds)
                 dstmp = ds
+                !print*, ds
 
                 !check if outside all sdfs
                 if(minval(ds) > 0._wp)then
@@ -190,9 +193,8 @@ module inttau2
 
 
             ! From the the last startPos has the packet interacted with a detector?
-            ! This check will only occur if we need to move the particle across a boundary
             pointSep = sqrt((pos%x - startPos%x)**2 + (pos%y - startPos%y)**2 + (pos%z - startPos%z)**2)
-            hpoint = hit_t(startPos, dir, pointSep, sqrt(pos%x**2+pos%y**2), packet%weight)
+            hpoint = hit_t(startPos, dir, pointSep, packet%layer, packet%weight)
             do i = 1, size(dects)
                 call dects(i)%p%record_hit(hpoint, history)
             end do
@@ -204,16 +206,10 @@ module inttau2
                 exit
             end if
 
-            ! Otherwise the particle must cross a boundary,
+            ! Otherwise the packet must cross a boundary,
             ! we must now consider refraction
-
-            !print*, "across boundary"
             
             !step a small bit into next sdf to get n2
-            ! choose a different step distance to ensure that you actually move into the next medium
-            !
-            !
-            !
             d_sdf = minval(abs(ds), dim=1) + 2.0_wp*eps
             smallStepPos = pos + d_sdf*dir
             dsNew = 0._wp
@@ -222,7 +218,21 @@ module inttau2
             end do
             packet%cnts = packet%cnts + size(dsNew)
             new_layer = maxloc(dsNew,dim=1, mask=(dsNew<=0._wp))
+            glancing_d_sdf = minval(abs(dsNew), dim=1) 
             old_layer = packet%layer
+
+            !Have we stepped over the boundary yet
+            do while(new_layer == old_layer .and. glancing_d_sdf < eps)
+                d_sdf = d_sdf + eps
+                smallStepPos = pos + d_sdf*dir
+                dsNew = 0._wp
+                do i = 1, size(ds)
+                    dsNew(i) = sdfs_array(i)%evaluate(smallStepPos)
+                end do
+                packet%cnts = packet%cnts + size(dsNew)
+                new_layer = maxloc(dsNew,dim=1, mask=(dsNew<=0._wp))
+                glancing_d_sdf = minval(abs(dsNew), dim=1) 
+            end do
 
             if (new_layer == 0) then
                 ! There is no new layer and we are outside of the SDFs
@@ -236,43 +246,43 @@ module inttau2
 
             !carry out refelction/refraction
             if (n1 /= n2) then !check for fresnel reflection
-                !print*, "n are different"
-                !Need to test and understand
-                !get correct sdf normal
-                !print*, packet%layer
-                !print*, pos
-                !print*, old_layer, new_layer
-                !print*, ds
-                !print*, dsNew
-                
-                !print*, pos
-                !print*, smallStepPos
-                !print*, dir
                                 
                 layer = -1
                 if(dsNew(new_layer) < 0._wp .and. ds(new_layer) >= 0.0_wp) then
                     !entered new layer
                     layer = new_layer
-                else if (dsNew(old_layer) > 0._wp .and. ds(old_layer) <= 0.0_wp) then
+                else if (dsNew(old_layer) >= 0._wp .and. ds(old_layer) < 0.0_wp) then
                     !left old_layer
                     layer = old_layer
+                else if (dsNew(new_layer) < 0.0_wp .and. dsNew(old_layer) <0.0_wp) then
+                    !floating point error has stepped the initial ds over a boundary, moving into a new layer
+                    layer = new_layer 
+                    !this floating point error won't occur for stepping out of a sdf
                 else 
+                    !First point has stepped into the new layer, step backwards
+                    !print*, old_layer, new_layer
+                    !print*, ds
+                    !print*, ds>0._wp
+                    !print*, dsNew
+                    !print*, dsNew<=0._wp
+                    !print*, maxval(dsNew, dim=1, mask=(dsNew<=0._wp))
+                    !print*, maxloc(dsNew,dim=1, mask=(dsNew<=0._wp))
+                    !print*, pos, sqrt(pos%x**2 + pos%y**2 + pos%z**2)
+                    !print*, smallStepPos, sqrt(smallStepPos%x**2 + smallStepPos%y**2 + smallStepPos%z**2)
+                    !print*, dir
                     error stop "This should not be reached!"
                 end if
-
-                !print*, layer
                 
                 N = calcNormal(pos, sdfs_array(layer))
-                !print*, N
 
                 rflag = .false.
                 call reflect_refract(dir, N, n1, n2, rflag, Ri)
 
                 if(.not.rflag)then
-                    !print*, "Transmitted"
-                    !update layer and step across the boundary
+                    ! Transmitted
+                    ! update layer and step across the boundary
 
-                    !move to boundary, then move a small step over the boundary in the new direction
+                    ! move to boundary, then move a small step over the boundary in the new direction
 
                     packet%layer = new_layer
                     oldpos = pos
@@ -283,13 +293,13 @@ module inttau2
                     pos = smallStepPos
 
                     pointSep = sqrt((pos%x - startPos%x)**2 + (pos%y - startPos%y)**2 + (pos%z - startPos%z)**2)
-                    hpoint = hit_t(startPos, dir, pointSep, sqrt(pos%x**2+pos%y**2), packet%weight)
+                    hpoint = hit_t(startPos, dir, pointSep, packet%layer, packet%weight)
                     do i = 1, size(dects)
                         call dects(i)%p%record_hit(hpoint, history)
                     end do
                     startPos = pos
                 else
-                    !print*, "Reflected"
+                    ! Reflected 
                     !step back inside original sdf
                     oldpos = pos
                     startPos = pos
@@ -311,7 +321,7 @@ module inttau2
                 pos = smallStepPos
 
                 pointSep = sqrt((pos%x - startPos%x)**2 + (pos%y - startPos%y)**2 + (pos%z - startPos%z)**2)
-                hpoint = hit_t(startPos, dir, pointSep, sqrt(pos%x**2+pos%y**2), packet%weight)
+                hpoint = hit_t(startPos, dir, pointSep, packet%layer, packet%weight)
                 do i = 1, size(dects)
                     call dects(i)%p%record_hit(hpoint, history)
                 end do
@@ -407,14 +417,14 @@ module inttau2
 ! needs to be atomic so dont write to same array address with more than 1 thread at a time
                 packet%phase = packet%phase + dcell
 !$omp atomic
-                    jmean(celli,cellj,cellk) = jmean(celli,cellj,cellk) + real(dcell, kind=sp)
+                    jmean(celli,cellj,cellk) = jmean(celli,cellj,cellk) + real(dcell, kind=sp)*packet%weight
                 call update_pos(grid, old_pos, celli, cellj, cellk, dcell, .false., dir, ldir, delta)
                 exit
             else
                 d = d + dcell
                 packet%phase = packet%phase + dcell
 !$omp atomic
-                    jmean(celli,cellj,cellk) = jmean(celli,cellj,cellk) + real(dcell, kind=sp)
+                    jmean(celli,cellj,cellk) = jmean(celli,cellj,cellk) + real(dcell, kind=sp)*packet%weight
                 call update_pos(grid, old_pos, celli, cellj, cellk, dcell, .true., dir, ldir, delta)
             end if
             if(celli == -1 .or. cellj == -1 .or. cellk == -1)then

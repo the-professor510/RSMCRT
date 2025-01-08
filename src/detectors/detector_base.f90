@@ -13,8 +13,10 @@ module detector_mod
         type(vector)  :: dir
         !> Distance over which if -t is greater than then the particle does not interact
         real(kind=wp) :: pointSep
-        !> Where to deposit
-        real(kind=wp) :: value
+        !> Where to store the value, used in record_hit_1D_sub
+        real(kind=wp) :: value1D
+        ! !> Where to store the value, used in record_hit_2D_sub
+        ! real(kind=wp) :: value2D
         !> Weight of the packet
         real(kind=wp) :: weight
     end type hit_t
@@ -121,7 +123,7 @@ contains
         integer       :: idx
 
         if(this%check_hit(hitpoint))then
-            value = hitpoint%value
+            value = hitpoint%value1D
 
             idx = min(nint(value / this%bin_wid) + 1, this%nbins)
             !$omp atomic

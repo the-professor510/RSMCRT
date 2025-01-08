@@ -1,37 +1,130 @@
 [source]
-name = "pencil"
-nphotons = 10000000
-direction = "z"
-position = [0.0,0.0,-2.45]
+name = "point"
+nphotons = 1000000
+position = [0.0,0.0,0.0]
 spectrum_type = "constant"
 wavelength = 500.0
 
 [grid]
-nxg = 500
-nyg = 500
-nzg = 500
-xmax = 50.0
-ymax = 50.0
+nxg = 200
+nyg = 200
+nzg = 200
+xmax = 5.0
+ymax = 5.0
 zmax = 5.0
 
 [geometry]
 geom_name = "box"
-BoxDimensions = [100.0,100.0,4.9]
-boundingBox = [100.0,100.0,5.0]
+BoxDimensions = [10.0, 10.0, 10.0]
+boundingBox = [10.0, 10.0, 10.0]
 position = [0.0,0.0,0.0]
-mus = [90]
+mus = [0]
 hgg = [0]
-mua = [10]
-n = [1.5]
+mua = [0]
+n = [1.0]
 
 [[detectors]]
-type="circle"
-position=[0.0, 0.0, -2.46]
+type="fibre"
+position=[0.0, 0.0, 0.0]
 direction=[0.0, 0.0, -1.0]
-radius1=20
-nbins=100
+focalLength1 = 1.5
+focalLength2 = 20.0
+f1Aperture = 0.5
+f2Aperture = 0.5
+frontOffset = 1.5
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
 maxval = 1.0
-trackHistory=false
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 0.0]
+direction=[0.0, 0.0, -1.0]
+focalLength1 = 1.5
+focalLength2 = 20.0
+f1Aperture = 1.0
+f2Aperture = 1.0
+frontOffset = 1.5
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 0.0]
+direction=[0.0, 0.0, -1.0]
+focalLength1 = 1.5
+focalLength2 = 20.0
+f1Aperture = 1.5
+f2Aperture = 1.5
+frontOffset = 1.5
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 0.0]
+direction=[0.0, 0.0, -1.0]
+focalLength1 = 1.5
+focalLength2 = 20.0
+f1Aperture = 2.0
+f2Aperture = 2.0
+frontOffset = 1.5
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 0.0]
+direction=[0.0, 0.0, -1.0]
+focalLength1 = 1.5
+focalLength2 = 20.0
+f1Aperture = 2.5
+f2Aperture = 2.5
+frontOffset = 1.5
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 0.0]
+direction=[0.0, 0.0, -1.0]
+focalLength1 = 1.5
+focalLength2 = 200.0
+f1Aperture = 3.0
+f2Aperture = 3.0
+frontOffset = 1.5
+backOffset = 200.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
 
 [output]
 fluence = "fluence.nrrd"

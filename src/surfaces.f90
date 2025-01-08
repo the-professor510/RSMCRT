@@ -98,6 +98,7 @@ module surfaces
         real(kind=wp) :: costt, sintt, sint2, cost2, tir, f1, f2
 
         costt = abs(I .dot. N)
+        if(costt>1.0_wp)costt=1.0_wp
         sintt = sqrt(1._wp - costt * costt)
         sint2 = n1/n2 * sintt
         if(sint2 > 1._wp)then

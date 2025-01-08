@@ -10,8 +10,10 @@ module iarray
     complex(kind=sp), allocatable :: phasor(:,:,:), phasorGLOBAL(:,:,:)
     !> fluence data array
     real(kind=sp), allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
-    !> absorption data array
+    !> first shot absorption data array
     real(kind=sp), allocatable :: absorb(:,:,:), absorbGLOBAL(:,:,:)
+    !> raman absorption data array
+    !real(kind=sp), allocatable :: ramanAbsorb(:,:,:), 
     !> emission location
     real(kind=sp), allocatable :: emission(:,:,:), emissionGLOBAL(:,:,:)
 end module iarray
