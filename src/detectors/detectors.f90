@@ -191,26 +191,43 @@ module detectors
         if(nbins == 0)then
             out%bin_wid = 1._wp
         else
-            out%bin_wid = maxval / real(nbins, kind=wp)
+            out%bin_wid = (r2-r1) / real(nbins, kind=wp)
         end if
         out%trackHistory = trackHistory
 
     end function init_annulus_dect
 
     logical function check_hit_annulus(this, hitpoint)
+
+        use geometry, only : intersectCircle
+
         !! Check if a hitpoint is in the annulus
         class(annulus_dect), intent(INOUT) :: this
         !> Hitpoint to check
         type(hit_t),         intent(inout)    :: hitpoint
 
-        real(kind=wp) :: newpos
+        logical :: hit_circle_r2, hit_circle_r1
+        real(kind=wp) :: t
 
         check_hit_annulus = .false.
-        !if(this%layer /= hitpoint%layer)return
-        newpos = sqrt((hitpoint%pos%x - this%pos%x)**2 + (hitpoint%pos%y - this%pos%y)**2 + (hitpoint%pos%z - this%pos%z)**2)
-        if(newpos >= this%r1 .and. newpos <= this%r2)then
-            check_hit_annulus = .true.
+        !do we hit the inner void
+        hit_circle_r1 = intersectCircle(this%dir, this%pos, this%r1, hitpoint%pos, hitpoint%dir, t, hitpoint%value1D)
+        !do we hit the inner void and the annulus
+        hit_circle_r2 = intersectCircle(this%dir, this%pos, this%r2, hitpoint%pos, hitpoint%dir, t, hitpoint%value1D)
+
+        !if we don't hit the void but do hit the void and annulus we must be in the annulus
+        if((.not. hit_circle_r1) .and. hit_circle_r2) then
+            !is the interaction point outside of the packet path
+            if(t <= 0.0_wp .or. t > hitpoint%pointSep) then
+                !yes it is outside the packet path
+                check_hit_annulus=.false.
+            else 
+                ! it is inside the packet path
+                check_hit_annulus = .true.
+            end if
         end if
+
+        hitpoint%value1D = hitpoint%value1D - this%r1
 
     end function check_hit_annulus
 

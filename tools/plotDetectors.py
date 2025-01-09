@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 import sys
 
 def plot(radius, count, nPackets, dectType):
-    print(count)        
+    print(radius)
+    print(count)
+    #print(count)        
     totalCounts = sum(count)
     print("Detector Type : " + dectType)
     print("Total Diffuse : " + str(totalCounts/nPackets))
@@ -21,15 +23,7 @@ def plot(radius, count, nPackets, dectType):
 
 
 folderName = "RSMCRT/data/detectors/"
-filename = folderName + "detector_2.dat"
-NoOpticalDepths = 5
-OpticalDepths = [0.1, 1, 10, 30, 100] 
-
-NoTimeBins = 1000
-TimeBinResolution = 0.000000001
-MaxTime = NoTimeBins*TimeBinResolution
-times = np.linspace(0,MaxTime,NoTimeBins, endpoint=False)
-
+filename = folderName + "detector_4.dat"
 
 data = np.fromfile(file=filename, dtype=np.float64, sep="")
 detectorType = data[0]
@@ -78,6 +72,22 @@ match detectorType:
             
         plot(radius, count, nPackets, "Fibre")
             
+    case 3:     #Detector Type of Annulus
+        nPackets = data[1]
+        radius1 = data[2]
+        radius2 = data[3]
+        pos = [data[4], data[5], data[6]]
+        dir = [data[7], data[8], data[9]]
+        numBins = (len(data) - 9)/2
+        
+        radius = []
+        count = []
+        
+        for i in range(10, len(data), 2):
+            radius.append(data[i])
+            count.append(data[i+1])
+        
+        plot(radius, count, nPackets, "Annulus")
     case _:     #Default case
         print("Unknown Detector Type")
         sys.exit()

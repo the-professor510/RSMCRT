@@ -301,8 +301,8 @@ contains
         pos = get_vector(child, "position", context=context, error=error)
         dir = get_vector(child, "direction", default=vector(0.0, 0.0, -1.0), context=context, error=error)
         call get_value(child, "layer", layer, 1)
-        call get_value(child, "radius1", radius1)
-        call get_value(child, "radius2", radius2, origin=origin)
+        call get_value(child, "radius1", radius1, 0.1_wp)
+        call get_value(child, "radius2", radius2, 0.2_wp, origin=origin)
         
         if(radius2 <= radius1)then
             call make_error(error,&

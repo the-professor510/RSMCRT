@@ -24,107 +24,43 @@ mua = [0]
 n = [1.0]
 
 [[detectors]]
-type="fibre"
-position=[0.0, 0.0, 0.0]
-direction=[0.0, 0.0, -1.0]
-focalLength1 = 1.5
-focalLength2 = 20.0
-f1Aperture = 0.5
-f2Aperture = 0.5
-frontOffset = 1.5
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
+type = "circle"
+position = [0.0,0.0, 4.0]
+direction = [0.0,0.0, 1.0]
+radius = 0.5
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+
+[[detectors]]
+type = "circle"
+position = [0.0,0.0, 4.0]
+direction = [0.0,0.0, 1.0]
+radius = 0.25
 nbins = 100
 maxval = 1.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-position=[0.0, 0.0, 0.0]
-direction=[0.0, 0.0, -1.0]
-focalLength1 = 1.5
-focalLength2 = 20.0
-f1Aperture = 1.0
-f2Aperture = 1.0
-frontOffset = 1.5
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
+type = "annulus"
+position = [0.0,0.0, 4.0]
+direction = [0.0,0.0, 1.0]
+radius1 = 0.0
+radius2 = 0.25
 nbins = 100
 maxval = 1.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-position=[0.0, 0.0, 0.0]
-direction=[0.0, 0.0, -1.0]
-focalLength1 = 1.5
-focalLength2 = 20.0
-f1Aperture = 1.5
-f2Aperture = 1.5
-frontOffset = 1.5
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
+type = "annulus"
+position = [0.0,0.0, 4.0]
+direction = [0.0,0.0, 1.0]
+radius1 = 0.25
+radius2 = 0.5
 nbins = 100
 maxval = 1.0
 trackHistory = false
-
-[[detectors]]
-type="fibre"
-position=[0.0, 0.0, 0.0]
-direction=[0.0, 0.0, -1.0]
-focalLength1 = 1.5
-focalLength2 = 20.0
-f1Aperture = 2.0
-f2Aperture = 2.0
-frontOffset = 1.5
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
-trackHistory = false
-
-[[detectors]]
-type="fibre"
-position=[0.0, 0.0, 0.0]
-direction=[0.0, 0.0, -1.0]
-focalLength1 = 1.5
-focalLength2 = 20.0
-f1Aperture = 2.5
-f2Aperture = 2.5
-frontOffset = 1.5
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
-trackHistory = false
-
-[[detectors]]
-type="fibre"
-position=[0.0, 0.0, 0.0]
-direction=[0.0, 0.0, -1.0]
-focalLength1 = 1.5
-focalLength2 = 200.0
-f1Aperture = 3.0
-f2Aperture = 3.0
-frontOffset = 1.5
-backOffset = 200.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
-trackHistory = false
-
 
 [output]
 fluence = "fluence.nrrd"

@@ -106,6 +106,15 @@ module writer_mod
                         end do
                     type is(annulus_dect)
                         ! hdr = "#pos, layer, nbins, bin_wid, radius1, radius2"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%r1)//","//str(x%r2)
+                        write(u)  3.0_wp ! What type of detector is it
+                        write(u)  real(state%nphotons, kind=wp)
+                        write(u)  x%r1
+                        write(u)  x%r2
+                        write(u)  x%pos
+                        write(u)  x%dir
+                        do j = 1, x%nbins
+                            write(u)(real(j,kind=wp) * x%bin_wid + x%r1), x%data(j)
+                        end do
                     type is(camera)
                         print*,"Warning not yet implmented!"
                     end select
