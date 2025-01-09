@@ -55,8 +55,9 @@ module writer_mod
         subroutine write_detected_photons(dects)
 
             use detectors
-            use constants, only: fileplace
+            use constants, only: fileplace, wp
             use utils, only : str
+            use sim_state_mod, only : state
 
             type(dect_array), intent(in) :: dects(:)
 
@@ -76,10 +77,30 @@ module writer_mod
                         ! hdr = "# pos, layer, nbins, bin_wid, radius"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%radius)
                         ! write(u, "(a)")hdr
                         ! write(u, "(a)")"#data:"
-                        write(u)  1.0_wp
+                        write(u)  1.0_wp ! What type of detector is it
+                        write(u)  real(state%nphotons, kind=wp)
                         write(u)  x%radius
                         write(u)  x%pos
                         write(u)  x%dir
+                        do j = 1, x%nbins
+                            write(u)real(j,kind=wp) * x%bin_wid, x%data(j)
+                        end do
+                    type is(fibre_dect)
+                        write(u)  2.0_wp !What type of detector is it
+                        write(u)  real(state%nphotons, kind=wp)
+                        write(u)  x%pos
+                        write(u)  x%dir
+                        write(u)  x%focalLength1
+                        write(u)  x%focalLength2
+                        write(u)  x%f1Aperture
+                        write(u)  x%f2Aperture
+                        write(u)  x%frontOffset
+                        write(u)  x%backOffset
+                        write(u)  x%frontToPinSep
+                        write(u)  x%pinToBackSep
+                        write(u)  x%pinAperture
+                        write(u)  x%acceptAngle
+                        write(u)  x%coreDiameter
                         do j = 1, x%nbins
                             write(u)real(j,kind=wp) * x%bin_wid, x%data(j)
                         end do
@@ -87,14 +108,6 @@ module writer_mod
                         ! hdr = "#pos, layer, nbins, bin_wid, radius1, radius2"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%r1)//","//str(x%r2)
                     type is(camera)
                         print*,"Warning not yet implmented!"
-                    type is(fibre_dect)
-                        write(u)  1.0_wp
-                        write(u)  x%coreDiameter
-                        write(u)  x%pos
-                        write(u)  x%dir
-                        do j = 1, x%nbins
-                            write(u)real(j,kind=wp) * x%bin_wid, x%data(j)
-                        end do
                     end select
                     end associate
                 close(u)

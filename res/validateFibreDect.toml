@@ -1,0 +1,211 @@
+[source]
+name = "point"
+nphotons = 1000000
+position = [0.0,0.0,0.0]
+spectrum_type = "constant"
+wavelength = 500.0
+
+[grid]
+nxg = 200
+nyg = 200
+nzg = 200
+xmax = 5.0
+ymax = 5.0
+zmax = 5.0
+
+[geometry]
+geom_name = "box"
+BoxDimensions = [10.0, 10.0, 10.0]
+boundingBox = [10.0, 10.0, 10.0]
+position = [0.0,0.0,0.0]
+mus = [0]
+hgg = [0]
+mua = [0]
+n = [1.0]
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 20.0
+f1Aperture = 0.5
+f2Aperture = 0.5
+frontOffset = 0.0
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 20.0
+f1Aperture = 1.0
+f2Aperture = 1.0
+frontOffset = 0.0
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 20.0
+f1Aperture = 1.5
+f2Aperture = 1.5
+frontOffset = 0.0
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 20.0
+f1Aperture = 2.0
+f2Aperture = 2.0
+frontOffset = 0.0
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 20.0
+f1Aperture = 2.5
+f2Aperture = 2.5
+frontOffset = 0.0
+backOffset = 20.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 200.0
+f1Aperture = 3.0
+f2Aperture = 3.0
+frontOffset = 0.0
+backOffset = 200.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 200.0
+f1Aperture = 3.5
+f2Aperture = 3.5
+frontOffset = 0.0
+backOffset = 200.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 200.0
+f1Aperture = 4.0
+f2Aperture = 4.0
+frontOffset = 0.0
+backOffset = 200.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 200.0
+f1Aperture = 4.5
+f2Aperture = 4.5
+frontOffset = 0.0
+backOffset = 200.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+[[detectors]]
+type="fibre"
+position=[0.0, 0.0, 2.0]
+direction=[0.0, 0.0, 1.0]
+focalLength1 = 2.0
+focalLength2 = 200.0
+f1Aperture = 5.0
+f2Aperture = 5.0
+frontOffset = 0.0
+backOffset = 200.0
+pinAperture = 200.0
+acceptAngle = 90.0
+coreDiameter = 1.0
+nbins = 100
+maxval = 1.0
+trackHistory = false
+
+
+[output]
+fluence = "fluence.nrrd"
+render_geometry_name = "geom_render.nrrd"
+render_geomerty = true
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [200,200,200]
+overwrite = true
+
+[simulation]
+iseed = 123456789
+absorb=true
+load_checkpoint=false
+checkpoint_file="check.ckpt"
+checkpoint_every_n=10000

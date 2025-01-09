@@ -17,7 +17,7 @@ contains
     subroutine parse_detectors(table, dects, context, error)
         !! parse the detectors
 
-        use detectors,     only : dect_array, circle_dect, annulus_dect, camera
+        use detectors,     only : dect_array, circle_dect, annulus_dect, camera, fibre_dect
         use sim_state_mod, only : state
 
         !> Input Toml table
@@ -34,11 +34,13 @@ contains
         character(len=:), allocatable :: dect_type
         type(circle_dect), target, save, allocatable :: dect_c(:)
         type(annulus_dect), target, save, allocatable :: dect_a(:)
+        type(fibre_dect), target, save, allocatable :: dect_f(:)
         type(camera), target, save, allocatable :: dect_cam(:)
-        integer :: i, c_counter, a_counter, cam_counter, j, k,origin
+        integer :: i, c_counter, a_counter, f_counter, cam_counter, j, k,origin, l
 
         c_counter = 0
         a_counter = 0
+        f_counter = 0
         cam_counter = 0
         call get_value(table, "detectors", array)
         allocate(dects(len(array)))
@@ -56,6 +58,8 @@ contains
                 c_counter = c_counter + 1
             case("annulus")
                 a_counter = a_counter + 1
+            case("fibre")
+                f_counter = f_counter + 1
             case("camera")
                 cam_counter = cam_counter + 1
             end select
@@ -69,12 +73,17 @@ contains
             if(allocated(dect_a))deallocate(dect_a)
             allocate(dect_a(a_counter))
         end if
+        if(f_counter > 0)then
+            if(allocated(dect_f))deallocate(dect_f)
+            allocate(dect_f(f_counter))
+        end if
         if(cam_counter > 0)then
             if(allocated(dect_cam))deallocate(dect_cam)
             allocate(dect_cam(cam_counter))
         end if
         c_counter = 1
         a_counter = 1
+        f_counter = 1
         cam_counter = 1
         state%trackHistory=.false.
         do i = 1, len(array)
@@ -87,6 +96,9 @@ contains
                 if(allocated(error))return
             case("annulus")
                 call handle_annulus_dect(child, dect_a, a_counter, context, error)
+                if(allocated(error))return
+            case("fibre")
+                call handle_fibre_collection_dect(child, dect_f, f_counter, context, error)
                 if(allocated(error))return
             case("camera")
                 call handle_camera(child, dect_cam, cam_counter, context, error)
@@ -104,9 +116,14 @@ contains
             dects(j+i-1)%p => dect_a(j)
         end do
 
-        do k = 1, cam_counter-1
-            allocate(dects(j+i+k-2)%p, source=dect_cam(k))
-            dects(j+i+k-2)%p => dect_cam(k)
+        do k = 1, f_counter-1
+            allocate(dects(j+i+k-2)%p, source=dect_f(k))
+            dects(j+i+k-2)%p => dect_f(k)
+        end do
+
+        do l = 1, cam_counter-1
+            allocate(dects(j+i+k+l-3)%p, source=dect_cam(l))
+            dects(j+i+l-3)%p => dect_cam(l)
         end do
 
         if(.not. allocated(state%historyFilename))state%historyFilename="photPos.obj"
@@ -179,7 +196,7 @@ contains
         dir = get_vector(child, "direction", default=vector(0.0, 0.0, -1.0), context=context, error=error)
         dir = dir%magnitude()
         call get_value(child, "layer", layer, 1)
-        call get_value(child, "radius1", radius)
+        call get_value(child, "radius", radius, 1.0_wp)
         call get_value(child, "nbins", nbins, 100)
         call get_value(child, "maxval", maxval, 100._wp)
         call get_value(child, "trackHistory", trackHistory, .false.)
@@ -194,6 +211,69 @@ contains
         counts = counts + 1
 
     end subroutine handle_circle_dect
+
+    subroutine handle_fibre_collection_dect(child, dects, counts, context, error)
+        !! Read in handle_fibre_collection_dector settings and initalise variable
+        use detectors,     only : fibre_dect
+        use sim_state_mod, only : state
+
+        !> Detector table
+        type(toml_table), pointer,     intent(in)    :: child
+        !> Array of fibre_dect
+        type(fibre_dect),             intent(inout) :: dects(:)
+        !> Number of fibre_dect to create
+        integer,                       intent(inout) :: counts
+        !> Context handle for error reporting.
+        type(toml_context),            intent(in)    :: context
+        !> Error message
+        type(toml_error), allocatable, intent(out)   :: error
+
+        integer       :: layer, nbins
+        real(kind=wp) :: maxval
+        type(vector)  :: pos, dir
+        logical       :: trackHistory
+
+        real(kind=wp) :: focalLength1, focalLength2, f1Aperture, f2Aperture
+        real(kind=wp) :: frontOffset, backOffset, frontToPinSep, pinToBackSep
+        real(kind=wp) :: pinAperture, acceptAngle, coreDiameter
+
+        pos = get_vector(child, "position", context=context, error=error)
+        dir = get_vector(child, "direction", default=vector(0.0, 0.0, -1.0), context=context, error=error)
+        dir = dir%magnitude()
+        call get_value(child, "focalLength1", focalLength1, 1.0_wp)
+        call get_value(child, "focalLength2", focalLength2, 1.0_wp)
+        call get_value(child, "f1Aperture", f1Aperture, 1.0_wp)
+        call get_value(child, "f2Aperture", f2Aperture, 1.0_wp)
+        call get_value(child, "frontOffset", frontOffset, 0.0_wp)
+        call get_value(child, "backOffset", backOffset, focalLength2)
+        call get_value(child, "frontToPinSep", frontToPinSep, focalLength1)
+        call get_value(child, "pinToBackSep", pinToBackSep, focalLength2)
+        call get_value(child, "pinAperture", pinAperture, max(f1Aperture, f2Aperture))
+        call get_value(child, "acceptanceAngle", acceptAngle, 90.0_wp)
+        call get_value(child, "coreDiameter", coreDiameter, 0.01_wp)
+
+        print*, backOffset
+        print*, frontToPinSep
+        print*, pinToBackSep
+        print*, pinAperture
+        
+        call get_value(child, "layer", layer, 1)
+        call get_value(child, "nbins", nbins, 1)
+        call get_value(child, "maxval", maxval, 100._wp)
+        call get_value(child, "trackHistory", trackHistory, .false.)
+        if(trackHistory)state%trackHistory=.true.
+#ifdef _OPENMP
+        if(trackHistory)then
+            call make_error(error, "Track history currently incompatable with OpenMP!", -1)
+            return
+        end if
+#endif
+        dects(counts) = fibre_dect(pos, dir, layer, nbins, maxval, trackHistory, focalLength1, & 
+                                    focalLength2, f1Aperture, f2Aperture, frontOffset, backOffset, & 
+                                    frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter)
+        counts = counts + 1
+
+    end subroutine handle_fibre_collection_dect
 
     subroutine handle_annulus_dect(child, dects, counts, context, error)
         !! Read in Annulus_detector settings and initalise variable
