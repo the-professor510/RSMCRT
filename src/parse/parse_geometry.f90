@@ -80,15 +80,15 @@ contains
                 call make_error(error, &
                 context%report("Need to set an integer value of at least one or greater for numOptProp", origin, &
                                 "numOptProp Incorrectly Specified"), -1)
-            else if ((state%experiment == "sphere") .and. (numOptProp .NE. 1)) then
+            else if ((state%experiment == "sphere") .and. (numOptProp /= 1)) then
                 call make_error(error, &
                 context%report("For geometry of sphere must set numOptProp to one", origin, &
                                 "numOptProp Incorrectly Specified"), -1)
-            else if ((state%experiment == "box") .and. (numOptProp .NE. 1)) then
+            else if ((state%experiment == "box") .and. (numOptProp /= 1)) then
                 call make_error(error, &
                 context%report("For geometry of box must set numOptProp to one", origin, &
                                 "numOptProp Incorrectly Specified"), -1)
-            else if ((state%experiment == "egg") .and. (numOptProp .NE. 3)) then
+            else if ((state%experiment == "egg") .and. (numOptProp /= 3)) then
                 call make_error(error, &
                 context%report("For geometry of egg must set numOptProp to three", origin, &
                                 "numOptProp Incorrectly Specified"), -1)
@@ -99,7 +99,7 @@ contains
             call get_value(child, "mua", children, requested=.false., origin=origin)
             if(associated(children))then
                 nlen = len(children)
-                if ((nlen .EQ. numOptProp)) then
+                if ((nlen == numOptProp)) then
                     do i = 1, numOptProp
                         write(string,'(I4)') i
                         call get_value(children, i, muaTemp)
@@ -121,7 +121,7 @@ contains
             call get_value(child, "mus", children, requested=.false., origin=origin)
             if(associated(children))then
                 nlen = len(children)
-                if ((nlen .EQ. numOptProp)) then
+                if ((nlen == numOptProp)) then
                     do i = 1, numOptProp
                         write(string,'(I4)') i
                         call get_value(children, i, musTemp)
@@ -143,7 +143,7 @@ contains
             call get_value(child, "mur", children, requested=.false., origin=origin)
             if(associated(children))then
                 nlen = len(children)
-                if ((nlen .EQ. numOptProp)) then
+                if ((nlen == numOptProp)) then
                     do i = 1, numOptProp
                         write(string,'(I4)') i
                         call get_value(children, i, murTemp)
@@ -165,7 +165,7 @@ contains
             call get_value(child, "hgg", children, requested=.false., origin=origin)
             if(associated(children))then
                 nlen = len(children)
-                if ((nlen .EQ. numOptProp)) then
+                if ((nlen == numOptProp)) then
                     do i = 1, numOptProp
                         write(string,'(I4)') i
                         call get_value(children, i, hggTemp)
@@ -187,7 +187,7 @@ contains
             call get_value(child, "n", children, requested=.false., origin=origin)
             if(associated(children))then
                 nlen = len(children)
-                if ((nlen .EQ. numOptProp)) then
+                if ((nlen == numOptProp)) then
                     do i = 1, numOptProp
                         write(string,'(I4)') i
                         call get_value(children, i, nTemp)
@@ -209,7 +209,7 @@ contains
             call get_value(child, "position", children, requested=.false., origin=origin)
             if(associated(children) )then
                 nlen = len(children)
-                if(nlen .NE. 3)then
+                if(nlen /= 3)then
                     call make_error(error, &
                     context%report("Need a matrix row for points", origin, "expected matrix row of size 3"), -1)
                     return
@@ -230,7 +230,7 @@ contains
             call get_value(child, "boundingBox", children, requested=.false., origin=origin)
             if(associated(children))then
                 nlen = len(children)
-                if(nlen .NE. 3)then
+                if(nlen /= 3)then
                     call make_error(error, &
                     context%report("Need a matrix row for points", origin, "expected matrix row of size 3"), -1)
                     return
@@ -258,7 +258,7 @@ contains
                 call get_value(child, "BoxDimensions", children, requested=.false., origin=origin)
                 if(associated(children))then
                     nlen = len(children)
-                    if(nlen .NE. 3)then
+                    if(nlen /= 3)then
                         call make_error(error, &
                         context%report("Need a matrix row for points", origin, "expected matrix row of size 3"), -1)
                         return
