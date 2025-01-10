@@ -92,6 +92,8 @@ module testsSDFMod
     end subroutine collect_suite4
 
     subroutine test_model_error(error)
+        ! from what I can understand we desire having this produce errors,
+        ! thus it shouldn't fail the test?
 
         type(error_type), allocatable, intent(out) :: error
 

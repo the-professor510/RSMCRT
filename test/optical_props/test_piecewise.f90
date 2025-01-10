@@ -45,7 +45,7 @@ module testsPiecewiseMod
         type(piecewise1D) :: obj1D
     
         !set seed
-        call init_rng(spread(123456789, 1, 8), .true.)
+        call init_rng(123456789, .true.)
         
         data1d = 0.
         bin_wid = (1000.-250.)/n
@@ -92,7 +92,7 @@ module testsPiecewiseMod
         type(piecewise2D) :: obj2D
     
         !set seed
-        call init_rng(spread(123456789, 1, 8), .true.)
+        call init_rng(123456789, .true.)
         
         ! generate image
         data2d = 0.

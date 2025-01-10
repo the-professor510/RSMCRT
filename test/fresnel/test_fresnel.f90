@@ -46,7 +46,7 @@ module testsFresnelMod
         real(kind=wp) :: ri, n1, n2, theta, real_value, phi, computed_theta
         integer :: j, counter
 
-        call init_rng(input_seed=spread(123456789, 1, 8))
+        call init_rng(input_seed=123456789)
 
         counter = 0
     

@@ -89,7 +89,7 @@ module testsOpticalPropMod
         real(kind=wp), allocatable :: flux(:,:), mua_a(:, :), hgg_a(:, :), n_a(:, :), mus_a(:, :)
         real(kind=wp) :: wave, hgg, mua, n, mus
         
-        call init_rng(spread(1234569, 1, 8), .false.)
+        call init_rng(1234569, .false.)
 
         allocate(mua_a(10, 2))
         mua_a(:, 1) = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]

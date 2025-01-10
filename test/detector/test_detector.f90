@@ -35,23 +35,24 @@ module testsDetectorMod
         type(circle_dect) :: a
         type(vector) :: pos, dir
         integer :: layer, nbins
-        real(kind=wp) :: radius, maxval, val
+        real(kind=wp) :: radius, maxval, pointSep, weight
         logical :: flag
         type(history_stack_t) :: history
 
-        pos = vector(0._wp, 0._wp, 0._wp)
+        pos = vector(0.5_wp, 0._wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)
         layer = 1
         radius = 0.5
         nbins = 100
         maxval = 100._wp
-        a = circle_dect(pos, dir, layer, radius, nbins, maxval, .false.)
+        a = circle_dect(pos, dir, layer, radius, nbins, .false.)
 
         pos = vector(0._wp, 0._wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)
-        val = 1._wp
+        pointSep = 1._wp
         layer = 1
-        hitpoint = hit_t(pos, dir, val, layer)
+        weight = 1._wp
+        hitpoint = hit_t(pos, dir, pointSep, layer, weight)
 
         flag = a%check_hit(hitpoint)
         call check(error, flag, .true.)
@@ -76,7 +77,7 @@ module testsDetectorMod
         type(camera) :: a
         type(vector) :: pos, dir, p1, p2, p3
         integer :: layer, nbins
-        real(kind=wp) :: maxval, val
+        real(kind=wp) :: maxval, val, weight
         logical :: flag
         type(history_stack_t) :: history
 
@@ -92,7 +93,8 @@ module testsDetectorMod
         dir = vector(-1._wp, 0._wp, 0._wp)
         val = 1._wp
         layer = 1
-        hitpoint = hit_t(pos, dir, val, layer)
+        weight = 1._wp
+        hitpoint = hit_t(pos, dir, val, layer, weight)
 
         flag = a%check_hit(hitpoint)
 
@@ -107,7 +109,8 @@ module testsDetectorMod
         dir = vector(1._wp, 0._wp, 0._wp)
         val = 1._wp
         layer = 1
-        hitpoint = hit_t(pos, dir, val, layer)
+        weight = 1._wp
+        hitpoint = hit_t(pos, dir, val, layer, weight)
 
         flag = a%check_hit(hitpoint)
 
@@ -127,7 +130,7 @@ module testsDetectorMod
         type(annulus_dect) :: a
         type(vector) :: pos, dir
         integer :: layer, nbins
-        real(kind=wp) :: maxval, val, r1, r2
+        real(kind=wp) :: maxval, pointSep, r1, r2, weight
         logical :: flag
         type(history_stack_t) :: history
 
@@ -136,14 +139,16 @@ module testsDetectorMod
         maxval = 100._wp
         r1 = 0.5_wp
         r2 = 1.0_wp
-        pos = vector(0., 0., 0.)
+        pos = vector(0.5_wp, 0._wp, 0._wp)
+        dir = vector(1._wp, 0._wp, 0._wp)
         a = annulus_dect(pos, dir, layer, r1, r2, nbins, maxval, .false.)
 
-        pos = vector(.75_wp, 0._wp, 0._wp)
-        dir = vector(-1._wp, 0._wp, 0._wp)
-        val = 1._wp
+        pos = vector(0._wp, 0.75_wp, 0._wp)
+        dir = vector(1._wp, 0._wp, 0._wp)
+        pointSep = 1._wp
         layer = 1
-        hitpoint = hit_t(pos, dir, val, layer)
+        weight = 1._wp
+        hitpoint = hit_t(pos, dir, pointSep, layer, weight)
 
         flag = a%check_hit(hitpoint)
         call check(error, flag, .true.)
@@ -155,9 +160,10 @@ module testsDetectorMod
 
         pos = vector(0._wp, 0._wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)
-        val = 1._wp
+        pointSep = 1._wp
         layer = 1
-        hitpoint = hit_t(pos, dir, val, layer)
+        weight = 1._wp
+        hitpoint = hit_t(pos, dir, pointSep, layer, weight)
 
         flag = a%check_hit(hitpoint)
 

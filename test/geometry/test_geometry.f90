@@ -219,7 +219,7 @@ module testsgeometryMod
         type(error_type), allocatable, intent(out) :: error
         logical :: flag
         type(vector) :: n, centre, orig, dir, new_pos
-        real(kind=wp) :: t, radius
+        real(kind=wp) :: t, radius, d2
 
         radius = 10.0_wp
         centre = vector(0.0, 0.0, 0.0)
@@ -228,7 +228,7 @@ module testsgeometryMod
         orig = vector(0.0, 0.0, -10.0)
         dir = vector(0.0, 0.0, 1.0)
 
-        flag = intersectCircle(n, centre, radius, orig, dir, t)
+        flag = intersectCircle(n, centre, radius, orig, dir, t, d2)
         new_pos = orig + t * dir
 
         call check(error, flag, .true.)
@@ -245,7 +245,7 @@ module testsgeometryMod
 
         orig = vector(0.0, 0., -20.)
         dir = vector(0., 0., -1.)
-        flag = intersectCircle(n, centre, radius, orig, dir, t)
+        flag = intersectCircle(n, centre, radius, orig, dir, t, d2)
 
         call check(error, flag, .false.)
         if(allocated(error))return

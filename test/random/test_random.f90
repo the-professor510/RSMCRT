@@ -57,7 +57,7 @@ module testsrandom
 
         call random_seed(size=n)
         allocate(seed(n))
-        call init_rng(spread(123456789, 1, 8), .true.)
+        call init_rng(123456789, .true.)
         call random_seed(get=seed)
 
         do i = 1, n
@@ -67,7 +67,7 @@ module testsrandom
             if(allocated(error))return
         end do
         
-        call init_rng(spread(123456789, 1, 8))
+        call init_rng(123456789)
         call random_seed(get=seed)
 
         do i = 1, n

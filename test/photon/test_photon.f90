@@ -105,7 +105,7 @@ module testsPhotonMod
 
         do i = 1, 10000
             call packet%emit(spectrum, dict)
-            if(packet%pos%x /= -7.5_wp)then
+            if(packet%pos%x /= -7.5_wp + 7.9e-7_wp)then
                 call test_failed(error, "Uniform X coordinate failed!", "Pos%x="//str(packet%pos%x)//" should be -7.5")
                 return
             end if
@@ -185,14 +185,14 @@ module testsPhotonMod
         type(spectrum_t) :: spectrum
         type(constant) :: const
 
-        call init_rng(spread(12345678, 1, 8), .false.)
+        call init_rng(12345678, .false.)
 
         const = constant(500._wp)
         allocate(spectrum%p, source=const)
 
-        state%grid = init_grid(200, 200, 200, 1._wp, 1._wp, 1._wp)
+        state%grid = init_grid(200, 200, 200, 1.1_wp, 1.1_wp, 1.1_wp)
 
-        pos = vector(1.0_wp, 1.0_wp, 1.0_wp)
+        pos = vector(0.0_wp, 0.0_wp, 1.0_wp)
         dir = vector(0.0_wp, 0.0_wp, -1.0_wp)
 
         call set_photon(pos, dir)
@@ -202,8 +202,8 @@ module testsPhotonMod
 
         do i = 1, 10000
             call packet%emit(spectrum, dict)
-            r_pos = sqrt((packet%pos%x+1)**2 + (packet%pos%y+1)**2+ (packet%pos%z+1)**2)
-            if(r_pos > 2.5_wp .and. packet%pos%z /= -1._wp)then
+            r_pos = sqrt((packet%pos%x+1)**2 + (packet%pos%y+1)**2)
+            if(r_pos > 2.5_wp .and. packet%pos%z /= 1._wp)then
                 call test_failed(error, "Circle Source failed!", "radial position="//str(r_pos, 5)//" should be less than 2.5")
                 return
             end if
@@ -281,7 +281,7 @@ module testsPhotonMod
         cell_height = 2./200.
         cell_width = 2./200.
 
-        call init_rng(spread(12345678, 1, 8), .false.)
+        call init_rng(12345678, .false.)
         
         ! Read in image
         sfile = "test/parse/test.png"

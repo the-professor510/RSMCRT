@@ -385,7 +385,7 @@ contains
         call get_value(dict, "muab", optprop(2))
         call get_value(dict, "musc", optprop(3))
         call get_value(dict, "muac", optprop(4))
-        call get_value(dict, "hgg", optprop(5))
+        call get_value(dict, "hgga", optprop(5))
         n = 1._wp
 
         opt(1) = mono(optprop(1), optprop(2), optprop(5), 1.5_wp)
@@ -445,10 +445,12 @@ contains
 
         type(opticalProp_t) :: opt
         real(kind=wp) :: mus, mua, hgg, n, tau
+        character(4) :: string 
 
         allocate(array(1))
         call get_value(dict, "tau", tau)
-        call get_value(dict, "hgg", hgg)
+        write(string,'(I4)') 1
+        call get_value(dict, "hgg%"//string, hgg)
 
         n = 1._wp
         hgg = hgg
