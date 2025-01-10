@@ -8,8 +8,8 @@ class plotDetectorsClass:
         print(radius)
         print(count)       
         totalCounts = sum(count)
-        print("Detector Type : " + dectType)
-        print("Total Diffuse : " + str(totalCounts/nPackets))
+        print(f"Detector Type : {dectType:.4f}")
+        print(f"Total Diffuse : {totalCounts/nPackets}")
 
 
         fig = plt.figure(1)

@@ -15,7 +15,7 @@ for j in range(1,11):
                 
     totalCounts.append(sum(count)/nPackets)
     aperture.append(j*0.5)
-    print("Total Diffuse " + str(j) + " : " + str(totalCounts[j-1]))
+    print(f"Total Diffuse {j} : {(totalCounts[j-1]):.5f}")
 
 
 fig = plt.figure(1)
