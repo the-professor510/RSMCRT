@@ -4,7 +4,7 @@ module kernels
     implicit none
     
     private
-    public :: weight_scatter, pathlength_scatter, pathlength_scatter2, test_kernel
+    public :: weight_scatter, run_MCRT_Default, run_MCRT_Survival_Bias, test_kernel
 
 contains
 !###############################################################################
@@ -91,7 +91,7 @@ contains
                 distances(i) = array(i)%evaluate(packet%pos)
                 !if(distances(i) > 0._wp)distances(i)=-999.0_wp
             end do
-            packet%layer=maxloc(distances,dim=1, mask=(distances<=0._wp))
+            packet%layer=maxloc(distances,dim=1, mask=(distances<0._wp))
             if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
             ! Find scattering location
             call tauint2(state%grid, packet, array, dects, history)
@@ -164,7 +164,7 @@ contains
 
 
     !Full weight reduction
-    subroutine pathlength_scatter(input_file)
+    subroutine run_MCRT_Default(input_file)
 
         !Shared data
         use iarray
@@ -289,7 +289,7 @@ contains
                 distances(i) = array(i)%evaluate(packet%pos)
                 !if(distances(i) > 0._wp)distances(i)=-999.0_wp
             end do
-            packet%layer=maxloc(distances,dim=1, mask=(distances<=0._wp))
+            packet%layer=maxloc(distances,dim=1, mask=(distances<0._wp))
             
             if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
             ! Find scattering location
@@ -339,11 +339,11 @@ toc=omp_get_wtime()
     print*,"Photons/s: ",(state%nphotons / (toc - tic))
 
     call finalise(dict, dects, nscatt, start, history)
-    end subroutine pathlength_scatter
+    end subroutine run_MCRT_Default
 
 
     !Partial weight reduction with survival biasing as a variance reduction technique
-    subroutine pathlength_scatter2(input_file)
+    subroutine run_MCRT_Survival_Bias(input_file)
 
         !Shared data
         use iarray
@@ -468,7 +468,7 @@ toc=omp_get_wtime()
                 distances(i) = array(i)%evaluate(packet%pos)
                 !if(distances(i) > 0._wp)distances(i)=-999.0_wp
             end do
-            packet%layer=maxloc(distances,dim=1, mask=(distances<=0._wp))
+            packet%layer=maxloc(distances,dim=1, mask=(distances<0._wp))
             
             if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
             ! Find scattering location
@@ -558,14 +558,92 @@ toc=omp_get_wtime()
 #ifdef _OPENMP
 !$OMP end  do
 !$OMP end parallel
-toc=omp_get_wtime()
+    toc=omp_get_wtime()
 #else
-    call cpu_time(toc)
+        call cpu_time(toc)
 #endif
-    print*,"Photons/s: ",(state%nphotons / (toc - tic))
+        print*,"Photons/s: ",(state%nphotons / (toc - tic))
 
-    call finalise(dict, dects, nscatt, start, history)
-    end subroutine pathlength_scatter2
+        call finalise(dict, dects, nscatt, start, history)
+    end subroutine run_MCRT_Survival_Bias
+
+
+    subroutine Emission_MCRT(input_file)
+        ! Yet to be used however, will be used to calculate raman scattering
+        !To do raman Scatter i need to do the following
+
+        ! clear the detectors of all data, i.e. set them to zero, add functionality to zero all detectors
+        ! I no longer need to record weight so I will want to do moving without pathlength enabled, add functionality to 
+        !                                                                               disable it with a global setting
+        ! I will launch packets from every grid cell that has non-zero weight (don't used jmean to do this) use absorbed
+        ! this will ensure that I launch from cells that are significant, and where we expect to get a signal from
+        ! For every cell I will launch 10^6 packets, I expect this to take a couple of seconds for each grid cell
+        ! To improve this I can add as many detectors as possible to ensure that I will only have to do one geometry once
+        ! 
+        !call ramanScatter(dict, dects, nscatt, start, history)
+        !Shared data
+        use iarray
+        use constants, only : wp
+
+        !subroutines
+        use detectors,     only : dect_array
+        use sdfs,          only : sdf
+        use sim_state_mod, only : state
+        use vector_class,  only : vector
+        use photonMod,     only : photon
+        use piecewiseMod
+
+        !external deps
+        use tev_mod, only : tevipc
+        use tomlf,   only : toml_table
+
+        character(len=*), intent(in) :: input_file
+        
+        type(toml_table)              :: dict
+        real(kind=wp),    allocatable :: distances(:), image(:,:,:)
+        type(dect_array), allocatable :: dects(:)
+        type(sdf),        allocatable :: array(:)
+        real(kind=wp)                 :: nscatt
+        type(tevipc)                  :: tev
+        type(photon)                  :: packet
+        type(spectrum_t)              :: spectrum
+
+        integer :: m, n, o, layer, count, total, i
+        real(kind = wp) :: x,y,z, start
+        type(vector) :: position
+
+
+        call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
+        count = 0
+        total = 0
+        do m = 1, state%grid%nxg
+            do n = 1, state%grid%nyg
+                do o = 1, state%grid%nzg
+                    y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                    x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                    z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                    position = vector(x,y,z)
+                    !get the layer at this position
+                    distances = 0._wp
+                    !print*, position
+                    do i = 1, size(distances)
+                        distances(i) = array(i)%evaluate(position)
+                    end do
+                    !print*, distances
+                    layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+                    !print*, array(layer)%getkappa()
+                    if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                        count = count+1
+                    end if
+                    total = total +1
+                end do         
+            end do
+        end do
+        print*, count
+
+        print*, total
+
+    end subroutine Emission_MCRT
 
     subroutine test_kernel(input_file, end_early)
 
@@ -895,7 +973,7 @@ subroutine finalise(dict, dects, nscatt, start, history)
         !INTENSITY
         ! call write_data(abs(phasorGLOBAL)**2, trim(fileplace)//"phasor/"//state%outfile, state, dict)    
     end if
-    
+
     !write out detected photons
     if(size(dects) > 0)then
         call write_detected_photons(dects)

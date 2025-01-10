@@ -325,11 +325,11 @@ module sdf_baseMod
 !$omp private(i, x, y, z, pos, j, k, u, ds, id, minvalue)
 !$omp do
         do i = 1, samples(1)
-            x = (i-ns(1)) *wid%x
+            x = (i-ns(1) - 0.5) *wid%x
             do j = 1, samples(2)
-                y = (j-ns(2)) *wid%y
+                y = (j-ns(2) - 0.5) *wid%y
                 do k = 1, samples(3)
-                    z = (k-ns(3)) * wid%z
+                    z = (k-ns(3) - 0.5) * wid%z
                     pos = vector(x, y, z)
                     ds = 0._wp
                     !do u = 1, size(ds)
@@ -349,7 +349,7 @@ module sdf_baseMod
                         ds(u) = cnt(u)%evaluate(pos)
                         !if(ds(u) > 0._wp)ds(u)=-999.0_wp
                     end do
-                    image(i, j, k) = maxloc(ds,dim=1, mask=(ds<=0._wp))
+                    image(i, j, k) = maxloc(ds,dim=1, mask=(ds<0._wp))
                 end do
             end do
             call bar%progress()

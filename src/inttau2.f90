@@ -81,7 +81,7 @@ module inttau2
                     ds(i) = sdfs_array(i)%evaluate(smallStepPos)
                 end do
                 packet%cnts = packet%cnts + size(ds)
-                smallStepLayer=maxloc(ds,dim=1, mask=(ds<=0._wp))
+                smallStepLayer=maxloc(ds,dim=1, mask=(ds<0._wp))
                 
                 if (smallStepLayer == packet%layer) then
                     !print*, "forward"
@@ -217,7 +217,7 @@ module inttau2
                 dsNew(i) = sdfs_array(i)%evaluate(smallStepPos)
             end do
             packet%cnts = packet%cnts + size(dsNew)
-            new_layer = maxloc(dsNew,dim=1, mask=(dsNew<=0._wp))
+            new_layer = maxloc(dsNew,dim=1, mask=(dsNew<0._wp))
             glancing_d_sdf = minval(abs(dsNew), dim=1) 
             old_layer = packet%layer
 
@@ -230,7 +230,7 @@ module inttau2
                     dsNew(i) = sdfs_array(i)%evaluate(smallStepPos)
                 end do
                 packet%cnts = packet%cnts + size(dsNew)
-                new_layer = maxloc(dsNew,dim=1, mask=(dsNew<=0._wp))
+                new_layer = maxloc(dsNew,dim=1, mask=(dsNew<0._wp))
                 glancing_d_sdf = minval(abs(dsNew), dim=1) 
             end do
 
@@ -254,23 +254,26 @@ module inttau2
                 else if (dsNew(old_layer) >= 0._wp .and. ds(old_layer) < 0.0_wp) then
                     !left old_layer
                     layer = old_layer
-                else if (dsNew(new_layer) < 0.0_wp .and. dsNew(old_layer) <0.0_wp) then
+                else if (dsNew(new_layer) < 0.0_wp .and. dsNew(old_layer) < 0.0_wp) then
                     !floating point error has stepped the initial ds over a boundary, moving into a new layer
                     layer = new_layer 
                     !this floating point error won't occur for stepping out of a sdf
+                else if (ds(old_layer) >= 0.0_wp .and. dsNew(old_layer) >= 0.0_wp) then
+                    !floating point error has stepped the initial ds over a boundary, leaving out of the old layer
+                    layer = old_layer
                 else 
                     !First point has stepped into the new layer, step backwards
-                    !print*, old_layer, new_layer
-                    !print*, ds
-                    !print*, ds>0._wp
-                    !print*, dsNew
-                    !print*, dsNew<=0._wp
-                    !print*, maxval(dsNew, dim=1, mask=(dsNew<=0._wp))
-                    !print*, maxloc(dsNew,dim=1, mask=(dsNew<=0._wp))
-                    !print*, pos, sqrt(pos%x**2 + pos%y**2 + pos%z**2)
-                    !print*, smallStepPos, sqrt(smallStepPos%x**2 + smallStepPos%y**2 + smallStepPos%z**2)
-                    !print*, dir
-                    error stop "This should not be reached!"
+                    print*, old_layer, new_layer
+                    print*, ds
+                    print*, ds<0._wp
+                    print*, dsNew
+                    print*, dsNew<0._wp
+                    print*, maxval(dsNew, dim=1, mask=(dsNew<0._wp))
+                    print*, maxloc(dsNew,dim=1, mask=(dsNew<0._wp))
+                    print*, pos, sqrt(pos%x**2 + pos%y**2 + pos%z**2)
+                    print*, smallStepPos, sqrt(smallStepPos%x**2 + smallStepPos%y**2 + smallStepPos%z**2)
+                    print*, dir
+                    error stop "This should not be reached! check reflection/refraction in inttau2.f90"
                 end if
                 
                 N = calcNormal(pos, sdfs_array(layer))

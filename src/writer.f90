@@ -75,8 +75,6 @@ module writer_mod
                     !write out different data for different detector types
                     type is(circle_dect)
                         ! hdr = "# pos, layer, nbins, bin_wid, radius"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%radius)
-                        ! write(u, "(a)")hdr
-                        ! write(u, "(a)")"#data:"
                         write(u)  1.0_wp ! What type of detector is it
                         write(u)  real(state%nphotons, kind=wp)
                         write(u)  x%radius
