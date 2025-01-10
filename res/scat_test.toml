@@ -1,7 +1,7 @@
 [source]
 name = "point"
-nphotons = 1000000
-position = [0.0,0.0,0.0]
+nphotons = 100000
+position = [0.0, 0.0, 0.0]
 spectrum_type = "constant"
 wavelength = 500.0
 
@@ -9,66 +9,18 @@ wavelength = 500.0
 nxg = 200
 nyg = 200
 nzg = 200
-xmax = 5.0
-ymax = 5.0
-zmax = 5.0
+xmax = 1.0
+ymax = 1.0
+zmax = 1.0
 
 [geometry]
-geom_name = "box"
-BoxDimensions = [10.0, 10.0, 10.0]
-boundingBox = [10.0, 10.0, 10.0]
-position = [0.0,0.0,0.0]
-mus = [0]
-hgg = [0]
-mua = [0]
-n = [1.0]
-
-[[detectors]]
-type = "circle"
-position = [0.0,0.0, 4.0]
-direction = [0.0,0.0, 1.0]
-radius = 0.5
-nbins = 100
-maxval = 1.0
-trackHistory = false
-
-
-[[detectors]]
-type = "circle"
-position = [0.0,0.0, 4.0]
-direction = [0.0,0.0, 1.0]
-radius = 0.25
-nbins = 100
-maxval = 1.0
-trackHistory = false
-
-[[detectors]]
-type = "annulus"
-position = [0.0,0.0, 4.0]
-direction = [0.0,0.0, 1.0]
-radius1 = 0.0
-radius2 = 0.25
-nbins = 100
-maxval = 1.0
-trackHistory = false
-
-[[detectors]]
-type = "annulus"
-position = [0.0,0.0, 4.0]
-direction = [0.0,0.0, 1.0]
-radius1 = 0.25
-radius2 = 0.5
-nbins = 100
-maxval = 1.0
-trackHistory = false
+geom_name = "scat_test"
+tau = 10.0
 
 [output]
 fluence = "fluence.nrrd"
-render_geometry_name = "geom_render.nrrd"
-render_geomerty = true
-render_source_name = "source_render.nrrd"
-render_source = true
-render_size = [200,200,200]
+render = "geom_render.nrrd"
+render_geom = false
 overwrite = true
 
 [simulation]
