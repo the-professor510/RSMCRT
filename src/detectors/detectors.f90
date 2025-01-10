@@ -34,7 +34,7 @@ module detectors
         real(kind=wp) :: f2Aperture
         !> distance between the detector plane and the front lens
         real(kind=wp) :: frontOffset
-        !> distance between the fibre plance and the back lens
+        !> distance between the fibre plane and the back lens
         real(kind=wp) :: backOffset
         !> distance between front lens and a pinhole in between the front and back lens
         real(kind=wp) :: frontToPinSep

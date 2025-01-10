@@ -65,16 +65,14 @@ module writer_mod
             character(len=:), allocatable :: hdr
 
             do i = 1, size(dects)
-                !open(newunit=u,  access="stream",&
-                !     status='REPLACE', file=trim(fileplace)//"detectors/detector_"//str(i)//".dat")
-
+                
                 open(newunit=u,file=trim(fileplace)//"detectors/detector_"//str(i)//".dat",&
                     access='stream',status='REPLACE',form='unformatted')
                 associate(x => dects(i)%p)
                     select type(x)
                     !write out different data for different detector types
                     type is(circle_dect)
-                        ! hdr = "# pos, layer, nbins, bin_wid, radius"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%radius)
+                        ! write out the circle detector 
                         write(u)  1.0_wp ! What type of detector is it
                         write(u)  real(state%nphotons, kind=wp)
                         write(u)  x%radius
@@ -84,6 +82,7 @@ module writer_mod
                             write(u)real(j,kind=wp) * x%bin_wid, x%data(j)
                         end do
                     type is(fibre_dect)
+                        ! write out the fibre detector
                         write(u)  2.0_wp !What type of detector is it
                         write(u)  real(state%nphotons, kind=wp)
                         write(u)  x%pos
@@ -103,7 +102,7 @@ module writer_mod
                             write(u)real(j,kind=wp) * x%bin_wid, x%data(j)
                         end do
                     type is(annulus_dect)
-                        ! hdr = "#pos, layer, nbins, bin_wid, radius1, radius2"//new_line("a")//str(x%pos)//","//str(x%layer)//","//str(x%nbins)//","//str(x%bin_wid)//","//str(x%r1)//","//str(x%r2)
+                        ! write out the annulus detector
                         write(u)  3.0_wp ! What type of detector is it
                         write(u)  real(state%nphotons, kind=wp)
                         write(u)  x%r1

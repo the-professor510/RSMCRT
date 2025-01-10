@@ -332,22 +332,8 @@ module sdf_baseMod
                     z = (k-ns(3) - 0.5) * wid%z
                     pos = vector(x, y, z)
                     ds = 0._wp
-                    !do u = 1, size(ds)
-                    !    ds(u) = cnt(u)%evaluate(pos)
-                    !end do
-
-                    !image(i, j, k) = minval(ds)
-
-                    !image(i, j, k) = (product(ds))
-                    !if(image(i, j, k)>0) then
-                    !    image(i, j, k) = 1.0
-                    !else
-                    !    image(i, j, k) = -1.0
-                    !end if
-
                     do u = 1, size(ds)
                         ds(u) = cnt(u)%evaluate(pos)
-                        !if(ds(u) > 0._wp)ds(u)=-999.0_wp
                     end do
                     image(i, j, k) = maxloc(ds,dim=1, mask=(ds<0._wp))
                 end do

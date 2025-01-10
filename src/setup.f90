@@ -29,8 +29,6 @@ module setupMod
             call alloc_array(settings%grid%nxg, settings%grid%nyg, settings%grid%nzg)
             call zarray()
 
-            !print*, settings%experiment
-
             ! setup geometry using SDFs
             select case(settings%experiment)
                 case("logo")
