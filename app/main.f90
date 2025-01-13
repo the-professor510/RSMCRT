@@ -1,6 +1,6 @@
 program mcpolar
 !! Entry point for program
-    use kernels, only : weight_scatter, run_MCRT_Default, run_MCRT_Survival_Bias
+    use kernels, only : run_MCRT_Default, run_MCRT_Survival_Bias
 
     integer :: num_args, i
     character(len=64), allocatable :: args(:)

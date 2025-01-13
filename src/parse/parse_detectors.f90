@@ -250,13 +250,8 @@ contains
         call get_value(child, "pinToBackSep", pinToBackSep, focalLength2)
         call get_value(child, "pinAperture", pinAperture, max(f1Aperture, f2Aperture))
         call get_value(child, "acceptanceAngle", acceptAngle, 90.0_wp)
-        call get_value(child, "coreDiameter", coreDiameter, 0.01_wp)
-
-        print*, backOffset
-        print*, frontToPinSep
-        print*, pinToBackSep
-        print*, pinAperture
-        
+        call get_value(child, "coreDiameter", coreDiameter, 0.01_wp)   
+             
         call get_value(child, "layer", layer, 1)
         call get_value(child, "nbins", nbins, 1)
         call get_value(child, "maxval", maxval, 100._wp)

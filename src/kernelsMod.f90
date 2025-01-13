@@ -4,164 +4,11 @@ module kernels
     implicit none
     
     private
-    public :: weight_scatter, run_MCRT_Default, run_MCRT_Survival_Bias, test_kernel
+    public :: run_MCRT_Default, run_MCRT_Survival_Bias, test_kernel
 
 contains
 !###############################################################################
 !                   KERNELS
-    subroutine weight_scatter(input_file)
-
-        !Shared data
-        use iarray
-        use constants, only : wp, CHANCE, THRESHOLD
-
-        !subroutines
-        use detectors,     only : dect_array
-        use detector_mod,  only : hit_t
-        use historyStack,  only : history_stack_t
-        use inttau2,       only : tauint2, update_voxels
-        use photonMod,     only : photon
-        use piecewiseMod
-        use random,        only : ran2, init_rng
-        use sdfs,          only : sdf
-        use sim_state_mod, only : state
-        use utils,         only : pbar
-        use vec4_class,    only : vec4
-        use vector_class,  only : vector
-        
-        !external deps
-        use tev_mod, only : tevipc
-        use tomlf,   only : toml_table
-#ifdef _OPENMP
-        use omp_lib
-#endif
-        character(len=*), intent(in)   :: input_file
-        
-        integer                        :: numproc, id, j, i
-        type(history_stack_t)          :: history
-        type(pbar)                     :: bar
-        type(photon)                   :: packet
-        type(toml_table)               :: dict
-        real(kind=wp),     allocatable :: distances(:), image(:,:,:)
-        type(hit_t)                    :: hpoint
-        type(vector)                   :: dir
-        type(dect_array),  allocatable :: dects(:)
-        type(sdf),         allocatable :: array(:)
-        real(kind=wp)                  :: nscatt, start, weight_absorb
-        type(tevipc)                   :: tev
-        integer                        :: celli, cellj, cellk
-        type(spectrum_t)               :: spectrum
-
-        call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start)
-
-#ifdef _OPENMP
-        !is state%seed private, i dont think so...
-        !$omp parallel default(none) shared(dict, array, numproc, start, state, bar, jmean, emission, tev, dects, spectrum)&
-        !$omp& private(id, distances, image, dir, hpoint, history, weight_absorb, cellk, cellj, celli) &
-        !$omp& reduction(+:nscatt) firstprivate(packet)
-        numproc = omp_get_num_threads()
-        id = omp_get_thread_num()
-        if(numproc > state%nphotons .and. id == 0)print*,"Warning, simulation may be underministic due to low photon count!"
-        if(state%trackHistory)history = history_stack_t(state%historyFilename, id)
-#elif MPI
-    !nothing
-#else
-        numproc = 1
-        id = 0
-        if(state%trackHistory)history = history_stack_t(state%historyFilename, id)
-#endif
-        if(id == 0)print("(a,I3.1,a)"),'Photons now running on', numproc,' cores.'
-
-        ! set seed for rnd generator. id to change seed for each process
-        call init_rng(state%iseed, fwd=.true.)
-
-        bar = pbar(state%nphotons/ 10)
-        !$OMP BARRIER
-        !$OMP do
-        !loop over photons 
-        do j = 1, state%nphotons
-            if(mod(j, 10) == 0)call bar%progress()
-
-            ! Release photon from point source
-            call packet%emit(spectrum, dict)
-            packet%step = 0
-            packet%id = id
-            distances = 0._wp
-            do i = 1, size(distances)
-                distances(i) = array(i)%evaluate(packet%pos)
-                !if(distances(i) > 0._wp)distances(i)=-999.0_wp
-            end do
-            packet%layer=maxloc(distances,dim=1, mask=(distances<0._wp))
-            if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
-            ! Find scattering location
-            call tauint2(state%grid, packet, array, dects, history)
-
-            do while(.not. packet%tflag)
-                if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
-                
-                weight_absorb = packet%weight * (1._wp - array(packet%layer)%getAlbedo())
-
-                packet%weight = packet%weight - weight_absorb
-                call update_voxels(state%grid, &
-                packet%pos + vector(state%grid%xmax, state%grid%ymax, state%grid%zmax), celli, cellj, cellk)
-
-                if(celli < 1)then
-                    packet%tflag = .true.
-                    exit
-                end if
-                if(cellj < 1)then
-                    packet%tflag = .true.
-                    exit
-                end if
-                if(cellk < 1)then
-                    packet%tflag = .true.
-                    exit
-                end if
-                !$omp atomic
-                jmean(celli,cellj,cellk) = jmean(celli,cellj,cellk) + weight_absorb
-                call packet%scatter(array(packet%layer)%gethgg(), array(packet%layer)%getg2(), dects)
-                if(packet%weight < THRESHOLD)then
-                    if(ran2() < CHANCE)then
-                        packet%weight = packet%weight / CHANCE
-                    else
-                        packet%tflag = .true.
-                        exit
-                    end if
-                end if
-
-                ! !Find next scattering location
-                call tauint2(state%grid, packet, array, dects, history)
-            end do
-
-            dir = vector(packet%nxp, packet%nyp, packet%nzp)
-            hpoint = hit_t(packet%pos, dir, packet%weight, packet%layer, packet%weight)
-            do i = 1, size(dects)
-                call dects(i)%p%record_hit(hpoint, history)
-            end do
-
-            if(id == 0 .and. mod(j,1000) == 0)then
-                if(state%tev)then
-!$omp critical
-                    image = reshape(jmean(:,100:100,:), [state%grid%nxg,state%grid%nzg,1])
-                    call tev%update_image(state%experiment, real(image(:,:,1:1)), ["I"], 0, 0, .false., .false.)
-
-                    image = reshape(jmean(100:100,:,:), [state%grid%nyg,state%grid%nzg,1])
-                    call tev%update_image(state%experiment, real(image(:,:,1:1)), ["J"], 0, 0, .false., .false.)
-
-                    image = reshape(jmean(:,:,100:100), [state%grid%nxg,state%grid%nyg,1])
-                    call tev%update_image(state%experiment, real(image(:,:,1:1)), ["K"], 0, 0, .false., .false.)
-!$omp end critical
-                end if
-            end if
-        end do
-
-#ifdef _OPENMP
-!$OMP end  do
-!$OMP end parallel
-#endif
-    call finalise(dict, dects, nscatt, start, history)
-    end subroutine weight_scatter
-
 
     !Full weight reduction
     subroutine run_MCRT_Default(input_file)
@@ -569,6 +416,9 @@ toc=omp_get_wtime()
 
 
     subroutine Emission_MCRT(input_file)
+        ! given a geometry, you want to find the chance of light entering a detector from all points in the geometry with non-zero kappa
+
+
         ! Yet to be used however, will be used to calculate raman scattering
         !To do raman Scatter i need to do the following
 
