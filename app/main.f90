@@ -1,6 +1,6 @@
 program mcpolar
 !! Entry point for program
-    use kernels, only : run_MCRT_Default, run_MCRT_Survival_Bias
+    use kernels, only : run_MCRT_Default
 
     integer :: num_args, i
     character(len=64), allocatable :: args(:)
@@ -16,10 +16,7 @@ program mcpolar
         end do
     end if
     
-#ifdef survivalBias
-    call run_MCRT_Survival_Bias(trim(args(1)))
-#else
     call run_MCRT_Default(trim(args(1)))
-#endif
+
 
 end program
