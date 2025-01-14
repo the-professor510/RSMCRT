@@ -325,9 +325,6 @@ module detectors
             if(t <= 0.0_wp .or. t > hitpoint%pointSep)check_hit_fibre=.false.
         end if
 
-        !print*,this%pos
-        !print*, this%pos + this%dir*this%frontOffset
-
         if(.not. check_hit_fibre) then
             ! The packet won't interact with the first lens stop following it
             return
@@ -339,13 +336,9 @@ module detectors
         gradient = sintt/costt
         radius = hitpoint%value1D
 
-        !print*, gradient, radius
-
         ! change gradient as the packet moves through the lens
         ! use thin lens approximation
         gradient = -radius/this%focalLength1 + gradient
-
-        !print*, gradient, radius
 
         ! move to the pinhole
         radius = radius + gradient*this%frontToPinSep
@@ -359,7 +352,6 @@ module detectors
         ! move to the second lens
         radius = radius + gradient*this%pinToBackSep
 
-        !print*, gradient, radius
         ! does the packet enter the second lens
         if(radius > this%f2Aperture) then
             check_hit_fibre = .false.
@@ -375,12 +367,11 @@ module detectors
         !does the packet enter the fibre?
         angle = abs(atan(gradient))*360/TWOPI
 
-        !print*, gradient, radius
         if(angle > this%acceptAngle .or. radius > (this%coreDiameter/2)) then
             check_hit_fibre = .false.
         end if    
         
-        hitpoint%value1D = radius
+        hitpoint%value1D = abs(radius)
     end function check_hit_fibre
 
     function init_camera(p1, p2, p3, layer, nbins, maxval, trackHistory) result(out)

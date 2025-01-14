@@ -4,14 +4,14 @@ module kernels
     implicit none
     
     private
-    public :: run_MCRT_Default, test_kernel
+    public :: default_MCRT, escape_Function, test_kernel
 
 contains
 !###############################################################################
 !                   KERNELS
 
     
-    subroutine run_MCRT_Default(input_file)
+    subroutine default_MCRT(input_file)
 
         !Shared data
         use iarray
@@ -20,15 +20,11 @@ contains
         !subroutines
         use detectors,     only : dect_array
         use historyStack,  only : history_stack_t
-        use inttau2,       only : tauint2
         use photonMod,     only : photon
         use piecewiseMod
-        use random,        only : ran2, init_rng, seq
+        use random,        only : ran2, init_rng
         use sdfs,          only : sdf
         use sim_state_mod, only : state
-        use utils,         only : pbar
-        use vec4_class,    only : vec4
-        use writer_mod,    only : checkpoint
 
         !external deps
         use tev_mod, only : tevipc
@@ -38,19 +34,16 @@ contains
 #endif
         character(len=*), intent(in) :: input_file
         
-        integer                       :: numproc, id, j, i
+        integer                       :: j
         type(history_stack_t)         :: history
-        type(pbar)                    :: bar
         type(photon)                  :: packet
         type(toml_table)              :: dict
         real(kind=wp),    allocatable :: distances(:), image(:,:,:)
         type(dect_array), allocatable :: dects(:)
         type(sdf),        allocatable :: array(:)
         real(kind=wp)                 :: nscatt, start
-        type(tevipc)                  :: tev
-        type(seq)                     :: seqs(2)
         type(spectrum_t)              :: spectrum
-        real :: tic, toc
+        type(tevipc)                  :: tev
 
         integer :: nphotons_run,pos
         character(len=128) :: line
@@ -81,96 +74,17 @@ contains
             call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
         end if
 
-#ifdef _OPENMP
-        tic=omp_get_wtime()
-        !$omp parallel default(none)& 
-        !$omp& shared(dict, array, numproc, start, bar, jmean, emission, absorb, input_file, phasor, tev, dects, spectrum)& 
-        !$omp& private(id, distances, image, history, seqs)& 
-        !$omp& reduction(+:nscatt) firstprivate(state, packet)
-        numproc = omp_get_num_threads()
-        id = omp_get_thread_num()
-        if(numproc > state%nphotons .and. id == 0)print*,"Warning, simulation may be underministic due to low photon count!"
-        if(state%trackHistory)history = history_stack_t(state%historyFilename, id)
-#elif MPI
-    !nothing
-#else
-        call cpu_time(tic)
-        numproc = 1
-        id = 0
-        if(state%trackHistory)history = history_stack_t(state%historyFilename, id)
-#endif
-        if(id == 0)print("(a,I3.1,a)"),'Photons now running on', numproc,' cores.'
-        state%iseed = state%iseed + id
-        ! set seed for rnd generator. id to change seed for each process
-        call init_rng(state%iseed, fwd=.true.)
-        seqs = [seq((id+1)*(state%nphotons/numproc), 2),&
-                seq((id+1)*(state%nphotons/numproc), 3)]
-
-        bar = pbar(state%nphotons/ 10)
-
-        !$OMP BARRIER
-        !$OMP do
-        !loop over photons
-        do j = 1, state%nphotons
-            if(mod(j, 10) == 0)call bar%progress()
-            if(mod(j, state%ckptfreq) == 0 .and. id==0)call checkpoint(input_file, state%ckptfile, j, .true.)
-
-            !launch and propagate packets, either dropping full weight or partial weights (survival bias)
-#ifdef survivalBias
-            call survivalBiasPropagation(id, history, packet, dict, distances, image, dects, array,& 
-                                        nscatt, seqs, spectrum)
-#else
-            call noBiasPropagation(id, history, packet, dict, distances, image, dects, array,& 
-                                        nscatt, seqs, spectrum)
-#endif
-
-            if(id == 0 .and. mod(j,1000) == 0)then
-                if(state%tev)then
-                    !$omp critical
-                    image = reshape(jmean(:,100:100,:), [state%grid%nxg,state%grid%nzg,1])
-                    call tev%update_image(state%experiment, real(image(:,:,1:1)), ["I"], 0, 0, .false., .false.)
-
-                    image = reshape(phasor(100:100,:,:), [state%grid%nyg,state%grid%nzg,1])
-                    call tev%update_image(state%experiment, real(image(:,:,1:1)), ["J"], 0, 0, .false., .false.)
-
-                    image = reshape(phasor(:,:,100:100), [state%grid%nxg,state%grid%nyg,1])
-                    call tev%update_image(state%experiment, real(image(:,:,1:1)), ["K"], 0, 0, .false., .false.)
-                    !$omp end critical
-                end if
-            end if
-        end do
-        !$OMP end  do
-        
-#ifdef _OPENMP
-        !$OMP end parallel
-        toc=omp_get_wtime()
-#else
-        call cpu_time(toc)
-#endif
-        print*,"Photons/s: ",(state%nphotons / (toc - tic))
+        call run_MCRT(input_file, history, packet, dict, & 
+                        distances, image, dects, array, nscatt, start, & 
+                        tev, spectrum)
 
         call finalise(dict, dects, nscatt, start, history)
-    end subroutine run_MCRT_Default
+    end subroutine default_MCRT
 
     !calculate the escape function for each detector    
-    subroutine run_MCRT_Escape_Function(input_file)
-        ! given a geometry, you want to find the chance of light entering a detector from all points in the geometry with non-zero kappa
+    subroutine escape_Function(input_file)
 
-
-        ! Yet to be used however, will be used to calculate raman scattering
-        !To do raman Scatter i need to do the following
-
-        ! clear the detectors of all data, i.e. set them to zero, add functionality to zero all detectors
-        ! I no longer need to record weight so I will want to do moving without pathlength enabled, add functionality to 
-        !                                                                               disable it with a global setting
-        ! I will launch packets from every grid cell that has non-zero weight (don't used jmean to do this) use absorbed
-        ! this will ensure that I launch from cells that are significant, and where we expect to get a signal from
-        ! For every cell I will launch 10^6 packets, I expect this to take a couple of seconds for each grid cell
-        ! To improve this I can add as many detectors as possible to ensure that I will only have to do one geometry once
-        ! 
-        !call ramanScatter(dict, dects, nscatt, start, history)
-
-                !Shared data
+        !Shared data
         use iarray
         use constants, only : wp
 
@@ -180,13 +94,10 @@ contains
         use inttau2,       only : tauint2
         use photonMod,     only : photon
         use piecewiseMod
-        use random,        only : ran2, init_rng, seq
+        use random,        only : ran2, init_rng
         use sdfs,          only : sdf
         use sim_state_mod, only : state
-        use utils,         only : pbar
-        use vec4_class,    only : vec4
         use vector_class,  only : vector
-        use writer_mod,    only : checkpoint
 
         !external deps
         use tev_mod, only : tevipc
@@ -196,27 +107,27 @@ contains
 #endif
         character(len=*), intent(in) :: input_file
         
-        integer                       :: numproc, id, j, i
+        integer                       :: j, i
         type(history_stack_t)         :: history
-        type(pbar)                    :: bar
         type(photon)                  :: packet
         type(toml_table)              :: dict
         real(kind=wp),    allocatable :: distances(:), image(:,:,:)
         type(dect_array), allocatable :: dects(:)
         type(sdf),        allocatable :: array(:)
         real(kind=wp)                 :: nscatt, start
-        type(tevipc)                  :: tev
-        type(seq)                     :: seqs(2)
         type(spectrum_t)              :: spectrum
-        real :: tic, toc
+        type(tevipc)                  :: tev
 
         integer :: nphotons_run,pos
         character(len=128) :: line
-        character(len=:), allocatable :: checkpt_input_file   
+        character(len=:), allocatable :: checkpt_input_file
+         
         integer :: m, n, o, layer, count, total
         real(kind = wp) :: x,y,z
         type(vector) :: position
+        real(kind=wp),  allocatable :: escapeFunction(:,:,:,:)
 
+        !setup the geometry and detectors
         if(state%loadckpt)then
             call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .false.)
             open(newunit=j,file=state%ckptfile, access="stream", form="formatted")
@@ -242,10 +153,117 @@ contains
             call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
         end if
 
-        ! loop through every detector
+        !allocate(escapeFunction(size(dects), state%grid%x, state%grid%y, state%grid%z))
+
+        !set the packet to be a isotropic source, this is an accepted assumption for either fluorescence or raman
+        packet = photon("point")
+        packet%nxp = 1.0_wp 
+        packet%nyp = 0.0_wp 
+        packet%nzp = 0.0_wp 
         
-        call reset(dects)
-        
+        ! loop through every position in the grid array
+
+        !use symmetry to reduce the number of voxels we have to check
+
+        !if there is 360rotational symmetry then we only need to consider going outwards in r and down in depth, 
+        !   you will need some method to map a cartesian grid onto a cylindrical and visa versa, use bilinear interpolation
+        !   this will require some work
+        !   symmetry should be around the centre axis of the detector(s) to work properly
+        !   first work along a know good axis that is aligned with the grid, then perform the interpolation to get along a know set   
+        !
+        !   
+        !
+        !if there is 2rotational symmetry then we have to consider half of the shape divided by a plane, remember to rotate the plane
+        ! leave in cartesian to not have to perform bilinear interpolation
+        !if there is flipped symmetry then we have to consider half of the shape divided by a plane
+        !if there is prism symmetry then we have to consider a layer going in width and depth and then use this for each layer in the length
+        !if there is none then we will have to consider all squares, which will take a very long time
+
+        !add some warning to the tell the user that this will take a while to run
+
+        do m = 1, state%grid%nxg
+            do n = 1, state%grid%nyg
+                do o = 1, state%grid%nzg
+
+                    ! reset the arrays storing data
+                    call reset(dects)
+
+                    ! find the centre position of the voxel
+                    y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                    x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                    z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                    position = vector(x,y,z)
+
+                    packet%pos = position   ! set the emission location
+
+                    ! get the layer at this position
+                    distances = 0._wp
+                    do i = 1, size(distances)
+                        distances(i) = array(i)%evaluate(position)
+                    end do
+                    layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+
+                    ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+                    if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                        call run_MCRT(input_file, history, packet, dict, & 
+                                        distances, image, dects, array, nscatt, start, & 
+                                        tev, spectrum)
+                    end if
+                    
+                    ! record the efficiency for each detector and add to an array of escape functions
+
+
+                end do         
+            end do
+        end do     
+
+        !store the escape funcitons for each detector
+
+    end subroutine escape_Function
+
+
+
+
+    subroutine run_MCRT(input_file, history, packet, dict, & 
+                        distances, image, dects, array, nscatt, start, & 
+                        tev, spectrum)
+        !Shared data
+        use iarray
+        use constants, only : wp
+
+        !subroutines
+        use detectors,     only : dect_array
+        use historyStack,  only : history_stack_t
+        use inttau2,       only : tauint2
+        use photonMod,     only : photon
+        use piecewiseMod
+        use random,        only : ran2, init_rng, seq
+        use sdfs,          only : sdf
+        use sim_state_mod, only : state
+        use utils,         only : pbar
+        use writer_mod,    only : checkpoint
+
+        !external deps
+        use tev_mod, only : tevipc
+        use tomlf,   only : toml_table
+#ifdef _OPENMP
+        use omp_lib
+#endif
+        character(len=*),                 intent(in) :: input_file
+         
+        type(history_stack_t),         intent(inout) :: history
+        type(pbar)                                   :: bar
+        type(photon),                  intent(inout) :: packet
+        type(toml_table),              intent(inout) :: dict
+        real(kind=wp),    allocatable, intent(inout) :: distances(:), image(:,:,:)
+        type(dect_array), allocatable, intent(inout) :: dects(:)
+        type(sdf),        allocatable, intent(inout) :: array(:)
+        real(kind=wp),                 intent(inout) :: nscatt, start
+        type(tevipc),                  intent(inout) :: tev
+        type(seq)                                    :: seqs(2)
+        type(spectrum_t),              intent(inout) :: spectrum
+        real :: tic, toc
+        integer :: numproc, id, j
 
 #ifdef _OPENMP
         tic=omp_get_wtime()
@@ -314,51 +332,7 @@ contains
         call cpu_time(toc)
 #endif
         print*,"Photons/s: ",(state%nphotons / (toc - tic))
-
-        call finalise(dict, dects, nscatt, start, history)
-
-
-        
-
-
-        call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
-        count = 0
-        total = 0
-        do m = 1, state%grid%nxg
-            do n = 1, state%grid%nyg
-                do o = 1, state%grid%nzg
-                    y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
-                    x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
-                    z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
-                    position = vector(x,y,z)
-                    !get the layer at this position
-                    distances = 0._wp
-                    !print*, position
-                    do i = 1, size(distances)
-                        distances(i) = array(i)%evaluate(position)
-                    end do
-                    !print*, distances
-                    layer=maxloc(distances,dim=1, mask=(distances<0._wp))
-                    !print*, array(layer)%getkappa()
-                    if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                        count = count+1
-                    end if
-                    total = total +1
-                end do         
-            end do
-        end do
-        print*, count
-
-        print*, total
-
-        packet = photon("point")
-        !packet%pos = poss   !specify to be a vector that is the position of a square with non-zero kappa
-        !packet%nxp = dirr%x !specify, it will become random when you use packet%emit(spectrum, dict, seq)
-        !packet%nyp = dirr%y !specify, it will become random when you use packet%emit(spectrum, dict, seq)
-        !packet%nzp = dirr%z !specify, it will become random when you use packet%emit(spectrum, dict, seq)
-
-    end subroutine run_MCRT_Escape_Function
-
+    end subroutine run_MCRT
 
     !Full weight reduction
     subroutine noBiasPropagation(id, history, packet, dict, distances, image, dects, array,& 

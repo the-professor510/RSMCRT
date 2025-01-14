@@ -1,6 +1,6 @@
 program mcpolar
 !! Entry point for program
-    use kernels, only : run_MCRT_Default
+    use kernels, only : default_MCRT, escape_Function
 
     integer :: num_args, i
     character(len=64), allocatable :: args(:)
@@ -8,7 +8,7 @@ program mcpolar
     num_args = command_argument_count()
     if(num_args == 0)then
         allocate(args(1))
-        args(1) = "scat_test.toml"
+        args(1) = "default.toml"
     else
         allocate(args(num_args))
         do i = 1, num_args
@@ -17,9 +17,9 @@ program mcpolar
     end if
     
 #ifdef escapeFunction
-    call run_MCRT_Escape_Function(trim(args(1)))
+    call escape_Function(trim(args(1)))
 #else
-    call run_MCRT_Default(trim(args(1)))
+    call default_MCRT(trim(args(1)))
 #endif
 
 
