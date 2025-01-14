@@ -16,7 +16,11 @@ program mcpolar
         end do
     end if
     
+#ifdef escapeFunction
+    call run_MCRT_Escape_Function(trim(args(1)))
+#else
     call run_MCRT_Default(trim(args(1)))
+#endif
 
 
 end program

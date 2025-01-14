@@ -7,7 +7,7 @@ module setupMod
     implicit none
 
     private
-    public  :: setup_simulation, dealloc_array, directory
+    public  :: setup_simulation, dealloc_array, directory, zarray
 
     contains
 
@@ -151,7 +151,7 @@ module setupMod
 
         end subroutine create_directory
 
-        subroutine zarray
+        subroutine zarray()
         !! zero data arrays
             use iarray
 

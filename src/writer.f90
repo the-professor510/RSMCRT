@@ -68,7 +68,7 @@ module writer_mod
                 
                 open(newunit=u,file=trim(fileplace)//"detectors/detector_"//str(i)//".dat",&
                     access='stream',status='REPLACE',form='unformatted')
-                associate(x => dects(i)%p)
+                    associate(x => dects(i)%p)
                     select type(x)
                     !write out different data for different detector types
                     type is(circle_dect)
