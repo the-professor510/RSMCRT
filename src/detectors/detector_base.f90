@@ -41,6 +41,7 @@ module detector_mod
             procedure(recordHitInterface), deferred, public :: record_hit
             procedure(checkHitInterface),  deferred, public :: check_hit
             procedure(zeroHitInterface), deferred, public :: zero_dect
+            procedure(totalHitInterface), deferred, public :: total_dect
     end type detector
 
     abstract interface
@@ -71,6 +72,15 @@ module detector_mod
 
             class(detector),       intent(inout) :: this
         end subroutine zeroHitInterface
+
+        subroutine totalHitInterface(this, total)
+            use vector_class
+            use constants, only : wp
+            import detector
+
+            class(detector),        intent(inout) :: this
+            real(kind=wp),          intent(out)   :: total
+        end subroutine totalHitInterface
     end interface
     
     !> 1D detector type. Records linear information
@@ -84,6 +94,7 @@ module detector_mod
         contains
         procedure :: record_hit => record_hit_1D_sub
         procedure :: zero_dect => zero_1D_sub
+        procedure :: total_dect => total_1D
     end type detector1D
     
     !> 2D detecctor type. Records spatial information
@@ -101,6 +112,7 @@ module detector_mod
         contains
         procedure :: record_hit => record_hit_2D_sub
         procedure :: zero_dect => zero_2D_sub
+        procedure :: total_dect => total_2D
     end type detector2D
 
     private
@@ -157,6 +169,37 @@ contains
 
         this%data = 0._wp
     end subroutine zero_2D_sub
+
+    subroutine total_1D(this, total)
+
+        class(detector1D),      intent(inout) :: this
+        !> Sum of all values in data(:)
+        real(kind=wp),          intent(out)   :: total
+
+        integer :: i
+
+        total = 0._wp
+        do i= 1, size(this%data)
+            total = total + this%data(i)
+        end do
+    end subroutine total_1D
+
+    subroutine total_2D(this, total)
+
+        class(detector2D),      intent(inout) :: this
+        !> Sum of all values in data(:)
+        real(kind=wp),          intent(out)   :: total
+
+        integer :: i, j
+
+        total = 0._wp
+        do i= 1, size(this%data, dim = 1 )
+            do j = 1, size(this%data, dim = 2)
+                total = total + this%data(i,j)
+            end do
+        end do
+    end subroutine total_2D
+
 
     subroutine record_hit_2D_sub(this, hitpoint, history)
         !! check if a hit is on the detector and record it if so
