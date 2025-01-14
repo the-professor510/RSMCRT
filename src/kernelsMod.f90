@@ -89,7 +89,7 @@ contains
         use constants, only : wp
 
         !subroutines
-        use detectors,     only : dect_array
+        use detectors
         use historyStack,  only : history_stack_t
         use inttau2,       only : tauint2
         use photonMod,     only : photon
@@ -101,7 +101,7 @@ contains
 
         !external deps
         use tev_mod, only : tevipc
-        use tomlf,   only : toml_table
+        use tomlf,   only : toml_table, toml_error, get_value
 #ifdef _OPENMP
         use omp_lib
 #endif
@@ -117,15 +117,18 @@ contains
         real(kind=wp)                 :: nscatt, start
         type(spectrum_t)              :: spectrum
         type(tevipc)                  :: tev
+        type(toml_error), allocatable :: error
 
         integer :: nphotons_run,pos
         character(len=128) :: line
         character(len=:), allocatable :: checkpt_input_file
          
-        integer :: m, n, o, layer, count, total
-        real(kind = wp) :: x,y,z
+        integer :: m, n, o, layer
+        real(kind = wp) :: x,y,z, total
         type(vector) :: position
         real(kind=wp),  allocatable :: escapeFunction(:,:,:,:)
+        real(kind=wp),  allocatable :: escapeFunctionSymmetry(:,:,:,:)
+        character(len=:), allocatable :: symmetry
 
         !setup the geometry and detectors
         if(state%loadckpt)then
@@ -153,69 +156,259 @@ contains
             call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
         end if
 
-        !allocate(escapeFunction(size(dects), state%grid%x, state%grid%y, state%grid%z))
-
         !set the packet to be a isotropic source, this is an accepted assumption for either fluorescence or raman
         packet = photon("point")
         packet%nxp = 1.0_wp 
         packet%nyp = 0.0_wp 
         packet%nzp = 0.0_wp 
         
-        ! loop through every position in the grid array
+        allocate(escapeFunction(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+        
+        !use symmetry to reduce the number of voxels we have to calculate
+        call get_value(dict, "symmetry", symmetry)
+        select case(symmetry)
+        case("none")
+            !there is no symmetry launch from every cell
 
-        !use symmetry to reduce the number of voxels we have to check
+            print*, "User warning! This may take a long time to run"
+            print*, "It is advised to try and find a geometry with symmetry or to reduce the grid size"
+            
 
-        !if there is 360rotational symmetry then we only need to consider going outwards in r and down in depth, 
-        !   you will need some method to map a cartesian grid onto a cylindrical and visa versa, use bilinear interpolation
-        !   this will require some work
-        !   symmetry should be around the centre axis of the detector(s) to work properly
-        !   first work along a know good axis that is aligned with the grid, then perform the interpolation to get along a know set   
-        !
-        !   
-        !
-        !if there is 2rotational symmetry then we have to consider half of the shape divided by a plane, remember to rotate the plane
-        ! leave in cartesian to not have to perform bilinear interpolation
-        !if there is flipped symmetry then we have to consider half of the shape divided by a plane
-        !if there is prism symmetry then we have to consider a layer going in width and depth and then use this for each layer in the length
-        !if there is none then we will have to consider all squares, which will take a very long time
+            !loop through every cell
+            do m = 1, state%grid%nxg
+                do n = 1, state%grid%nyg
+                    do o = 1, state%grid%nzg
 
-        !add some warning to the tell the user that this will take a while to run
+                        ! reset the arrays storing data
+                        call reset(dects)
 
-        do m = 1, state%grid%nxg
-            do n = 1, state%grid%nyg
-                do o = 1, state%grid%nzg
+                        ! find the centre position of the voxel
+                        y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                        x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                        z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                        position = vector(x,y,z)
 
-                    ! reset the arrays storing data
-                    call reset(dects)
+                        packet%pos = position   ! set the emission location
 
-                    ! find the centre position of the voxel
-                    y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
-                    x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
-                    z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
-                    position = vector(x,y,z)
+                        ! get the layer at this position
+                        distances = 0._wp
+                        do i = 1, size(distances)
+                            distances(i) = array(i)%evaluate(position)
+                        end do
+                        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
-                    packet%pos = position   ! set the emission location
-
-                    ! get the layer at this position
-                    distances = 0._wp
-                    do i = 1, size(distances)
-                        distances(i) = array(i)%evaluate(position)
-                    end do
-                    layer=maxloc(distances,dim=1, mask=(distances<0._wp))
-
-                    ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-                    if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                        call run_MCRT(input_file, history, packet, dict, & 
-                                        distances, image, dects, array, nscatt, start, & 
-                                        tev, spectrum)
-                    end if
-                    
-                    ! record the efficiency for each detector and add to an array of escape functions
-
-
-                end do         
+                        ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                            call run_MCRT(input_file, history, packet, dict, & 
+                                            distances, image, dects, array, nscatt, start, & 
+                                            tev, spectrum)
+                        end if
+                        
+                        ! record the efficiency for each detector and add to an array of escape functions
+                        do i = 1, size(dects)
+                            total = 0._wp
+                            call dects(i)%p%total_dect(total)
+                            escapeFunction(i, m, n, o) = total/state%nphotons
+                        end do
+                    end do         
+                end do
             end do
-        end do     
+        case("prism")
+            !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            !what is the normal to the plane this prism is in?
+            !
+            allocate(escapeFunctionSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+
+            !loop through every cell
+            do m = 1, state%grid%nxg
+                do n = 1, state%grid%nyg
+                    do o = 1, state%grid%nzg
+
+                        ! reset the arrays storing data
+                        call reset(dects)
+
+                        ! find the centre position of the voxel
+                        y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                        x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                        z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                        position = vector(x,y,z)
+
+                        packet%pos = position   ! set the emission location
+
+                        ! get the layer at this position
+                        distances = 0._wp
+                        do i = 1, size(distances)
+                            distances(i) = array(i)%evaluate(position)
+                        end do
+                        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+
+                        ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                            call run_MCRT(input_file, history, packet, dict, & 
+                                            distances, image, dects, array, nscatt, start, & 
+                                            tev, spectrum)
+                        end if
+                        
+                        ! record the efficiency for each detector and add to an array of escape functions
+                        do i = 1, size(dects)
+                            total = 0._wp
+                            call dects(i)%p%total_dect(total)
+                            escapeFunction(i, m, n, o) = total/state%nphotons
+                        end do
+                    end do         
+                end do
+            end do
+        case("flipped")
+            !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            ! Only do half the cells, ensure the you know the plane of division
+            !
+            allocate(escapeFunctionSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+
+            !loop through every cell
+            do m = 1, state%grid%nxg
+                do n = 1, state%grid%nyg
+                    do o = 1, state%grid%nzg
+
+                        ! reset the arrays storing data
+                        call reset(dects)
+
+                        ! find the centre position of the voxel
+                        y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                        x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                        z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                        position = vector(x,y,z)
+
+                        packet%pos = position   ! set the emission location
+
+                        ! get the layer at this position
+                        distances = 0._wp
+                        do i = 1, size(distances)
+                            distances(i) = array(i)%evaluate(position)
+                        end do
+                        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+
+                        ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                            call run_MCRT(input_file, history, packet, dict, & 
+                                            distances, image, dects, array, nscatt, start, & 
+                                            tev, spectrum)
+                        end if
+                        
+                        ! record the efficiency for each detector and add to an array of escape functions
+                        do i = 1, size(dects)
+                            total = 0._wp
+                            call dects(i)%p%total_dect(total)
+                            escapeFunction(i, m, n, o) = total/state%nphotons
+                        end do
+                    end do         
+                end do
+            end do
+        case("360rotational")
+            !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            ! do radially and in depth only for a single angle
+
+
+            ! find the axis along which we have symmetry
+
+            ! get an axis along which we calculate the symmetry, we want to choose our radii and selection of z such that 
+            ! we are garunteed to be within the grid
+
+            ! rotate to align the z axis, assume that there is no difference due to theta, use dot product 
+            !                                                       between desired axis and current axis
+            ! rotate to align the theta axis, use dot product desired axis and current axis
+            ! shift to align the central coordinates with one another
+            ! use bilinear interprolation to convert from cylindrical to cartesian
+
+            allocate(escapeFunctionSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+
+            !loop through every cell
+            do m = 1, state%grid%nxg
+                do n = 1, state%grid%nyg
+                    do o = 1, state%grid%nzg
+
+                        ! reset the arrays storing data
+                        call reset(dects)
+
+                        ! find the centre position of the voxel
+                        y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                        x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                        z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                        position = vector(x,y,z)
+
+                        packet%pos = position   ! set the emission location
+
+                        ! get the layer at this position
+                        distances = 0._wp
+                        do i = 1, size(distances)
+                            distances(i) = array(i)%evaluate(position)
+                        end do
+                        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+
+                        ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                            call run_MCRT(input_file, history, packet, dict, & 
+                                            distances, image, dects, array, nscatt, start, & 
+                                            tev, spectrum)
+                        end if
+                        
+                        ! record the efficiency for each detector and add to an array of escape functions
+                        do i = 1, size(dects)
+                            total = 0._wp
+                            call dects(i)%p%total_dect(total)
+                            escapeFunction(i, m, n, o) = total/state%nphotons
+                        end do
+                    end do         
+                end do
+            end do
+        case("nrotational")
+            !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            ! do radially and in depth only for 360/n region of angles
+            allocate(escapeFunctionSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+
+            !loop through every cell
+            do m = 1, state%grid%nxg
+                do n = 1, state%grid%nyg
+                    do o = 1, state%grid%nzg
+
+                        ! reset the arrays storing data
+                        call reset(dects)
+
+                        ! find the centre position of the voxel
+                        y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                        x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                        z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                        position = vector(x,y,z)
+
+                        packet%pos = position   ! set the emission location
+
+                        ! get the layer at this position
+                        distances = 0._wp
+                        do i = 1, size(distances)
+                            distances(i) = array(i)%evaluate(position)
+                        end do
+                        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+
+                        ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                            call run_MCRT(input_file, history, packet, dict, & 
+                                            distances, image, dects, array, nscatt, start, & 
+                                            tev, spectrum)
+                        end if
+                        
+                        ! record the efficiency for each detector and add to an array of escape functions
+                        do i = 1, size(dects)
+                            total = 0._wp
+                            call dects(i)%p%total_dect(total)
+                            escapeFunction(i, m, n, o) = total/state%nphotons
+                        end do
+                    end do         
+                end do
+            end do
+        case default                     
+            print*,"Unknown symmetry type"
+            stop 1
+        end select
+                                            
 
         !store the escape funcitons for each detector
 
