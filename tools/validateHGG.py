@@ -6,7 +6,7 @@ folderName = "RSMCRT/data/detectors/"
 filename = folderName + "detector_1.dat"
 
 readDetectors = plotDetectorsClass.plotDetectorsClass()
-radius, count, nPackets, numBins, pos, dir, typeOfDect, _ = readDetectors.read_1D_Detector(filename)
+radius, count, dectID, nPackets, numBins, pos, dir, typeOfDect, _ = readDetectors.read_1D_Detector(filename)
 totalCounts = sum(count)/nPackets
 
 # Validating against https://doi.org/10.1016/0169-2607(95)01640-F
@@ -20,7 +20,7 @@ folderName = "RSMCRT/data/detectors/"
 filename = folderName + "detector_2.dat"
 
 readDetectors = plotDetectorsClass.plotDetectorsClass()
-radius, count, nPackets, numBins, pos, dir, typeOfDect, _ = readDetectors.read_1D_Detector(filename)
+radius, count, dectID, nPackets, numBins, pos, dir, typeOfDect, _ = readDetectors.read_1D_Detector(filename)
 totalCounts = sum(count)/nPackets
 
 print(f"Theoretical Total Diffure Transmission : {0.66096}")

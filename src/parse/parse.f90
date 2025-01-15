@@ -61,13 +61,18 @@ module parse_mod
         call parse_simulation(table, error)
         if(allocated(error))return
 
+#ifdef escapeFunction
+        call parse_symmetry(table, dict, error)
+        if(allocated(error))return
+#endif
+
     end subroutine parse_params
     
 
     subroutine parse_grid(table, dict, error)
     !! parse grid input data
         use sim_state_mod, only : state
-        use gridMod,       only : init_grid 
+        use gridMod,       only : init_grid_cart 
         
         !> Input Toml table
         type(toml_table),               intent(inout) :: table
@@ -99,7 +104,7 @@ module parse_mod
         end if
 
         !set the grid variable inside the program
-        state%grid = init_grid(nxg, nyg, nzg, xmax, ymax, zmax)
+        state%grid = init_grid_cart(nxg, nyg, nzg, xmax, ymax, zmax)
 
     end subroutine parse_grid
 
@@ -176,4 +181,134 @@ module parse_mod
         end if
 
     end subroutine parse_simulation
+
+    subroutine parse_symmetry(table, dict, error)
+        !! parse symmetry information, only used in the computation of the escape function
+        use sim_state_mod, only : state
+        use gridMod,       only : init_grid_cart, init_grid_cyl 
+        use vector_class, only : vector
+
+        !> Input Toml table 
+        type(toml_table),              intent(inout) :: table
+        !> Error message
+        type(toml_error), allocatable, intent(out)   :: error
+        !> Dictonary used to store metadata
+        type(toml_table),               intent(inout) :: dict
+
+        type(toml_table), pointer :: child
+        type(toml_array), pointer :: children
+
+        character(len=:), allocatable :: symmetryType
+        integer :: i, nlen
+        integer :: nxrg, nytg, nzg
+        real(kind=wp) :: xrmax, ytmax, zmax
+        type(vector) :: pos, dir
+
+        pos = vector(0._wp,0._wp,0._wp)
+        dir = vector(0._wp,0._wp,1._wp)
+
+        call get_value(table, "symmetry", child)
+
+        if(associated(child))then
+            !symmetry, used to reduce the computation time of the escape function
+            call get_value(child, "symmetryType", symmetryType, "none")
+            call set_value(dict, "symmetryType", symmetryType)
+
+            call get_value(child, "GridSize", children, requested=.false.)
+            if(associated(children))then
+                nlen = len(children)
+                if(nlen /= 3)then
+                    call make_error(error, "Need a vector of size 3 for symmetry grid size.", -1)
+                    return
+                end if
+                call get_value(children, 1, nxrg)
+                call get_value(children, 2, nytg)
+                call get_value(children, 3, nzg)
+            else
+                nxrg = 10
+                nytg = 10
+                nzg = 10
+            end if
+
+            call get_value(child, "maxValues", children, requested=.false.)
+            if(associated(children))then
+                nlen = len(children)
+                if(nlen /= 3)then
+                    call make_error(error, "Need a vector of size 3 for symmetry max values.", -1)
+                    return
+                end if
+                call get_value(children, 1, xrmax)
+                call get_value(children, 2, ytmax)
+                call get_value(children, 3, zmax)
+            else
+                xrmax = 1.0
+                ytmax = 1.0
+                zmax = 1.0
+            end if
+
+            call get_value(child, "position", children, requested=.false.)
+            if(associated(children))then
+                nlen = len(children)
+                if(nlen /= 3)then
+                    call make_error(error, "Need a vector of size 3 for symmetry position.", -1)
+                    return
+                end if
+                call get_value(children, 1, xrmax)
+                call get_value(children, 2, ytmax)
+                call get_value(children, 3, zmax)
+            else
+                pos = vector(0._wp, 0._wp, 0._wp)
+            end if
+
+            call get_value(child, "direction", children, requested=.false.)
+            if(associated(children))then
+                nlen = len(children)
+                if(nlen /= 3)then
+                    call make_error(error, "Need a vector of size 3 for symmetry position.", -1)
+                    return
+                end if
+                call get_value(children, 1, xrmax)
+                call get_value(children, 2, ytmax)
+                call get_value(children, 3, zmax)
+            else
+                dir = vector(0._wp, 0._wp, 1._wp)
+            end if
+
+            if (symmetryType == "none" .or. symmetryType == "prism" .or. symmetryType == "flipped") then
+                state%symGridPos = pos
+                state%symGridDir = dir
+                state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
+            else if (symmetryType == "360rotational" .or. symmetryType == "nrotational") then
+                state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
+            end if
+
+        else 
+            !set the symmetry type to none, and set the other variables to their default values
+            symmetryType = "none"
+            call set_value(dict, "symmetryType", symmetryType)
+
+            !set default size of symmetry grid
+            nxrg = 10
+            nytg = 10
+            nzg = 10
+
+            !set max values of symmetry grid
+            xrmax = 1.0
+            ytmax = 1.0
+            zmax = 1.0
+
+            !set default position of symmetry grid
+            state%symGridPos = pos
+
+            !set default direction of the symmetry grid
+            state%symGridDir = dir
+
+            !define the default escape cart grid
+            state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
+
+            print*, "here"
+
+        end if
+    end subroutine parse_symmetry
+
 end module parse_mod

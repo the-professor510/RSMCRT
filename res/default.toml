@@ -22,7 +22,11 @@ mus = [210]
 hgg = [0.9]
 mua = [0.23]
 n = [1.38]
-symmetry = "none"
+
+[symmetry]
+symmetryType = "none"
+GridSize = [5,5,5]
+maxValues = [4.0, 5.0, 5.0]
 
 [[detectors]]
 type="fibre"

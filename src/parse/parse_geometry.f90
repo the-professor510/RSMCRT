@@ -37,7 +37,6 @@ contains
         real(kind=wp)             :: muaTemp, musTemp, murTemp, hggTemp, nTemp, tempCoord, tempLength, sphereRadius
         integer                   :: num_spheres, i, nlen, numOptProp, origin
         character(4) :: string 
-        character(len=:), allocatable :: symmetry
 
         real(kind=wp) :: tau, musb, muab, musc, muac, hgg
         real(kind=wp) :: bottomSphereRad, topSphereRad, SphereSep, ShellThickness, YolkRadius
@@ -65,12 +64,6 @@ contains
             call get_value(child, "hgga", hgg, 0.7_wp)
             call set_value(dict, "hgga", hgg)
             !end of old stuff
-
-
-            !symmetry, used to reduce the computation time of the escape function
-            call get_value(child, "symmetry", symmetry, "none")
-            call set_value(dict, "symmetry", symmetry)
-
 
             call get_value(child, "numOptProp", numOptProp, 1)
             call set_value(dict, "numOptProp", numOptProp)

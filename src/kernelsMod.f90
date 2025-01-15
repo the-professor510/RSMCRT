@@ -96,8 +96,9 @@ contains
         use piecewiseMod
         use random,        only : ran2, init_rng
         use sdfs,          only : sdf
+        use sdfHelpers,    only : rotationAlign
         use sim_state_mod, only : state
-        use vector_class,  only : vector
+        use vector_class
         use setupMod, only : setup_escapeFunction
         use writer_mod, only : write_escape
 
@@ -127,8 +128,10 @@ contains
          
         integer :: m, n, o, layer
         real(kind = wp) :: x,y,z, total
-        type(vector) :: position
-        character(len=:), allocatable :: symmetry
+        type(vector) :: position, direction
+        real(kind=wp) :: rotationOnToSym(4,4), rotationOffSym(4,4)
+        character(len=:), allocatable :: symmetryType
+        integer :: indx(3)
         real :: tic, toc
 
         call cpu_time(tic)
@@ -168,30 +171,62 @@ contains
         call setup_escapeFunction(size(dects))
         
         !use symmetry to reduce the number of voxels we have to calculate
-        call get_value(dict, "symmetry", symmetry)
-        select case(symmetry)
+        call get_value(dict, "symmetryType", symmetryType)
+        select case(symmetryType)
         case("none")
             !there is no symmetry launch from every cell
 
             print*, "User warning! This may take a long time to run"
             print*, "It is advised to try and find a geometry with symmetry or to reduce the grid size"
             
+            !allocate the escape symmetry grids
+            allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
+                                    state%symmetryEscapeCartGrid%nyg, & 
+                                    state%symmetryEscapeCartGrid%nzg))
+            escapeSymmetry = 0._wp
+
+            !percompute the rotation vector here
+            !both for going from the shifted from base
+            ! and for going from base to the shifted
+            direction = vector(0.0_wp, 0.0_wp, 0.0_wp)
+
+            rotationOnToSym = rotationAlign(direction, state%symGridDir)
+            rotationOffSym = rotationAlign(state%symGridDir, direction)
 
             !loop through every cell
-            do m = 1, state%grid%nxg
-                do n = 1, state%grid%nyg
-                    do o = 1, state%grid%nzg
+            do m = 1, state%symmetryEscapeCartGrid%nxg
+                do n = 1, state%symmetryEscapeCartGrid%nyg
+                    do o = 1, state%symmetryEscapeCartGrid%nzg
+
+                        !TO DO
+                        !add some function to do this part for both cart and cyl
 
                         ! reset the arrays storing data
                         call reset(dects)
 
                         ! find the centre position of the voxel
-                        x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
-                        y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
-                        z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                        !first part is to find the position within the the given grid and then the next part is to shift to the correct position
+                        !in the furture you will want to first find the right part, then apply a rotation, and then apply the shift
+
+                        !use sdf_helpers rotate align to get the rotation matrix
+                        !then apply the shift adding the grid position
+
+                        x = (((real(m, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nxg)*& 
+                            2.0_wp*state%symmetryEscapeCartGrid%xmax) - state%symmetryEscapeCartGrid%xmax 
+                        y = (((real(n, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nyg)*& 
+                            2.0_wp*state%symmetryEscapeCartGrid%ymax) - state%symmetryEscapeCartGrid%ymax 
+                        z = (((real(o, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+                            2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax 
+                        
                         position = vector(x,y,z)
 
-                        !packet%pos = position   ! set the emission location
+                        !rotate
+                        position = position .dot. rotationOffSym
+
+                        !shift
+                        position = position - state%symGridPos
+
+                        packet%pos = position   ! set the emission location
 
                         ! get the layer at this position
                         distances = 0._wp
@@ -200,28 +235,114 @@ contains
                         end do
                         layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
-                        !  if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-                        ! if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                        !     call run_MCRT(input_file, history, packet, dict, & 
-                        !                     distances, image, dects, array, nscatt, start, & 
-                        !                     tev, spectrum)
-                        ! end if
+                        !!  if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+                        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                        !    call run_MCRT(input_file, history, packet, dict, & 
+                        !                    distances, image, dects, array, nscatt, start, & 
+                        !                    tev, spectrum)
+                        !end if
                         
                         ! record the efficiency for each detector and add to an array of escape functions
                         do i = 1, size(dects)
                             total = 0._wp
                             !call dects(i)%p%total_dect(total)
-                            !escape(i, m, n, o) = total/state%nphotons
-                            escape(i, m, n, o) = layer
+                            !escapeSymmetry(i, m, n, o) = total/state%nphotons
+                            !temporary while testing that this works
+                            escapeSymmetry(i, m, n, o) = layer
                         end do
                     end do         
                 end do
             end do
+
+            !Go through the base grid and use some form of interpolation to figure out the best match
+            do m = 1, state%grid%nxg
+                do n = 1, state%grid%nyg
+                    do o = 1, state%grid%nzg
+
+                        !TO DO
+                        !add some function to do the part in the this for both cart and cyl
+
+                        ! reset the arrays storing data
+                        call reset(dects)
+
+                        ! find the centre position of the voxel
+                        y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                        x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                        z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+
+                        position = vector(x,y,z) 
+
+                        !shift
+                        position = position + state%symGridPos
+
+                        !rotate, there is none for this geometry
+                        position = position .dot. rotationOnToSym
+                        
+                        !find the points in symmetry escape that correspond to this point?
+                        !this returns the point that is closest to this
+                        indx = -1
+                        !print*, position
+                        indx = state%symmetryEscapeCartGrid%get_voxel(position)
+
+                        if(indx(1) < 1 .or. indx(1) > state%symmetryEscapeCartGrid%nxg) then
+                            print*, "x out of bounds"
+                        end if
+                        if(indx(2) < 1 .or. indx(2) > state%symmetryEscapeCartGrid%nyg) then
+                            print*, "y out of bounds"
+                        end if
+                        if(indx(3) < 1 .or. indx(3) > state%symmetryEscapeCartGrid%nzg) then
+                            print*, "z out of bounds"
+                        end if
+
+
+                    end do   
+                end do
+            end do
         case("prism")
-            !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            !TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             !what is the normal to the plane this prism is in?
-            !
+
+
+            !first allocate the escapeSymmetry, with a size that is determined by the user,
+            !we will want the following settings
+            !cartesian base: none, prism, flipped, specified
+            !   we need a vector for num voxels
+            !   we need a vector for dimensions, going out from zero
+            !   we need a vector for central position for the coordinate system
+            !   we need a normal vector for the prism plane and the flipped plane
+            !   we need a series of points to calculate this for
+            !cylindrical base: 360 rotational, n rotational
+            !   we need a vector for num voxels (num in r, num in theta, num in z)
+            !   we need a vector for max dimensions going out from zero (max r, max z)
+            !   we need a vector for central position of the symmetry coordinate system
+            !   we need a vector for the axis along which the z direction points
             !allocate(escapeSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+
+            !this is now done, we have a list of variables that define the system so we can allocate many two different sets of grids
+
+            ! when working we will define the symmetry escape function looping through the x,y,z if cart or r, theta, z if cylindrical
+            ! we will find what the point in the symmetry coordinate space coordinates to in the given x,y,z
+            ! we will find if we have a non-zero kappa, which if we do we will then find the escape function for
+            ! we will then store this escape function in the symmetry escape function array
+            ! we will then loop through the base coordinate escape and convert each position into the symmetry coordinate
+            ! we will find the 8 closest points to perform trilinear interpolation
+            ! if we do not have 8 points we will set it to -1
+
+            !Jobs To Do
+
+            !Add section to input toml to read symmetry settings for the escape function, make these separate from the geometry now
+
+            ! Add function to shift and rotate between coordinate systems
+
+            ! begin with none, then do prism, then do flipped. To do prism, you will need to implement first a shift of coordinates and then a rotation of coordinates
+            ! none
+            ! prism
+            ! flipped
+            ! specified
+            ! 360rotational
+            ! nrotational
+
+            ! Fill the escape function, if it is greater than the cartesian grid, then ignore it and don't find it
 
             !loop through every cell
             do m = 1, state%grid%nxg

@@ -157,7 +157,7 @@ module writer_mod
             character(len=:), allocatable :: hdr
 
             do i = 1, size(dects)
-                filename = trim(fileplace)//"escape/"//trim(dects(i)%p%ID)//"_"//trim(str(i))//".nrrd" 
+                filename = trim(fileplace)//"escape/dectID_"//trim(dects(i)%p%ID)//"__escape"//trim(str(i))//".nrrd" 
                 call write_data(escape(i,:,:,:), filename, state, dict, overwrite, dects(i)%p%ID)
             end do
         end subroutine write_escape

@@ -1,7 +1,8 @@
 module sim_state_mod
 !! This module defines the setting_t type which holds simulation metadata:
 
-    use gridMod,   only : cart_grid
+    use gridMod,   only : cart_grid, cyl_grid
+    use vector_class, only : vector
 
     implicit none
     
@@ -28,6 +29,14 @@ module sim_state_mod
         character(len=:), allocatable :: outfile_absorb
         !> Cart_grid type
         type(cart_grid) :: grid
+        !> symmetryEscapeCart grid
+        type(cart_grid) :: symmetryEscapeCartGrid
+        !> symmetryEscapeCyl grid
+        type(cyl_grid) :: symmetryEscapeCylGrid
+        !> central position of the symmetry grid
+        type(vector) :: symGridPos
+        !> normal used in symmetry cart grid, and z axis direction in symmetry cyl grid
+        type(vector) :: symGridDir
         !> Boolean to indicate whether to render SDF to voxels or not.
         logical :: render_geom
         !> Boolean to indicate whether to render source emission to voxels or not.

@@ -38,6 +38,7 @@ module testsDetectorMod
         real(kind=wp) :: radius, maxval, pointSep, weight
         logical :: flag
         type(history_stack_t) :: history
+        character(len=:), allocatable :: dect_ID
 
         pos = vector(0.5_wp, 0._wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)
@@ -45,7 +46,8 @@ module testsDetectorMod
         radius = 0.5
         nbins = 100
         maxval = 100._wp
-        a = circle_dect(pos, dir, layer, radius, nbins, .false.)
+        dect_ID = "circleTest"
+        a = circle_dect(pos, dir, layer, radius, nbins, .false.,dect_ID)
 
         pos = vector(0._wp, 0._wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)
@@ -80,6 +82,7 @@ module testsDetectorMod
         real(kind=wp) :: maxval, val, weight
         logical :: flag
         type(history_stack_t) :: history
+        character(len=:), allocatable :: dect_ID
 
         p1 = vector(-1._wp, -1._wp, -1._wp)
         p2 = vector(0._wp, 2._wp, 0._wp)
@@ -87,7 +90,8 @@ module testsDetectorMod
         layer = 1
         nbins = 100
         maxval = 100._wp
-        a = camera(p1, p2, p3, layer, nbins, maxval, .false.)
+        dect_ID = "cameraTest"
+        a = camera(p1, p2, p3, layer, nbins, maxval, .false.,dect_ID)
 
         pos = vector(10._wp, 0._wp, 0._wp)
         dir = vector(-1._wp, 0._wp, 0._wp)
@@ -133,6 +137,7 @@ module testsDetectorMod
         real(kind=wp) :: maxval, pointSep, r1, r2, weight
         logical :: flag
         type(history_stack_t) :: history
+        character(len=:), allocatable :: dect_ID
 
         layer = 1
         nbins = 100
@@ -141,7 +146,8 @@ module testsDetectorMod
         r2 = 1.0_wp
         pos = vector(0.5_wp, 0._wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)
-        a = annulus_dect(pos, dir, layer, r1, r2, nbins, maxval, .false.)
+        dect_ID = "annulusTest"
+        a = annulus_dect(pos, dir, layer, r1, r2, nbins, maxval, .false.,dect_ID)
 
         pos = vector(0._wp, 0.75_wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)

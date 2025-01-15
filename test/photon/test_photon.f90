@@ -80,7 +80,7 @@ module testsPhotonMod
         type(constant) :: const
 
         const = constant(500._wp)
-        state%grid = init_grid(200, 200, 200, 7.5_wp, 7.5_wp, 7.5_wp)
+        state%grid = init_grid_cart(200, 200, 200, 7.5_wp, 7.5_wp, 7.5_wp)
 
         pos = vector(0.0_wp,0.0_wp,0.0_wp)
         dir = vector(1.0_wp,0.0_wp,0.0_wp)
@@ -140,7 +140,7 @@ module testsPhotonMod
         const = constant(500._wp)
         allocate(spectrum%p, source=const)
 
-        state%grid = init_grid(200, 200, 200, 1._wp, 1._wp, 1._wp)
+        state%grid = init_grid_cart(200, 200, 200, 1._wp, 1._wp, 1._wp)
 
         pos = vector(0.0_wp,0.5_wp,-0.25_wp)
         dir = vector(1.0_wp,0.0_wp,0.0_wp)
@@ -190,7 +190,7 @@ module testsPhotonMod
         const = constant(500._wp)
         allocate(spectrum%p, source=const)
 
-        state%grid = init_grid(200, 200, 200, 1.1_wp, 1.1_wp, 1.1_wp)
+        state%grid = init_grid_cart(200, 200, 200, 1.1_wp, 1.1_wp, 1.1_wp)
 
         pos = vector(0.0_wp, 0.0_wp, 1.0_wp)
         dir = vector(0.0_wp, 0.0_wp, -1.0_wp)
@@ -229,7 +229,7 @@ module testsPhotonMod
 
         const = constant(500._wp)
         allocate(spectrum%p, source=const)
-        state%grid = init_grid(200, 200, 200, 1._wp, 1._wp, 1._wp)
+        state%grid = init_grid_cart(200, 200, 200, 1._wp, 1._wp, 1._wp)
 
         pos = vector(0.0_wp,0.5_wp,-0.25_wp)
         dir = vector(1.0_wp,0.0_wp,0.0_wp)
@@ -302,7 +302,7 @@ module testsPhotonMod
         allocate(spectrum%p, source=img)
         allocate(out(size(image, 1), size(image, 2)))
         out = 0.
-        state%grid = init_grid(200, 200, 200, 1._wp, 1._wp, 1._wp)
+        state%grid = init_grid_cart(200, 200, 200, 1._wp, 1._wp, 1._wp)
 
         pos = vector(0.0_wp, 0.0_wp, 1.0_wp)
         dir = vector(0.0_wp, 0.0_wp, -1.0_wp)
