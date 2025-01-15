@@ -99,6 +99,7 @@ contains
         use sim_state_mod, only : state
         use vector_class,  only : vector
         use setupMod, only : setup_escapeFunction
+        use writer_mod, only : write_escape
 
         !external deps
         use tev_mod, only : tevipc
@@ -185,19 +186,19 @@ contains
                         call reset(dects)
 
                         ! find the centre position of the voxel
-                        !y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
-                        !x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
-                        !z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
-                        !position = vector(x,y,z)
+                        x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                        y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                        z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                        position = vector(x,y,z)
 
                         !packet%pos = position   ! set the emission location
 
                         ! get the layer at this position
-                        !distances = 0._wp
-                        !do i = 1, size(distances)
-                        !    distances(i) = array(i)%evaluate(position)
-                        !end do
-                        !layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+                        distances = 0._wp
+                        do i = 1, size(distances)
+                            distances(i) = array(i)%evaluate(position)
+                        end do
+                        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
                         !  if the layer has a non-zero kappa then it is significant and we want to perform MCRT
                         ! if(array(layer)%getkappa() /= real(0, kind=wp)) then
@@ -206,13 +207,13 @@ contains
                         !                     tev, spectrum)
                         ! end if
                         
-                        !  record the efficiency for each detector and add to an array of escape functions
-                        !do i = 1, size(dects)
-                        !    total = 0._wp
-                        !    call dects(i)%p%total_dect(total)
-                            ! escape(i, m, n, o) = total/state%nphotons
-                        !    escape(i, m, n, o) = layer
-                        !end do
+                        ! record the efficiency for each detector and add to an array of escape functions
+                        do i = 1, size(dects)
+                            total = 0._wp
+                            !call dects(i)%p%total_dect(total)
+                            !escape(i, m, n, o) = total/state%nphotons
+                            escape(i, m, n, o) = layer
+                        end do
                     end do         
                 end do
             end do
@@ -413,7 +414,7 @@ contains
         end select
                                             
         !store the escape funcitons for each detector
-        
+        call write_escape(dects, dict)
 
         call cpu_time(toc)
         print*,"Time to Run: ",((toc - tic))

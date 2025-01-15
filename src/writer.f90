@@ -19,7 +19,7 @@ module writer_mod
     end interface raw_write
 
     private
-    public :: normalise_fluence, write_data, write_detected_photons, checkpoint
+    public :: normalise_fluence, write_data, write_detected_photons, checkpoint, write_escape
 
     contains
         subroutine normalise_fluence(grid, array, nphotons)
@@ -133,7 +133,7 @@ module writer_mod
 
         end subroutine write_detected_photons
 
-        subroutine write_escape(overwrite, dict, dects)
+        subroutine write_escape(dects, dict, overwrite)
 
             use iarray, only : escape
             use detectors
@@ -157,12 +157,13 @@ module writer_mod
             character(len=:), allocatable :: hdr
 
             do i = 1, size(dects)
-                
+                filename = trim(fileplace)//"escape/"//trim(dects(i)%p%ID)//"_"//trim(str(i))//".nrrd" 
+                call write_data(escape(i,:,:,:), filename, state, dict, overwrite, dects(i)%p%ID)
             end do
         end subroutine write_escape
 
 
-        subroutine write_data(array, filename, state, dict, overwrite)
+        subroutine write_data(array, filename, state, dict, overwrite, dect_ID)
         !! routine automatically selects which way to write out results based upon file extension
             
             use sim_state_mod, only : settings_t
@@ -179,6 +180,8 @@ module writer_mod
             type(toml_table), optional, intent(INOUT) :: dict
             !> overwrite flag
             logical,          optional, intent(IN)    :: overwrite
+            !> detector ID, only used writing the escape function
+            character(len=:), allocatable, optional, intent(in) :: dect_ID
 
             Logical :: over_write
             integer :: pos
@@ -192,9 +195,9 @@ module writer_mod
             pos = index(filename, ".nrrd")
             if(pos > 0)then
                 if(present(dict))then
-                    call nrrd_write(array, filename, over_write, dict)
+                    call nrrd_write(array, filename, over_write, dict, dect_ID = dect_ID)
                 else
-                    call nrrd_write(array, filename, over_write)
+                    call nrrd_write(array, filename, over_write, dect_ID = dect_ID)
                 end if
                 return
             end if
@@ -295,7 +298,7 @@ module writer_mod
         
         end function check_file
 
-        subroutine write_hdr(u, sizes, type)
+        subroutine write_hdr(u, sizes, type, dect_ID)
             !! write out header information for .nrrd file format
             use utils, only : str
 
@@ -305,6 +308,8 @@ module writer_mod
             integer,      intent(IN) :: u
             !> dimensions of data
             integer,      intent(IN) :: sizes(:)
+            !> detector ID, only used writing the escape function
+            character(len=:), allocatable, optional, intent(in) :: dect_ID
             
             character(len=100) :: string
             integer :: i
@@ -322,13 +327,13 @@ module writer_mod
             write(u,"(A)")"encoding: raw"
             write(u,"(A)")"endian: little"
 
-!#ifdef escapeFunction
-!            write(u, "(A)")"dector: "//trim(dect_ID)//"_"//string(num) 
-!#endif
+            if(present(dect_ID)) then
+                write(u, "(A)")"dector: "//trim(dect_ID) 
+            end if
 
         end subroutine write_hdr
 
-        subroutine write_3d_r8_nrrd(array, filename, overwrite, dict)
+        subroutine write_3d_r8_nrrd(array, filename, overwrite, dict, dect_ID)
             !! write 3D array of float64's to .nrrd fileformat
 
             use tomlf,           only : toml_table, toml_dump, toml_error
@@ -343,6 +348,8 @@ module writer_mod
             type(toml_table), optional, intent(INOUT) :: dict
             !> overwrite flag
             logical,                    intent(IN)    :: overwrite
+            !> detector ID, only used writing the escape function
+            character(len=:), allocatable, optional, intent(in) :: dect_ID
 
             type(toml_error), allocatable :: error
             character(len=:), allocatable :: file
@@ -356,7 +363,7 @@ module writer_mod
 
             open(newunit=u,file=file,form="formatted")
             !to do fix precision
-            call write_hdr(u, [size(array, 1), size(array, 2), size(array, 3)], "double")
+            call write_hdr(u, [size(array, 1), size(array, 2), size(array, 3)], "double", dect_ID)
 
             if(present(dict))then
                 call toml_dump(dict, u, error)
@@ -369,7 +376,7 @@ module writer_mod
         
         end subroutine write_3d_r8_nrrd
 
-        subroutine write_3d_r4_nrrd(array, filename, overwrite, dict)
+        subroutine write_3d_r4_nrrd(array, filename, overwrite, dict, dect_ID)
             !! write 3D array of float32's to .nrrd fileformat
 
             use tomlf,           only : toml_table, toml_dump, toml_error
@@ -385,6 +392,8 @@ module writer_mod
             type(toml_table), optional, intent(INOUT) :: dict
             !> overwrite flag
             logical,                    intent(IN)    :: overwrite
+            !> detector ID, only used writing the escape function
+            character(len=:), allocatable, optional, intent(in) :: dect_ID
 
             type(toml_error), allocatable :: error
             character(len=:), allocatable :: file
@@ -398,7 +407,7 @@ module writer_mod
 
             open(newunit=u,file=file,form="formatted")
             !to do fix precision
-            call write_hdr(u, [size(array, 1), size(array, 2), size(array, 3)], "float")
+            call write_hdr(u, [size(array, 1), size(array, 2), size(array, 3)], "float", dect_ID)
 
             if(present(dict))then
                 call toml_dump(dict, u, error)
