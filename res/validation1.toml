@@ -26,6 +26,7 @@ n = [1.0]
 
 [[detectors]]
 type="circle"
+ID = "this is a test"
 position=[0.0, 0.0, -0.011]
 direction=[0.0, 0.0, -1.0]
 radius=20
@@ -35,6 +36,7 @@ trackHistory=false
 
 [[detectors]]
 type="circle"
+ID = "1"
 position=[0.0, 0.0, 0.011]
 direction=[0.0, 0.0, 1.0]
 radius=20

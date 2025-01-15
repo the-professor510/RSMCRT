@@ -25,72 +25,91 @@ class plotDetectorsClass:
     def read_1D_Detector(self, filename):
         data = np.fromfile(file=filename, dtype=np.float64, sep="")
         detectorType = data[0]
+        n = 1
         match detectorType:
             case 1:     #Detector Type of Cricle
-                nPackets = data[1]
-                radius = data[2]
-                pos = [data[3], data[4], data[5]]
-                dir = [data[6], data[7], data[8]]
-                numBins = (len(data) - 8)/2
+                dectIDLen = data[n]
+                dectID = ""
+                n+=1
+                for i in range(n, n+int(dectIDLen)):
+                    dectID = dectID + chr(int(data[i]))
+                    n += 1
+                nPackets = data[n]
+                radius = data[n+1]
+                pos = [data[n+2], data[n+3], data[n+4]]
+                dir = [data[n+5], data[n+6], data[n+7]]
+                numBins = (len(data) - (n+7))/2
                 
                 radius = []
                 count = []
                 
-                for i in range(9, len(data), 2):
+                for i in range(n+8, len(data), 2):
                     radius.append(data[i])
                     count.append(data[i+1])
                 
-                return radius, count, nPackets, numBins, pos, dir, "Circular", \
+                return radius, count, dectID, nPackets, numBins, pos, dir, "Circular", \
                     [radius]
                     
             case 2:     #Detector Type of Fibre
-                nPackets = data[1]
-                pos = [data[2], data[3], data[4]]
-                dir = [data[5], data[6], data[7]]
+                dectIDLen = data[n]
+                dectID = ""
+                n+=1
+                for i in range(n, n+int(dectIDLen)):
+                    dectID = dectID + chr(int(data[i]))
+                    n += 1
+                nPackets = data[n]
+                pos = [data[n+1], data[n+2], data[n+3]]
+                dir = [data[n+4], data[n+5], data[n+6]]
                             
-                focalLength1 = data[8]
-                focalLength2 = data[9]
-                f1Aperture = data[10]
-                f2Aperture = data[11]
-                frontOffset = data[12]
-                backOffset = data[13]
-                frontToPinSep = data[14]
-                pinToBackSep = data[15]
-                pinAperture = data[16]
-                acceptAngle = data[17]
-                coreDiameter = data[18]
+                focalLength1 = data[n+7]
+                focalLength2 = data[n+8]
+                f1Aperture = data[n+9]
+                f2Aperture = data[n+10]
+                frontOffset = data[n+11]
+                backOffset = data[n+12]
+                frontToPinSep = data[n+13]
+                pinToBackSep = data[n+14]
+                pinAperture = data[n+15]
+                acceptAngle = data[n+16]
+                coreDiameter = data[n+17]
                 
-                numBins = (len(data) - 18)/2
+                numBins = (len(data) - (n+17))/2
                 
                 radius = []
                 count = []
                 
-                for i in range(19, len(data), 2):
+                for i in range(n+18, len(data), 2):
                     radius.append(data[i])
                     count.append(data[i+1])
                     
                 
-                return radius, count, nPackets, numBins, pos, dir, "Fibre", \
+                return radius, count, dectID, nPackets, numBins, pos, dir, "Fibre", \
                     [focalLength1, focalLength2, f1Aperture, f2Aperture, \
                         frontOffset, backOffset, frontToPinSep, pinToBackSep, \
                         pinAperture, acceptAngle, coreDiameter] 
                     
             case 3:     #Detector Type of Annulus
-                nPackets = data[1]
-                radius1 = data[2]
-                radius2 = data[3]
-                pos = [data[4], data[5], data[6]]
-                dir = [data[7], data[8], data[9]]
-                numBins = (len(data) - 9)/2
+                dectIDLen = data[n]
+                dectID = ""
+                n+=1
+                for i in range(n, n+int(dectIDLen)):
+                    dectID = dectID + chr(int(data[i]))
+                    n += 1
+                nPackets = data[n]
+                radius1 = data[n+1]
+                radius2 = data[n+2]
+                pos = [data[n+3], data[n+4], data[n+5]]
+                dir = [data[n+6], data[n+7], data[n+8]]
+                numBins = (len(data) - (n+8))/2
                 
                 radius = []
                 count = []
                 
-                for i in range(10, len(data), 2):
+                for i in range(n+9, len(data), 2):
                     radius.append(data[i])
                     count.append(data[i+1])
                 
-                return radius, count, nPackets, numBins, pos, dir, "Annulus", \
+                return radius, count, dectID, nPackets, numBins, pos, dir, "Annulus", \
                     [radius1, radius2]
             
             case _:     #Default case

@@ -25,6 +25,7 @@ n = [1.0]
 
 [[detectors]]
 type="fibre"
+ID = "1"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0
@@ -42,6 +43,7 @@ trackHistory = false
 
 [[detectors]]
 type="fibre"
+ID = "2"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0
@@ -59,6 +61,7 @@ trackHistory = false
 
 [[detectors]]
 type="fibre"
+ID = "3"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0
@@ -76,6 +79,7 @@ trackHistory = false
 
 [[detectors]]
 type="fibre"
+ID = "4"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0
@@ -93,6 +97,7 @@ trackHistory = false
 
 [[detectors]]
 type="fibre"
+ID = "5"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0
@@ -110,6 +115,7 @@ trackHistory = false
 
 [[detectors]]
 type="fibre"
+ID = "6"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0
@@ -127,6 +133,7 @@ trackHistory = false
 
 [[detectors]]
 type="fibre"
+ID = "7"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0
@@ -144,6 +151,7 @@ trackHistory = false
 
 [[detectors]]
 type="fibre"
+ID = "8"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0
@@ -161,6 +169,7 @@ trackHistory = false
 
 [[detectors]]
 type="fibre"
+ID = "9"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0
@@ -178,6 +187,7 @@ trackHistory = false
 
 [[detectors]]
 type="fibre"
+ID = "10"
 position=[0.0, 0.0, 2.0]
 direction=[0.0, 0.0, 1.0]
 focalLength1 = 2.0

@@ -14,4 +14,6 @@ module iarray
     real(kind=sp), allocatable :: absorb(:,:,:), absorbGLOBAL(:,:,:) 
     !> emission location
     real(kind=sp), allocatable :: emission(:,:,:), emissionGLOBAL(:,:,:)
+    !> escape function
+    real(kind=sp), allocatable :: escape(:,:,:,:), escapeSymmetry(:,:,:,:)
 end module iarray

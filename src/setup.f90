@@ -7,7 +7,7 @@ module setupMod
     implicit none
 
     private
-    public  :: setup_simulation, dealloc_array, directory, zarray
+    public  :: setup_simulation, dealloc_array, directory, zarray, setup_escapeFunction
 
     contains
 
@@ -155,8 +155,7 @@ module setupMod
         !! zero data arrays
             use iarray
 
-            !sets all arrays to zer
-
+            !sets all arrays to zero
             phasor = 0._wp
             phasorGLOBAL = 0._wp
             jmean = 0._wp
@@ -198,4 +197,39 @@ module setupMod
             deallocate(emission)
             deallocate(emissionGLOBAL)
         end subroutine dealloc_array
+
+        subroutine setup_escapeFunction(numDects)
+
+            !!  subroutine creates escape function folder and creates    
+            use constants,      only : homedir, fileplace, resdir
+            use iarray
+            use sim_state_mod,  only : state
+
+            integer, intent(in) :: numDects
+
+            character(len=256) :: cwd
+            logical :: escapeExists
+
+            !get current working directory
+            call get_environment_variable('PWD', cwd)
+  
+            ! get 'home' dir from cwd
+            homedir = trim(cwd)
+            ! get data dir
+            fileplace = trim(homedir)//'/data/'
+            !check if data directory and subdirectories exists. if not create it
+#ifdef __GFORTRAN__
+            inquire(file=trim(fileplace)//"/escape/.", exist=escapeExists)
+#elif __INTEL_COMPILER
+            inquire(directory=trim(fileplace)//"/escape", exist=escapeExists)
+#else 
+    escapeExists=.true.
+    ! error stop "Compiler not supported!"
+#endif
+            call create_directory("escape/", escapeExists, "data/", .true.)
+
+            !allocate the escape cartesian escape function
+            allocate(escape(numDects, state%grid%nxg, state%grid%nyg, state%grid%nzg))
+
+        end subroutine setup_escapeFunction
 end module setupMod

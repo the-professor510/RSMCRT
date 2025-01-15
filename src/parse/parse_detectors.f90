@@ -31,7 +31,7 @@ contains
 
         type(toml_array), pointer :: array
         type(toml_table), pointer :: child
-        character(len=:), allocatable :: dect_type
+        character(len=:), allocatable :: dect_type, dect_ID
         type(circle_dect), target, save, allocatable :: dect_c(:)
         type(annulus_dect), target, save, allocatable :: dect_a(:)
         type(fibre_dect), target, save, allocatable :: dect_f(:)
@@ -48,6 +48,13 @@ contains
         do i = 1, len(array)
             call get_value(array, i, child)
             call get_value(child, "type", dect_type, origin=origin)
+            call get_value(child, "ID", dect_ID, origin=origin)
+            if(.not. allocated(dect_ID)) then
+                !through an error, the user must specify a detector ID
+                call make_error(error, context%report("Need to specify a detector ID", origin, &
+                                              "No detector ID specified"), -1)
+                return
+            end if
             select case(dect_type)
             case default
                 call make_error(error, &
@@ -89,19 +96,20 @@ contains
         do i = 1, len(array)
             call get_value(array, i, child)
             call get_value(child, "type", dect_type)
+            call get_value(child, "ID", dect_ID, "none", origin=origin)
             call get_value(child, "historyFileName", state%historyFilename, "photPos.obj")
             select case(dect_type)
             case("circle")
-                call handle_circle_dect(child, dect_c, c_counter, context, error)
+                call handle_circle_dect(child, dect_c, c_counter, context, error, dect_ID)
                 if(allocated(error))return
             case("annulus")
-                call handle_annulus_dect(child, dect_a, a_counter, context, error)
+                call handle_annulus_dect(child, dect_a, a_counter, context, error, dect_ID)
                 if(allocated(error))return
             case("fibre")
-                call handle_fibre_collection_dect(child, dect_f, f_counter, context, error)
+                call handle_fibre_collection_dect(child, dect_f, f_counter, context, error, dect_ID)
                 if(allocated(error))return
             case("camera")
-                call handle_camera(child, dect_cam, cam_counter, context, error)
+                call handle_camera(child, dect_cam, cam_counter, context, error, dect_ID)
                 if(allocated(error))return
             end select
         end do
@@ -130,7 +138,7 @@ contains
 
     end subroutine parse_detectors
 
-    subroutine handle_camera(child, dects, counts, context, error)
+    subroutine handle_camera(child, dects, counts, context, error, dect_ID)
         !! Read in Camera settings and initalise variable
         use detectors,     only : camera
         use sim_state_mod, only : state
@@ -145,6 +153,8 @@ contains
         type(toml_context),            intent(in)    :: context
         !> Error message
         type(toml_error), allocatable, intent(out)   :: error
+        !> Detector ID
+        character(len=:), allocatable, intent(in)    :: dect_ID
 
         integer       :: layer, nbins
         real(kind=wp) :: maxval
@@ -166,12 +176,12 @@ contains
             return
         end if
 #endif
-        dects(counts) = camera(p1, p2, p3, layer, nbins, maxval, trackHistory)
+        dects(counts) = camera(p1, p2, p3, layer, nbins, maxval, trackHistory, dect_ID)
         counts = counts + 1
 
     end subroutine handle_camera
 
-    subroutine handle_circle_dect(child, dects, counts, context, error)
+    subroutine handle_circle_dect(child, dects, counts, context, error, dect_ID)
         !! Read in Circle_detector settings and initalise variable
         use detectors,     only : circle_dect
         use sim_state_mod, only : state
@@ -186,6 +196,8 @@ contains
         type(toml_context),            intent(in)    :: context
         !> Error message
         type(toml_error), allocatable, intent(out)   :: error
+        !> Detector ID
+        character(len=:), allocatable, intent(in)    :: dect_ID
 
         integer       :: layer, nbins
         real(kind=wp) :: maxval, radius
@@ -207,12 +219,12 @@ contains
             return
         end if
 #endif
-        dects(counts) = circle_dect(pos, dir, layer, radius, nbins, trackHistory)
+        dects(counts) = circle_dect(pos, dir, layer, radius, nbins, trackHistory, dect_ID)
         counts = counts + 1
 
     end subroutine handle_circle_dect
 
-    subroutine handle_fibre_collection_dect(child, dects, counts, context, error)
+    subroutine handle_fibre_collection_dect(child, dects, counts, context, error, dect_ID)
         !! Read in handle_fibre_collection_dector settings and initalise variable
         use detectors,     only : fibre_dect
         use sim_state_mod, only : state
@@ -227,6 +239,8 @@ contains
         type(toml_context),            intent(in)    :: context
         !> Error message
         type(toml_error), allocatable, intent(out)   :: error
+        !> Detector ID
+        character(len=:), allocatable, intent(in)    :: dect_ID
 
         integer       :: layer, nbins
         real(kind=wp) :: maxval
@@ -265,12 +279,12 @@ contains
 #endif
         dects(counts) = fibre_dect(pos, dir, layer, nbins, maxval, trackHistory, focalLength1, & 
                                     focalLength2, f1Aperture, f2Aperture, frontOffset, backOffset, & 
-                                    frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter)
+                                    frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter, dect_ID)
         counts = counts + 1
 
     end subroutine handle_fibre_collection_dect
 
-    subroutine handle_annulus_dect(child, dects, counts, context, error)
+    subroutine handle_annulus_dect(child, dects, counts, context, error, dect_ID)
         !! Read in Annulus_detector settings and initalise variable
         
         use detectors,     only : annulus_dect
@@ -287,6 +301,9 @@ contains
         type(toml_context),            intent(in)    :: context
         !> Error message
         type(toml_error), allocatable, intent(out)   :: error
+        !> Detector ID
+        character(len=:), allocatable, intent(in)    :: dect_ID
+
 
         integer       :: layer, nbins, origin
         real(kind=wp) :: maxval, radius1, radius2
@@ -316,7 +333,7 @@ contains
             return
         end if
 #endif
-        dects(counts) = annulus_dect(pos, dir, layer, radius1, radius2, nbins, maxval, trackHistory)
+        dects(counts) = annulus_dect(pos, dir, layer, radius1, radius2, nbins, maxval, trackHistory, dect_ID)
         counts = counts + 1
     end subroutine handle_annulus_dect
 end module parse_detectorsMod

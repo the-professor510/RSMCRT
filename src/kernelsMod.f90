@@ -98,6 +98,7 @@ contains
         use sdfs,          only : sdf
         use sim_state_mod, only : state
         use vector_class,  only : vector
+        use setupMod, only : setup_escapeFunction
 
         !external deps
         use tev_mod, only : tevipc
@@ -126,9 +127,10 @@ contains
         integer :: m, n, o, layer
         real(kind = wp) :: x,y,z, total
         type(vector) :: position
-        real(kind=wp),  allocatable :: escapeFunction(:,:,:,:)
-        real(kind=wp),  allocatable :: escapeFunctionSymmetry(:,:,:,:)
         character(len=:), allocatable :: symmetry
+        real :: tic, toc
+
+        call cpu_time(tic)
 
         !setup the geometry and detectors
         if(state%loadckpt)then
@@ -162,7 +164,7 @@ contains
         packet%nyp = 0.0_wp 
         packet%nzp = 0.0_wp 
         
-        allocate(escapeFunction(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+        call setup_escapeFunction(size(dects))
         
         !use symmetry to reduce the number of voxels we have to calculate
         call get_value(dict, "symmetry", symmetry)
@@ -183,33 +185,34 @@ contains
                         call reset(dects)
 
                         ! find the centre position of the voxel
-                        y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
-                        x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
-                        z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
-                        position = vector(x,y,z)
+                        !y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                        !x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                        !z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+                        !position = vector(x,y,z)
 
-                        packet%pos = position   ! set the emission location
+                        !packet%pos = position   ! set the emission location
 
                         ! get the layer at this position
-                        distances = 0._wp
-                        do i = 1, size(distances)
-                            distances(i) = array(i)%evaluate(position)
-                        end do
-                        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+                        !distances = 0._wp
+                        !do i = 1, size(distances)
+                        !    distances(i) = array(i)%evaluate(position)
+                        !end do
+                        !layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
-                        ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                            call run_MCRT(input_file, history, packet, dict, & 
-                                            distances, image, dects, array, nscatt, start, & 
-                                            tev, spectrum)
-                        end if
+                        !  if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+                        ! if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                        !     call run_MCRT(input_file, history, packet, dict, & 
+                        !                     distances, image, dects, array, nscatt, start, & 
+                        !                     tev, spectrum)
+                        ! end if
                         
-                        ! record the efficiency for each detector and add to an array of escape functions
-                        do i = 1, size(dects)
-                            total = 0._wp
-                            call dects(i)%p%total_dect(total)
-                            escapeFunction(i, m, n, o) = total/state%nphotons
-                        end do
+                        !  record the efficiency for each detector and add to an array of escape functions
+                        !do i = 1, size(dects)
+                        !    total = 0._wp
+                        !    call dects(i)%p%total_dect(total)
+                            ! escape(i, m, n, o) = total/state%nphotons
+                        !    escape(i, m, n, o) = layer
+                        !end do
                     end do         
                 end do
             end do
@@ -217,7 +220,7 @@ contains
             !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             !what is the normal to the plane this prism is in?
             !
-            allocate(escapeFunctionSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+            !allocate(escapeSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
 
             !loop through every cell
             do m = 1, state%grid%nxg
@@ -243,17 +246,17 @@ contains
                         layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
                         ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                            call run_MCRT(input_file, history, packet, dict, & 
-                                            distances, image, dects, array, nscatt, start, & 
-                                            tev, spectrum)
-                        end if
+                        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                        !    call run_MCRT(input_file, history, packet, dict, & 
+                        !                    distances, image, dects, array, nscatt, start, & 
+                        !                    tev, spectrum)
+                        !end if
                         
                         ! record the efficiency for each detector and add to an array of escape functions
                         do i = 1, size(dects)
                             total = 0._wp
                             call dects(i)%p%total_dect(total)
-                            escapeFunction(i, m, n, o) = total/state%nphotons
+                        !    escape(i, m, n, o) = total/state%nphotons
                         end do
                     end do         
                 end do
@@ -262,7 +265,7 @@ contains
             !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             ! Only do half the cells, ensure the you know the plane of division
             !
-            allocate(escapeFunctionSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+            allocate(escapeSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
 
             !loop through every cell
             do m = 1, state%grid%nxg
@@ -288,17 +291,17 @@ contains
                         layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
                         ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                            call run_MCRT(input_file, history, packet, dict, & 
-                                            distances, image, dects, array, nscatt, start, & 
-                                            tev, spectrum)
-                        end if
+                        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                        !    call run_MCRT(input_file, history, packet, dict, & 
+                        !                    distances, image, dects, array, nscatt, start, & 
+                        !                    tev, spectrum)
+                        !end if
                         
                         ! record the efficiency for each detector and add to an array of escape functions
                         do i = 1, size(dects)
                             total = 0._wp
                             call dects(i)%p%total_dect(total)
-                            escapeFunction(i, m, n, o) = total/state%nphotons
+                        !    escape(i, m, n, o) = total/state%nphotons
                         end do
                     end do         
                 end do
@@ -319,7 +322,7 @@ contains
             ! shift to align the central coordinates with one another
             ! use bilinear interprolation to convert from cylindrical to cartesian
 
-            allocate(escapeFunctionSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+            allocate(escapeSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
 
             !loop through every cell
             do m = 1, state%grid%nxg
@@ -345,17 +348,17 @@ contains
                         layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
                         ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                            call run_MCRT(input_file, history, packet, dict, & 
-                                            distances, image, dects, array, nscatt, start, & 
-                                            tev, spectrum)
-                        end if
+                        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                        !    call run_MCRT(input_file, history, packet, dict, & 
+                        !                    distances, image, dects, array, nscatt, start, & 
+                        !                    tev, spectrum)
+                        !end if
                         
                         ! record the efficiency for each detector and add to an array of escape functions
                         do i = 1, size(dects)
                             total = 0._wp
                             call dects(i)%p%total_dect(total)
-                            escapeFunction(i, m, n, o) = total/state%nphotons
+                            escape(i, m, n, o) = total/state%nphotons
                         end do
                     end do         
                 end do
@@ -363,7 +366,7 @@ contains
         case("nrotational")
             !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             ! do radially and in depth only for 360/n region of angles
-            allocate(escapeFunctionSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
+            allocate(escapeSymmetry(size(dects), state%grid%nxg, state%grid%nyg, state%grid%nzg))
 
             !loop through every cell
             do m = 1, state%grid%nxg
@@ -389,17 +392,17 @@ contains
                         layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
                         ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-                        if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                            call run_MCRT(input_file, history, packet, dict, & 
-                                            distances, image, dects, array, nscatt, start, & 
-                                            tev, spectrum)
-                        end if
+                        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                        !    call run_MCRT(input_file, history, packet, dict, & 
+                        !                    distances, image, dects, array, nscatt, start, & 
+                        !                    tev, spectrum)
+                        !end if
                         
                         ! record the efficiency for each detector and add to an array of escape functions
                         do i = 1, size(dects)
                             total = 0._wp
                             call dects(i)%p%total_dect(total)
-                            escapeFunction(i, m, n, o) = total/state%nphotons
+                            escape(i, m, n, o) = total/state%nphotons
                         end do
                     end do         
                 end do
@@ -409,8 +412,11 @@ contains
             stop 1
         end select
                                             
-
         !store the escape funcitons for each detector
+        
+
+        call cpu_time(toc)
+        print*,"Time to Run: ",((toc - tic))
 
     end subroutine escape_Function
 
@@ -1058,14 +1064,12 @@ subroutine reset(dects)
 
 
     !zero jmean, absorb, emission, and phasor arrays
-    call zarray()
+    ! this takes a long time to run, can it be sped up?
+    !call zarray()
 
     !zero the detectors
     do i = 1, size(dects)
-        associate(x => dects(i)%p)
-        call x%zero_dect()
-        print*, "zeroed"
-        end associate
+        call dects(i)%p%zero_dect()
     end do
 
 end subroutine reset

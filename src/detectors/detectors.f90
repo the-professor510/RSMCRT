@@ -104,7 +104,7 @@ module detectors
 
     contains
     
-    function init_circle_dect(pos, dir, layer, radius, nbins, trackHistory) result(out)
+    function init_circle_dect(pos, dir, layer, radius, nbins, trackHistory, dect_ID) result(out)
         !! Initalise Circle detector
         !> Centre of detector
         type(vector),  intent(in) :: pos
@@ -118,12 +118,15 @@ module detectors
         real(kind=wp), intent(in) :: radius
         !> Boolean on if to store photon's history prior to hitting the detector.
         logical,       intent(in) :: trackHistory
+        !> Detector ID
+        character(len=:), allocatable, intent(in)    :: dect_ID
 
         type(circle_dect) :: out
 
         out%dir = dir
         out%pos = pos
         out%layer = layer
+        out%ID = dect_ID
         !extra bin for data beyond end of array
         out%nbins = nbins + 1
         out%radius = radius
@@ -157,7 +160,7 @@ module detectors
         end if
     end function check_hit_circle
 
-    function init_annulus_dect(pos, dir, layer, r1, r2, nbins, maxval, trackHistory) result(out)
+    function init_annulus_dect(pos, dir, layer, r1, r2, nbins, maxval, trackHistory, dect_ID) result(out)
         !! Initalise Annular detector
 
         !> Centre of detector
@@ -176,12 +179,15 @@ module detectors
         real(kind=wp), intent(in) :: maxval
         !> Boolean on if to store photon's history prior to hitting the detector.
         logical,       intent(in) :: trackHistory
+        !> Detector ID
+        character(len=:), allocatable, intent(in)    :: dect_ID
 
         type(annulus_dect) :: out
 
         out%pos = pos
         out%dir = dir
         out%layer = layer
+        out%ID = dect_ID
         !extra bin for data beyond end of array
         out%nbins = nbins + 1
         out%r1 = r1
@@ -233,7 +239,7 @@ module detectors
 
     function init_fibre_dect(pos, dir, layer, nbins, maxval, trackHistory, & 
         focalLength1, focalLength2, f1Aperture, f2Aperture, frontOffset, backOffset, & 
-        frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter) result(out)
+        frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter, dect_ID) result(out)
         !! Initialise fibre detector
         
         !> Centre of detector
@@ -270,12 +276,15 @@ module detectors
         real(kind=wp), intent(in) :: acceptAngle
         !> size of the fibre core
         real(kind=wp), intent(in) :: coreDiameter
+        !> Detector ID
+        character(len=:), allocatable, intent(in)    :: dect_ID
 
         type(fibre_dect) :: out
 
         out%pos = pos
         out%dir = dir
         out%layer = layer
+        out%ID = dect_ID
         
         out%focalLength1 = focalLength1
         out%focalLength2 = focalLength2
@@ -374,7 +383,7 @@ module detectors
         hitpoint%value1D = abs(radius)
     end function check_hit_fibre
 
-    function init_camera(p1, p2, p3, layer, nbins, maxval, trackHistory) result(out)
+    function init_camera(p1, p2, p3, layer, nbins, maxval, trackHistory, dect_ID) result(out)
         !! Initalise Camera detector
 
         !> Position of the 1st corner of the detector
@@ -391,6 +400,8 @@ module detectors
         real(kind=wp), intent(in) :: maxval
         !> Boolean on if to store photon's history prior to hitting the detector.
         logical,       intent(in) :: trackHistory
+        !> Detector ID
+        character(len=:), allocatable, intent(in)    :: dect_ID
         type(camera) :: out
 
         out%pos = p1
@@ -403,6 +414,7 @@ module detectors
         out%n = out%e2 .cross. out%e1
         out%n = out%n%magnitude()
         out%layer = layer
+        out%ID = dect_ID
         !extra bin for data beyond end of array
         out%nbinsX = nbins + 1
         out%nbinsY = nbins + 1

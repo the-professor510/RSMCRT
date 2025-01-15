@@ -25,16 +25,16 @@ ax1.set_ylabel("Fluence (-)")
 ax1.set_xlim([depths[-14],1.6])
 ax1.set_ylim([0, np.max(fluence)*1.1])
 
-#""" Used for validate 2
+""" Used for validate 2
 c1 = 5.76
 k1 = 1.00
 c2 = 1.31
 k2 = 10.2
 delta = 0.047
 norm = 0.115
-#"""
+"""
 
-""" Used for validate 3
+#""" Used for validate 3
 c1 = 6.27
 k1 = 1.00
 c2 = 1.18

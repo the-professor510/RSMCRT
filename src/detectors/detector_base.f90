@@ -36,6 +36,8 @@ module detector_mod
         integer :: layer
         !> Boolean, if true store the history of the photon prior to detection.
         logical :: trackHistory
+        !> Detector ID
+        character(len=:), allocatable :: ID
         contains
             
             procedure(recordHitInterface), deferred, public :: record_hit
@@ -160,13 +162,11 @@ contains
 
     subroutine zero_1D_sub(this)
         class(detector1D),     intent(inout) :: this
-
-        this%data = 0._wp
+        this%data= 0._wp
     end subroutine zero_1D_sub
 
     subroutine zero_2D_sub(this)
         class(detector2D),     intent(inout) :: this
-
         this%data = 0._wp
     end subroutine zero_2D_sub
 

@@ -11,7 +11,7 @@ for j in range(1,11):
     filename = folderName + "detector_" + str(j) + ".dat"
 
     readDetectors = plotDetectorsClass.plotDetectorsClass()
-    radius, count, nPackets, numBins, pos, dir, typeOfDect, _ = readDetectors.read_1D_Detector(filename)
+    radius, count, dectID, nPackets, numBins, pos, dir, typeOfDect, _ = readDetectors.read_1D_Detector(filename)
                 
     totalCounts.append(sum(count)/nPackets)
     aperture.append(j*0.5)

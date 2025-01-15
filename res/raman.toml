@@ -17,60 +17,70 @@ geom_name='raman_test'
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[0.1, 0.0, 0.0]
 radius1=0.25
 radius2=0.5
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[0.2, 0.0, 0.0]
 radius1=0.25
 radius2=0.5
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[0.3, 0.0, 0.0]
 radius1=0.25
 radius2=0.5
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[0.4, 0.0, 0.0]
 radius1=0.25
 radius2=0.5
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[0.5, 0.0, 0.0]
 radius1=0.25
 radius2=0.5
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[0.6, 0.0, 0.0]
 radius1=0.25
 radius2=0.5
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[0.7, 0.0, 0.0]
 radius1=0.25
 radius2=0.5
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[0.8, 0.0, 0.0]
 radius1=0.25
 radius2=0.5
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[0.9, 0.0, 0.0]
 radius1=0.25
 radius2=0.5
 
 [[detectors]]
 type="annulus"
+ID = "1"
 position=[1.0, 0.0, 0.0]
 radius1=0.25
 radius2=0.5

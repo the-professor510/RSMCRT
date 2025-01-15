@@ -61,7 +61,7 @@ module writer_mod
 
             type(dect_array), intent(in) :: dects(:)
 
-            integer :: i, j, u
+            integer :: i, j, u, test
             character(len=:), allocatable :: hdr
 
             do i = 1, size(dects)
@@ -74,6 +74,10 @@ module writer_mod
                     type is(circle_dect)
                         ! write out the circle detector 
                         write(u)  1.0_wp ! What type of detector is it
+                        write(u)  real(len(x%ID), kind=wp) !write out the detector ID
+                        do j = 1, len(x%ID) 
+                            write(u)  real(ichar(x%ID(j:j)), kind=wp)
+                        end do
                         write(u)  real(state%nphotons, kind=wp)
                         write(u)  x%radius
                         write(u)  x%pos
@@ -84,6 +88,10 @@ module writer_mod
                     type is(fibre_dect)
                         ! write out the fibre detector
                         write(u)  2.0_wp !What type of detector is it
+                        write(u)  real(len(x%ID), kind=wp) !write out the detector ID
+                        do j = 1, len(x%ID) 
+                            write(u)  real(ichar(x%ID(j:j)), kind=wp)
+                        end do
                         write(u)  real(state%nphotons, kind=wp)
                         write(u)  x%pos
                         write(u)  x%dir
@@ -104,6 +112,10 @@ module writer_mod
                     type is(annulus_dect)
                         ! write out the annulus detector
                         write(u)  3.0_wp ! What type of detector is it
+                        write(u)  real(len(x%ID), kind=wp) !write out the detector ID
+                        do j = 1, len(x%ID) 
+                            write(u)  real(ichar(x%ID(j:j)), kind=wp)
+                        end do
                         write(u)  real(state%nphotons, kind=wp)
                         write(u)  x%r1
                         write(u)  x%r2
@@ -113,13 +125,41 @@ module writer_mod
                             write(u)(real(j,kind=wp) * x%bin_wid + x%r1), x%data(j)
                         end do
                     type is(camera)
-                        print*,"Warning not yet implmented!"
+                        print*,"Warning camera detector not yet implmented!"
                     end select
                     end associate
                 close(u)
             end do
 
         end subroutine write_detected_photons
+
+        subroutine write_escape(overwrite, dict, dects)
+
+            use iarray, only : escape
+            use detectors
+            use constants, only: fileplace, wp
+            use utils, only : str
+            use sim_state_mod, only : state
+            use tomlf,         only : toml_table
+
+
+            !> list of detectors
+            type(dect_array), intent(in) :: dects(:)
+            !> dictionary of metadata
+            type(toml_table), optional, intent(INOUT) :: dict
+            !> overwrite flag
+            logical,          optional, intent(IN)    :: overwrite
+
+            !> filename to save array as
+            character(len=:), allocatable    :: filename
+
+            integer :: i, j, u
+            character(len=:), allocatable :: hdr
+
+            do i = 1, size(dects)
+                
+            end do
+        end subroutine write_escape
 
 
         subroutine write_data(array, filename, state, dict, overwrite)
@@ -281,6 +321,10 @@ module writer_mod
             write(u,"(A)")"space dimension: "//str(size(sizes))
             write(u,"(A)")"encoding: raw"
             write(u,"(A)")"endian: little"
+
+!#ifdef escapeFunction
+!            write(u, "(A)")"dector: "//trim(dect_ID)//"_"//string(num) 
+!#endif
 
         end subroutine write_hdr
 
