@@ -128,9 +128,13 @@ contains
          
         integer :: m, n, o, layer
         real(kind = wp) :: x,y,z, total
+        real(kind = wp) :: closestX, closestY, closestZ
         type(vector) :: position, direction, gridPos
         real(kind=wp) :: rotationOnToSym(4,4), rotationOffSym(4,4)
         real(kind=wp) :: rotationAroundZOnSym(4,4), rotationAroundZOffSym(4,4)
+        integer :: closestNeighbours(2,2,2,3)
+        integer :: lowerxIndx, upperxIndx, loweryIndx, upperyIndx, lowerzIndx, upperzIndx
+        logical :: notOnXedge, notOnYedge, notOnZedge
         character(len=:), allocatable :: symmetryType
         integer :: indx(3)
         real :: tic, toc
@@ -186,7 +190,7 @@ contains
                                     state%symmetryEscapeCartGrid%nzg))
             escapeSymmetry = 0._wp
 
-            !percompute the rotation vector here
+            !precompute the rotation vector here
             !both for going from the shifted from base
             ! and for going from base to the shifted
             direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
@@ -226,9 +230,6 @@ contains
                         
                         position = vector(x,y,z)
 
-                        !print*, " "
-                        !print*, position
-
                         !rotate to align x and y axis after z axis alignment
                         position = position .dot. rotationAroundZOffSym
 
@@ -238,7 +239,6 @@ contains
                         !shift
                         position = position + gridPos
 
-                        !print*, position
                         packet%pos = position   ! set the emission location
 
                         ! get the layer at this position
@@ -285,9 +285,6 @@ contains
 
                         position = vector(x,y,z) 
 
-                        !print*, " "
-                        !print*, position
-
                         !shift
                         position = position - gridPos
 
@@ -296,22 +293,109 @@ contains
 
                         !rotate to align x and y axis after z axis alignment
                         position = position .dot. rotationAroundZOnSym
-
-                        !print*, position
                         
                         !find the points in symmetry escape that correspond to this point?
                         !this returns the point that is closest to this
                         indx = -1
-                        !print*, position
                         indx = state%symmetryEscapeCartGrid%get_voxel(position)
 
                         !we are out of the bounds of the escapesymmetry grid
                         if (indx(1) == -1 .or. indx(2) == -1 .or. indx(3) == -1) then
                             escape(:, m, n, o) = -1._wp
+                            cycle
+                        end if
+
+                        
+
+                        !what is the position of this square that we are in
+                        closestX = (((real(indx(1), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nxg)*& 
+                            2.0_wp*state%symmetryEscapeCartGrid%xmax) - state%symmetryEscapeCartGrid%xmax 
+                        closestY = (((real(indx(2), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nyg)*& 
+                            2.0_wp*state%symmetryEscapeCartGrid%ymax) - state%symmetryEscapeCartGrid%ymax 
+                        closestZ = (((real(indx(3), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+                            2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax
+
+
+                        !escape(:, m, n, o) = escapeSymmetry(:, indx(1), indx(2), indx(3))
+                        !cycle
+                        !Is our point above or below, that will tell us whether we need to add 1 to the index or subract to get the closest points
+                        
+                        !What are the indices of the closest symmetry grid cells 
+                        if (closestX > position%x) then
+                            lowerxIndx = indx(1) - 1
+                            upperxIndx = indx(1)
+                        else 
+                            lowerxIndx = indx(1)
+                            upperxIndx = indx(1) + 1
+                        end if
+                        if (closestY > position%y) then
+                            loweryIndx = indx(2) - 1
+                            upperyIndx = indx(2)
+                        else 
+                            loweryIndx = indx(2)
+                            upperyIndx = indx(2) + 1
+                        end if
+                        if (closestZ > position%z) then
+                            lowerzIndx = indx(3) - 1
+                            upperzIndx = indx(3)
+                        else 
+                            lowerzIndx = indx(3)
+                            upperzIndx = indx(3) + 1
+                        end if
+
+
+
+                        !is the current position on the edge of the symmetry grid
+                        if (lowerxIndx < 1 .or. upperxIndx > state%symmetryEscapeCartGrid%nxg) then
+                            notOnXedge = .false.
+                        else 
+                            notOnXedge = .true.
+                        end if
+                        if (loweryIndx < 1 .or. upperyIndx > state%symmetryEscapeCartGrid%nyg) then
+                            notOnYedge = .false.
+                        else 
+                            notOnYedge = .true.
+                        end if
+                        if (lowerzIndx < 1 .or. upperzIndx > state%symmetryEscapeCartGrid%nzg) then
+                            notOnZedge = .false.
+                        else 
+                            notOnZedge = .true.
+                        end if
+
+                        !are we 
+                        if ((notOnXedge) .and. (notOnYedge) .and. (notOnZedge)) then
+                            !we are not on an edge or corner perform trilinear interpolation
+                            escape(:, m, n, o) = 3
+
+
+                        else if ( (notOnXedge .and. notOnYedge) .and. .not.notOnZedge) then
+                            !we are on the edge of z, perform bilinear interpolation
+                            escape(:, m, n, o) = 2
+                        else if ( (notOnXedge .and. notOnZedge) .and. .not.notOnYedge) then
+                            !we are on the edge of y, perform bilinear interpolation
+                            escape(:, m, n, o) = 2
+                        else if ( (notOnYedge .and. notOnZedge) .and. .not.notOnXedge) then
+                            !we are on the edge of x, perform bilinear interpolation
+                            escape(:, m, n, o) = 2
+                        
+                        
+                        else if ( (notOnXedge) .and. (.not.notOnYedge) .and. (.not.notOnZedge) ) then
+                            !we are on the edge of y and z, perform linear interpolation
+                            escape(:, m, n, o) = 1
+                        else if ( (notOnYedge) .and. (.not.notOnXedge) .and. (.not.notOnZedge) ) then
+                            !we are on the edge of x and z, perform linear interpolation
+                            escape(:, m, n, o) = 1
+                        else if ( (notOnZedge) .and. (.not.notOnXedge) .and. (.not.notOnYedge) ) then
+                            !we are on the edge of x and y, perform linear interpolation
+                            escape(:, m, n, o) = 1
+
                         else
+                            !we are on the edge of x, y, and z, set it to be equal to the closest value
                             escape(:, m, n, o) = escapeSymmetry(:, indx(1), indx(2), indx(3))
                         end if
 
+                        
+                        !escape(:, m, n, o) = escapeSymmetry(:, indx(1), indx(2), indx(3))
 
                     end do   
                 end do
