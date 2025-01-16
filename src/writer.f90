@@ -135,7 +135,7 @@ module writer_mod
 
         subroutine write_escape(dects, dict, overwrite)
 
-            use iarray, only : escape
+            use iarray
             use detectors
             use constants, only: fileplace, wp
             use utils, only : str
@@ -159,6 +159,9 @@ module writer_mod
             do i = 1, size(dects)
                 filename = trim(fileplace)//"escape/dectID_"//trim(dects(i)%p%ID)//"__escape"//trim(str(i))//".nrrd" 
                 call write_data(escape(i,:,:,:), filename, state, dict, overwrite, dects(i)%p%ID)
+
+                filename = trim(fileplace)//"escape/dectID_"//trim(dects(i)%p%ID)//"__escapeSym"//trim(str(i))//".nrrd" 
+                call write_data(escapeSymmetry(i,:,:,:), filename, state, dict, overwrite, dects(i)%p%ID)
             end do
         end subroutine write_escape
 

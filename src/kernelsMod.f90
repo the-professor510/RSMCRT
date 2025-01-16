@@ -96,7 +96,7 @@ contains
         use piecewiseMod
         use random,        only : ran2, init_rng
         use sdfs,          only : sdf
-        use sdfHelpers,    only : rotationAlign
+        use sdfHelpers,    only : rotationAlign, rotmat
         use sim_state_mod, only : state
         use vector_class
         use setupMod, only : setup_escapeFunction
@@ -128,8 +128,9 @@ contains
          
         integer :: m, n, o, layer
         real(kind = wp) :: x,y,z, total
-        type(vector) :: position, direction
+        type(vector) :: position, direction, gridPos
         real(kind=wp) :: rotationOnToSym(4,4), rotationOffSym(4,4)
+        real(kind=wp) :: rotationAroundZOnSym(4,4), rotationAroundZOffSym(4,4)
         character(len=:), allocatable :: symmetryType
         integer :: indx(3)
         real :: tic, toc
@@ -188,10 +189,15 @@ contains
             !percompute the rotation vector here
             !both for going from the shifted from base
             ! and for going from base to the shifted
-            direction = vector(0.0_wp, 0.0_wp, 0.0_wp)
+            direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
 
-            rotationOnToSym = rotationAlign(direction, state%symGridDir)
-            rotationOffSym = rotationAlign(state%symGridDir, direction)
+            rotationOffSym = rotationAlign(direction, state%symGridDir)
+            rotationOnToSym = rotationAlign(state%symGridDir, direction)
+
+            rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
+            rotationAroundZOnSym = rotmat(direction, state%symGridRot)
+
+            gridPos = state%symGridPos
 
             !loop through every cell
             do m = 1, state%symmetryEscapeCartGrid%nxg
@@ -220,12 +226,19 @@ contains
                         
                         position = vector(x,y,z)
 
-                        !rotate
+                        !print*, " "
+                        !print*, position
+
+                        !rotate to align x and y axis after z axis alignment
+                        position = position .dot. rotationAroundZOffSym
+
+                        !align z axis
                         position = position .dot. rotationOffSym
 
                         !shift
-                        position = position - state%symGridPos
+                        position = position + gridPos
 
+                        !print*, position
                         packet%pos = position   ! set the emission location
 
                         ! get the layer at this position
@@ -272,11 +285,19 @@ contains
 
                         position = vector(x,y,z) 
 
+                        !print*, " "
+                        !print*, position
+
                         !shift
-                        position = position + state%symGridPos
+                        position = position - gridPos
 
                         !rotate, there is none for this geometry
                         position = position .dot. rotationOnToSym
+
+                        !rotate to align x and y axis after z axis alignment
+                        position = position .dot. rotationAroundZOnSym
+
+                        !print*, position
                         
                         !find the points in symmetry escape that correspond to this point?
                         !this returns the point that is closest to this
@@ -284,14 +305,11 @@ contains
                         !print*, position
                         indx = state%symmetryEscapeCartGrid%get_voxel(position)
 
-                        if(indx(1) < 1 .or. indx(1) > state%symmetryEscapeCartGrid%nxg) then
-                            print*, "x out of bounds"
-                        end if
-                        if(indx(2) < 1 .or. indx(2) > state%symmetryEscapeCartGrid%nyg) then
-                            print*, "y out of bounds"
-                        end if
-                        if(indx(3) < 1 .or. indx(3) > state%symmetryEscapeCartGrid%nzg) then
-                            print*, "z out of bounds"
+                        !we are out of the bounds of the escapesymmetry grid
+                        if (indx(1) == -1 .or. indx(2) == -1 .or. indx(3) == -1) then
+                            escape(:, m, n, o) = -1._wp
+                        else
+                            escape(:, m, n, o) = escapeSymmetry(:, indx(1), indx(2), indx(3))
                         end if
 
 

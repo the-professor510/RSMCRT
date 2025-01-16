@@ -59,9 +59,19 @@ module gridMod
     
         integer :: res(3)
 
-        res(1) = int(this%nxg*(pos%x+this%xmax)/(2._wp*this%xmax))+1
-        res(2) = int(this%nyg*(pos%y+this%ymax)/(2._wp*this%ymax))+1
-        res(3) = int(this%nzg*(pos%z+this%zmax)/(2._wp*this%zmax))+1
+        res(1) = floor(this%nxg*(pos%x + this%xmax)/(2._wp*this%xmax))+1
+        res(2) = floor(this%nyg*(pos%y + this%ymax)/(2._wp*this%ymax))+1
+        res(3) = floor(this%nzg*(pos%z + this%zmax)/(2._wp*this%zmax))+1
+
+        if(res(1) < 1 .or. res(1) > this%nxg) then
+            res(1) = -1
+        end if
+        if(res(2) < 1 .or. res(2) > this%nyg) then
+            res(2) = -1
+        end if
+        if(res(3) < 1 .or. res(3) > this%nzg) then
+            res(3) = -1
+        end if
 
         !what if we are beyond the max or min values, need to return a different value
 
@@ -79,13 +89,23 @@ module gridMod
     
         integer :: res(3)
 
-        res(1) = int(this%nrg*(sqrt(pos%x**2 + pos%y**2)/this%rmax))+1
+        res(1) = floor(this%nrg*(sqrt(pos%x**2 + pos%y**2)/this%rmax))+1
         if (pos%y ==0 .and. pos%x == 0) then
             res(2) = 1
         else
-            res(2) = int(this%ntg*(atan2(pos%y, pos%x)/this%tmax) + PI) + 1
+            res(2) = floor(this%ntg*((atan2(pos%y, pos%x)+ PI)/this%tmax)) + 1
         end if
-        res(3) = int(this%nzg*(pos%z+this%zmax)/(2._wp*this%zmax)) + 1
+        res(3) = floor(this%nzg*(pos%z+this%zmax)/(2._wp*this%zmax)) + 1
+
+        if(res(1) < 1 .or. res(1) > this%nrg) then
+            res(1) = -1
+        end if
+        if(res(2) < 1 .or. res(2) > this%ntg) then
+            res(2) = -1
+        end if
+        if(res(3) < 1 .or. res(3) > this%nzg) then
+            res(3) = -1
+        end if
 
     end function get_voxel_cyl
 

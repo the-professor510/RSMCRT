@@ -1,6 +1,7 @@
 module sim_state_mod
 !! This module defines the setting_t type which holds simulation metadata:
 
+    use constants, only : wp
     use gridMod,   only : cart_grid, cyl_grid
     use vector_class, only : vector
 
@@ -37,6 +38,8 @@ module sim_state_mod
         type(vector) :: symGridPos
         !> normal used in symmetry cart grid, and z axis direction in symmetry cyl grid
         type(vector) :: symGridDir
+        !> rotation of the symGrid around z axis value between 0 and 360 degree rotation
+        real(kind=wp) :: symGridRot
         !> Boolean to indicate whether to render SDF to voxels or not.
         logical :: render_geom
         !> Boolean to indicate whether to render source emission to voxels or not.

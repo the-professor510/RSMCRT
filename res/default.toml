@@ -14,19 +14,23 @@ ymax = 5.0
 zmax = 5.0
 
 [geometry]
-geom_name = "sphere"
-sphereRadius = 5.0
-boundingBox = [10.0, 10.0, 10.0]
+geom_name = "egg"
+numOptProp = 3
+boundingBox = [10.0,10.0,10.0]
 position = [0.0,0.0,0.0]
-mus = [210]
-hgg = [0.9]
-mua = [0.23]
-n = [1.38]
+BottomSphereRadius = 2.0
+TopSphereRadius = 1.5
+SphereSep = 1.4
+ShellThickness = 0.02
+YolkRadius = 1.0
 
 [symmetry]
 symmetryType = "none"
-GridSize = [5,5,5]
-maxValues = [4.0, 5.0, 5.0]
+GridSize = [200,200,200]
+maxValues = [3.0, 4.0, 5.0]
+position = [0.0,0.0,0.0]
+direction = [0.0,0.0,1.0]
+rotation = 45
 
 [[detectors]]
 type="fibre"
@@ -215,7 +219,7 @@ render_geometry_name = "geom_render.nrrd"
 render_geomerty = true
 render_source_name = "source_render.nrrd"
 render_source = true
-render_size = [50,50,50]
+render_size = [50,100,150]
 overwrite = true
 
 [simulation]

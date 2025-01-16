@@ -184,9 +184,10 @@ module parse_mod
 
     subroutine parse_symmetry(table, dict, error)
         !! parse symmetry information, only used in the computation of the escape function
+        use constants,     only: TWOPI
         use sim_state_mod, only : state
         use gridMod,       only : init_grid_cart, init_grid_cyl 
-        use vector_class, only : vector
+        use vector_class,  only : vector, magnitude
 
         !> Input Toml table 
         type(toml_table),              intent(inout) :: table
@@ -201,7 +202,7 @@ module parse_mod
         character(len=:), allocatable :: symmetryType
         integer :: i, nlen
         integer :: nxrg, nytg, nzg
-        real(kind=wp) :: xrmax, ytmax, zmax
+        real(kind=wp) :: xrmax, ytmax, zmax, rotation
         type(vector) :: pos, dir
 
         pos = vector(0._wp,0._wp,0._wp)
@@ -253,9 +254,9 @@ module parse_mod
                     call make_error(error, "Need a vector of size 3 for symmetry position.", -1)
                     return
                 end if
-                call get_value(children, 1, xrmax)
-                call get_value(children, 2, ytmax)
-                call get_value(children, 3, zmax)
+                call get_value(children, 1, pos%x)
+                call get_value(children, 2, pos%y)
+                call get_value(children, 3, pos%z)
             else
                 pos = vector(0._wp, 0._wp, 0._wp)
             end if
@@ -267,21 +268,37 @@ module parse_mod
                     call make_error(error, "Need a vector of size 3 for symmetry position.", -1)
                     return
                 end if
-                call get_value(children, 1, xrmax)
-                call get_value(children, 2, ytmax)
-                call get_value(children, 3, zmax)
+                call get_value(children, 1, dir%x)
+                call get_value(children, 2, dir%y)
+                call get_value(children, 3, dir%z)
             else
                 dir = vector(0._wp, 0._wp, 1._wp)
             end if
 
+            call get_value(child, "rotation", rotation, 0._wp)
+            if (rotation < 0.0_wp .or. rotation >= 360.0_wp ) then
+                call make_error(error, "Must specifcy a rotation for symmetry that is between 0.0 and 360.0, inclusive of 0.0")
+                return
+            end if
+
+            if (dir%x == 0._wp .and. dir%y == 0._wp .and. dir%z == 0._wp) then
+                call make_error(error, "Must specify a non-zero direction for symmetry")
+                return
+            end if
+
+            dir = dir%magnitude()
+
             if (symmetryType == "none" .or. symmetryType == "prism" .or. symmetryType == "flipped") then
                 state%symGridPos = pos
                 state%symGridDir = dir
+                state%symGridRot = rotation
                 state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
             else if (symmetryType == "360rotational" .or. symmetryType == "nrotational") then
+                state%symGridPos = pos
+                state%symGridDir = dir
+                state%symGridRot = rotation
                 state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
             end if
-
         else 
             !set the symmetry type to none, and set the other variables to their default values
             symmetryType = "none"
@@ -305,9 +322,6 @@ module parse_mod
 
             !define the default escape cart grid
             state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
-
-            print*, "here"
-
         end if
     end subroutine parse_symmetry
 
