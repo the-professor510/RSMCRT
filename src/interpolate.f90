@@ -89,4 +89,52 @@ module interpolate
 
     end subroutine linearInterpolate
 
+    subroutine cylTrilinearInterpolate(corners, point)
+
+        !>corners (r,theta,z,(pos,value))
+        real(kind=wp), intent(in) :: corners(2,2,2,4)
+        !> point we want to get the value you of by interpolation
+        real(kind=wp), intent(inout):: point(4)
+
+        !using the fact that bilinear interpolation be seen as a weighted average, do this for cylindrical coordinates
+
+        real(kind = wp) :: c
+        real(kind = wp) :: a00, a01, a10, a11
+        real(kind = wp) :: volume, v000, v001, v010, v011, v100, v101, v110, v111
+
+        !calc volume = 0.5 * (thetahigh - thetalow) * (rhigh^2 - rlow^2) * z
+        volume = 0.5_wp * (corners(1,2,1,2) - corners(1,1,1,2)) * (corners(2,1,1,1)**2 - corners(1,1,1,1)**2) * & 
+                (corners(1,1,2,3) - corners(1,1,1,3))
+
+        !calc areas = 0.5 * (thetahigh - thetalow) * (rhigh^2 - rlow^2)
+        a00 = 0.5_wp * (corners(2,2,1,2) - point(2)) * (corners(2,2,1,1)**2 - point(1)**2) !enclosed by p and h theta and h r
+        a01 = 0.5_wp * (point(2) - corners(2,1,1,2)) * (corners(2,1,1,1)**2 - point(1)**2) !enclosed by p and l theta and h r
+        a10 = 0.5_wp * (corners(1,2,1,2) - point(2)) * (point(1)**2 - corners(1,2,1,1)**2) !enclosed by p and h theta and l r
+        a11 = 0.5_wp * (point(2) - corners(1,1,1,2)) * (point(1)**2 - corners(1,1,1,1)**2) !enclosed by p and l theta and l r
+
+        !calc volumes
+        v000 = a00 * (corners(1,1,2,3) - point(3)) / volume!volume between point and high z
+        v001 = a00 * (point(3) - corners(1,1,1,3)) / volume!volume between point and low z
+        v010 = a01 * (corners(1,1,2,3) - point(3)) / volume
+        v011 = a01 * (point(3) - corners(1,1,1,3)) / volume
+        v100 = a10 * (corners(1,1,2,3) - point(3)) / volume
+        v101 = a10 * (point(3) - corners(1,1,1,3)) / volume
+        v110 = a11 * (corners(1,1,2,3) - point(3)) / volume
+        v111 = a11 * (point(3) - corners(1,1,1,3)) / volume
+
+        !interpolate along z
+        c = v000 * corners(1,1,1,4) + & 
+            v001 * corners(1,1,2,4) + & 
+            v010 * corners(1,2,1,4) + & 
+            v011 * corners(1,2,2,4) + & 
+            v100 * corners(2,1,1,4) + & 
+            v101 * corners(2,1,2,4) + & 
+            v110 * corners(2,2,1,4) + & 
+            v111 * corners(2,2,2,4)
+
+        !this is our result
+        point(4) = c
+
+    end subroutine cylTrilinearInterpolate
+
 end module interpolate

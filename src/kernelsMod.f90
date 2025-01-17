@@ -172,9 +172,10 @@ contains
         ! Symmetries to implement
         ! none DONE
         ! prism DONE
-        ! flipped
+        ! flipped DONE
+        ! uniformSlab DONE
         ! specified
-        ! 360rotational
+        ! 360rotational 
         ! nrotational
         
         call setup_escapeFunction(size(dects))
@@ -915,6 +916,570 @@ contains
             end do
         end do
     end subroutine cart_map_escape_sym
+
+    subroutine cyl_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array, packet, & 
+                                    distances, dict, history, image, input_file, nscatt, spectrum, start, tev)
+
+        !Calculate the cartesian symmetry escape function 
+        use constants, only : wp
+        use iarray
+        use detectors
+        use sdfs,          only : sdf
+        use sdfHelpers,    only : rotationAlign, rotmat
+        use sim_state_mod
+        use vector_class
+        use photonMod,     only : photon, set_photon
+        use historyStack,  only : history_stack_t
+        use piecewiseMod
+
+        !external deps
+        use tev_mod, only : tevipc
+        use tomlf,   only : toml_table, toml_error, get_value
+
+        !> indices of symmetryEscapeCartGrid
+        integer, intent(in) :: m,n,o
+        !> rotation matrix to unrotate around the z axis
+        real(kind=wp), intent(in) :: rotationAroundZOffSym(4,4)
+        !> rotation matrix to unrotate around the z axis
+        real(kind=wp), intent(in) :: rotationOffSym(4,4)
+        !> rotation matrix to unrotate around the z axis
+        type(vector), intent(in) :: gridPos
+        character(len=*), intent(in) :: input_file
+        type(history_stack_t)        , intent(inout) :: history
+        type(photon)                 , intent(inout) :: packet
+        type(toml_table)             , intent(inout) :: dict
+        real(kind=wp),    allocatable, intent(inout) :: distances(:), image(:,:,:)
+        type(dect_array), allocatable, intent(inout) :: dects(:)
+        type(sdf),        allocatable, intent(inout) :: array(:)
+        real(kind=wp)                , intent(inout) :: nscatt, start
+        type(spectrum_t)             , intent(inout) :: spectrum
+        type(tevipc)                 , intent(inout) :: tev
+
+
+        integer :: loopCounter, layer
+        real(kind= wp) :: rad,theta,x,y,z, total
+        type(vector) :: position
+
+        ! reset the arrays storing data
+        call reset(dects)
+
+        ! find the centre position of the voxel in radians
+        rad = ((real(m, kind = wp)-0.5)/state%symmetryEscapeCylGrid%nrg)*state%symmetryEscapeCylGrid%nrg
+        theta = ((real(n, kind = wp)-0.5)/state%symmetryEscapeCylGrid%ntg)*state%symmetryEscapeCylGrid%ntg
+        z = (((real(o, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+            2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax 
+
+        !convert rad and theta into x and y
+        x = rad * cos(theta)
+        y = rad * sin(theta)
+
+        !translate back to the main grid
+        position = vector(x,y,z)
+
+        !rotate to align x and y axis after z axis alignment
+        position = position .dot. rotationAroundZOffSym
+
+        !align z axis
+        position = position .dot. rotationOffSym
+
+        !shift
+        position = position + gridPos
+
+        !set the emissin location to the centre of the voxel
+        call set_photon(position, vector(0.0_wp,0.0_wp,0.0_wp))
+        packet = photon(state%source)
+        packet%pos = position
+
+        ! get the layer at this position
+        distances = 0._wp
+        do loopCounter = 1, size(distances)
+        distances(loopCounter) = array(loopCounter)%evaluate(position)
+        end do
+        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+
+        !!  if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
+        !    call run_MCRT(input_file, history, packet, dict, & 
+        !                    distances, image, dects, array, nscatt, start, & 
+        !                    tev, spectrum)
+        !end if
+
+        ! record the efficiency for each detector and add to an array of escape functions
+        do loopCounter = 1, size(dects)
+            if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                !total = 0._wp
+                !call dects(loopCounter)%p%total_dect(total)
+                !escapeSymmetry(loopCounter, m, n, o) = total/state%nphotons
+
+
+                !temporary while testing 
+                escapeSymmetry(loopCounter, m, n, o) = layer
+                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            else
+                escapeSymmetry(loopCounter, m, n, o) = 0.0_wp
+
+                !temporary while testing 
+                escapeSymmetry(loopCounter, m, n, o) = layer
+                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            end if
+        end do
+
+    end subroutine cyl_calc_escape_sym
+    
+    subroutine cyl_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+
+        use iarray
+        use constants, only : wp, PI
+        use sim_state_mod, only : state
+        use vector_class, only : vector
+        use detectors
+        use interpolate
+
+        type(dect_array), allocatable, intent(inout) :: dects(:)
+        real(kind=wp), intent(in) :: rotationOnToSym(4,4), rotationAroundZOnSym(4,4)
+        !> rotation matrix to unrotate around the z axis
+        type(vector), intent(in) :: gridPos
+
+        integer :: i,j,k, m,n,o
+        integer :: loopCounter, indx(3)
+        integer :: radIndx(2), thetaIndx(2),zIndx(2)
+        real(kind=wp) :: x,y,z, closestRad, closestTheta, closestZ, rad, theta
+        logical :: notOnXedge, notOnYedge, notOnZedge
+        real(kind=wp) :: corners3D(2,2,2,4), corners2D(2,2,3), corners1D(2,2), point3D(4), point2D(3), point1D(2)
+        real(kind=wp) :: averageRad(2)
+        real(kind=wp) :: a1, a2, a3
+        real(kind=wp) :: thetaLow, thetaHigh
+        type(vector) :: position
+        
+
+        !Go through the base grid and use some form of interpolation to figure out the best match
+        do m = 1, state%grid%nxg
+            do n = 1, state%grid%nyg
+                do o = 1, state%grid%nzg
+
+                    !TO DO
+                    !add some function to do the part in the this for both cart and cyl
+
+                    ! reset the arrays storing data
+                    call reset(dects)
+
+                    ! find the centre position of the voxel
+                    y = (((real(n, kind = wp) - 0.5)/state%grid%nyg)*2.0_wp*state%grid%ymax) - state%grid%ymax
+                    x = (((real(m, kind = wp) - 0.5)/state%grid%nxg)*2.0_wp*state%grid%xmax) - state%grid%xmax
+                    z = (((real(o, kind = wp) - 0.5)/state%grid%nzg)*2.0_wp*state%grid%zmax) - state%grid%zmax
+
+                    position = vector(x,y,z) 
+
+                    !shift
+                    position = position - gridPos
+
+                    !rotate, there is none for this geometry
+                    position = position .dot. rotationOnToSym
+
+                    !rotate to align x and y axis after z axis alignment
+                    position = position .dot. rotationAroundZOnSym
+
+
+
+                    !convert to rad and theta
+                    rad = sqrt(position%x**2 + position%y**2)
+                    if (position%y == 0 .and. position%x == 0) then
+                        theta = 0._wp
+                    else
+                        theta = (atan2(position%y, position%x) + PI)
+                    end if
+                    
+
+
+                    !find the points in symmetry escape that correspond to this point?
+                    !this returns the point that is closest to this
+                    indx = -1
+                    indx = state%symmetryEscapeCylGrid%get_voxel(position)
+
+                    !we are out of the bounds of the escapesymmetry grid
+                    if (indx(1) == -1 .or. indx(2) == -1 .or. indx(3) == -1) then
+                        do loopCounter = 1, size(dects)
+                            escape(loopCounter, m, n, o) = -1._wp
+                        end do
+                        cycle
+                    end if
+
+                    !what is the position of this square that we are in
+                    closestRad = ((real(indx(1), kind = wp)-0.5)/state%symmetryEscapeCylGrid%nrg)*state%symmetryEscapeCylGrid%nrg
+                    closestTheta = ((real(indx(2), kind = wp)-0.5)/state%symmetryEscapeCylGrid%ntg)*state%symmetryEscapeCylGrid%ntg
+                    closestZ = (((real(indx(3), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+                        2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax 
+                    
+                    !What are the indices of the closest symmetry grid cells 
+                    if (closestRad > rad) then
+                        radIndx(1) = indx(1) - 1
+                        radIndx(2) = indx(1)
+                    else 
+                        radIndx(1) = indx(1)
+                        radIndx(2) = indx(1) + 1
+                    end if
+                    if (closestTheta > theta) then
+                        thetaIndx(1) = indx(2) - 1
+                        thetaIndx(2) = indx(2)
+                    else 
+                        thetaIndx(1) = indx(2)
+                        thetaIndx(2) = indx(2) + 1
+                    end if
+                    if (closestZ > position%z) then
+                        zIndx(1) = indx(3) - 1
+                        zIndx(2) = indx(3)
+                    else 
+                        zIndx(1) = indx(3)
+                        zIndx(2) = indx(3) + 1
+                    end if
+
+                    !special cases
+                    !rIndex(1) = - 1, weighted average between the three points that bound it between the point r = 0 and 
+                    !                  r equating to rIndx of 1 and the given theta bounds
+                    !rIndex(2) greater than max, on edge of r, do some form of bilinear with theta and z
+                    
+                    !zIndex(1) < 1 then do bilinear cylindrical 
+                    !zIndex(2) > nzg then bilinear cylindrical
+                    
+                    !all other cases are contained within the abilility to use trilinear interpolation
+
+                    !TO DO add bilinear interpolation for cylindrical by copying your trilinear interpolation for cylindricals
+
+                    !store the theta values that can be used in calculations
+                    thetaLow = ((real(thetaIndx(1), kind = wp)-0.5)/state%symmetryEscapeCylGrid%ntg)*& 
+                                state%symmetryEscapeCylGrid%ntg
+                    thetaHigh = ((real(thetaIndx(2), kind = wp)-0.5)/state%symmetryEscapeCylGrid%ntg)*& 
+                                state%symmetryEscapeCylGrid%ntg
+
+                    if (thetaIndx(1) < 1) then 
+                        ! wrap around
+                        thetaIndx(1) = state%symmetryEscapeCylGrid%ntg
+                    end if
+                    if (thetaIndx(2) > state%symmetryEscapeCylGrid%ntg) then 
+                        !wrap around
+                        thetaIndx(2) = 1
+                    end if
+
+                    
+                    ! radIndx(1) < 1
+                    if (radIndx(1) < 1) then 
+                        !we need to find the proprotion of areas
+
+                        !find the area a1, a2, a3 and use them as weightings
+                        at = PI * (state%symmetryEscapeCylGrid%nrg/state%symmetryEscapeCylGrid%rmax)**2 * & 
+                            ((thetaHigh-thetaLow)/TWOPI)
+                        a1 = (0.5_wp * (state%symmetryEscapeCylGrid%nrg/state%symmetryEscapeCylGrid%rmax) * & 
+                            rad * cos(thetaHigh - theta)) / at
+                        a2 = (0.5_wp * (state%symmetryEscapeCylGrid%nrg/state%symmetryEscapeCylGrid%rmax) * & 
+                            rad * cos(theta-thetaLow)) / at
+                        a3 = (at - a1 - a2) / at
+
+                        if (zIndx(1) < 1) then 
+                            !we are on the bottom z edge, take average r as your point
+                            do loopCounter = 1, size(dects)
+                                
+                                averageRad(1) = 0._wp
+                                do i = 1, state%symmetryEscapeCylGrid%ntg
+                                    averageRad(1) = averageRad(1) + escapeSymmetry(loopCounter, 1, i, 1)
+                                end do
+                                averageRad(1) = averageRad(1)/state%symmetryEscapeCylGrid%ntg
+
+                                escape(loopCounter, m, n, o) = a1 * escapeSymmetry(loopCounter, 1, thetaIndx(1), 1) + & 
+                                                               a2 * escapeSymmetry(loopCounter, 1, thetaIndx(2), 1) + & 
+                                                               a3 * averageRad(1)
+
+                            end do
+                            cycle
+                        else if(zIndx(2) > state%symmetryEscapeCylGrid%nzg) then 
+                            !we are on the top z edge, take average r as your point
+                            do loopCounter = 1, size(dects)
+
+                                averageRad(2) = 0._wp
+                                do i = 1, state%symmetryEscapeCylGrid%ntg
+                                    averageRad(2) = averageRad(2) + & 
+                                                    escapeSymmetry(loopCounter, 1, i, state%symmetryEscapeCylGrid%nzg)
+                                end do
+                                averageRad(2) = averageRad(2)/state%symmetryEscapeCylGrid%ntg
+
+                                escape(loopCounter, m, n, o) = a1 * escapeSymmetry(loopCounter, 1, thetaIndx(1), & 
+                                                                                    state%symmetryEscapeCylGrid%nzg) + & 
+                                                               a2 * escapeSymmetry(loopCounter, 1, thetaIndx(2), & 
+                                                                                    state%symmetryEscapeCylGrid%nzg) + & 
+                                                               a3 * averageRad(2)
+                            end do
+                            cycle
+                        else 
+                            !we are in the middle so we will lineraly interpolate between z bottom and z top
+                            do loopCounter = 1, size(dects)
+                                averageRad(1) = 0._wp
+                                averageRad(2) = 0._wp
+                                do i = 1, state%symmetryEscapeCylGrid%ntg
+                                    averageRad(1) = averageRad(1) + escapeSymmetry(loopCounter, 1, i, zIndx(1))
+                                    averageRad(2) = averageRad(2) + escapeSymmetry(loopCounter, 1, i, zIndx(2))
+                                end do
+                                averageRad(1) = averageRad(1)/state%symmetryEscapeCylGrid%ntg
+                                averageRad(2) = averageRad(2)/state%symmetryEscapeCylGrid%ntg
+
+
+                                do k = 1,2
+                                    corners1D(k,1) = (((real(zIndx(k), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+                                                2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax 
+                                    corners1D(k,2) = a1 * escapeSymmetry(loopCounter, 1, thetaIndx(1), k) + & 
+                                                     a2 * escapeSymmetry(loopCounter, 1, thetaIndx(2), k) + & 
+                                                     a3 * averageRad(k)
+                                end do
+
+                                point1D(1) = position%z
+                                point1D(2) = 0._wp
+
+                                call linearInterpolate(corners1D, point1D)
+
+                                escape(loopCounter, m, n, o) = point1D(2)
+                            end do
+                            cycle
+                        end if
+                    end if
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    !Below is left over from copying the cart version of this
+
+
+                    !!is the current position on the edge of the symmetry grid
+                    !if (xIndx(1) < 1 .or. xIndx(2) > state%symmetryEscapeCartGrid%nxg) then
+                    !    notOnXedge = .false.
+                    !else 
+                    !    notOnXedge = .true.
+                    !end if
+                    !if (yIndx(1) < 1 .or. yIndx(2) > state%symmetryEscapeCartGrid%nyg) then
+                    !    notOnYedge = .false.
+                    !else 
+                    !    notOnYedge = .true.
+                    !end if
+                    !if (zIndx(1) < 1 .or. zIndx(2) > state%symmetryEscapeCartGrid%nzg) then
+                    !    notOnZedge = .false.
+                    !else 
+                    !    notOnZedge = .true.
+                    !end if
+!
+                    !!is the point fully enclosed by 8 points of the symmetry grid or is it on a face, edge or corner
+                    !if ((notOnXedge) .and. (notOnYedge) .and. (notOnZedge)) then
+                    !    !we are not on an edge or corner perform trilinear interpolation
+                    !    !corners3D = 0._wp
+!
+                    !    do loopCounter = 1, size(dects)
+                    !    do i = 1,2
+                    !        do j = 1,2
+                    !            do k =1,2
+                    !                corners3D(i,j,k,1) = (((real(xIndx(i), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nxg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%xmax) - state%symmetryEscapeCartGrid%xmax 
+                    !                corners3D(i,j,k,2) = (((real(yIndx(j), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nyg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%ymax) - state%symmetryEscapeCartGrid%ymax
+                    !                corners3D(i,j,k,3) = (((real(zIndx(k), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax 
+                    !                corners3D(i,j,k,4) = escapeSymmetry(loopCounter, xIndx(i), yIndx(j), zIndx(k))
+                    !            end do
+                    !        end do
+                    !    end do
+                    !    point3D(1) = position%x
+                    !    point3D(2) = position%y
+                    !    point3D(3) = position%z
+                    !    point3D(4) = 0._wp
+!
+                    !    call trilinearInterpolate(corners3D, point3D)
+!
+                    !    escape(loopCounter, m, n, o) = point3D(4)
+                    !    end do
+                    !else if ( (notOnXedge .and. notOnYedge) .and. .not.notOnZedge) then
+                    !    !we are on the edge of z, perform bilinear interpolation
+!
+                    !    !get the zindx that is inside
+                    !    if (zIndx(1) >= 1) then
+                    !        k = 1
+                    !    else 
+                    !        k = 2
+                    !    end if
+!
+                    !    do loopCounter = 1, size(dects)
+                    !        do i = 1,2
+                    !            do j = 1,2
+                    !                corners2D(i,j,1) = (((real(xIndx(i), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nxg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%xmax) - state%symmetryEscapeCartGrid%xmax 
+                    !                corners2D(i,j,2) = (((real(yIndx(j), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nyg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%ymax) - state%symmetryEscapeCartGrid%ymax
+                    !                corners2D(i,j,3) = escapeSymmetry(loopCounter, xIndx(i), yIndx(j), zIndx(k))
+                    !            end do
+                    !        end do
+                    !        point2D(1) = position%x
+                    !        point2D(2) = position%y
+                    !        point2D(3) = 0._wp
+!
+                    !        call bilinearInterpolate(corners2D, point2D)
+!
+                    !        escape(loopCounter, m, n, o) = point2D(3)
+                    !    end do
+                    !else if ( (notOnXedge .and. notOnZedge) .and. .not.notOnYedge) then
+                    !    !we are on the edge of y, perform bilinear interpolation
+                    !    !get the yindx that is inside
+                    !    if (yIndx(1) >= 1) then
+                    !        j = 1
+                    !    else 
+                    !        j = 2
+                    !    end if
+!
+                    !    do loopCounter = 1, size(dects)
+                    !        do i = 1,2
+                    !            do k = 1,2
+                    !                corners2D(i,k,1) = (((real(xIndx(i), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nxg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%xmax) - state%symmetryEscapeCartGrid%xmax 
+                    !                corners2D(i,k,2) = (((real(zIndx(k), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax
+                    !                corners2D(i,k,3) = escapeSymmetry(loopCounter, xIndx(i), yIndx(j), zIndx(k))
+                    !            end do
+                    !        end do
+                    !        point2D(1) = position%x
+                    !        point2D(2) = position%z
+                    !        point2D(3) = 0._wp
+!
+                    !        call bilinearInterpolate(corners2D, point2D)
+!
+                    !        escape(loopCounter, m, n, o) = point2D(3)
+                    !    end do
+                    !else if ( (notOnYedge .and. notOnZedge) .and. .not.notOnXedge) then
+                    !    !we are on the edge of x, perform bilinear interpolation
+                    !    !get the xindx that is inside
+                    !    if (xIndx(1) >= 1) then
+                    !        i = 1
+                    !    else 
+                    !        i = 2
+                    !    end if
+!
+                    !    do loopCounter = 1, size(dects)
+                    !        do j = 1,2
+                    !            do k = 1,2
+                    !                corners2D(j,k,1) = (((real(yIndx(j), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nyg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%ymax) - state%symmetryEscapeCartGrid%ymax 
+                    !                corners2D(j,k,2) = (((real(zIndx(k), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax
+                    !                corners2D(j,k,3) = escapeSymmetry(loopCounter, xIndx(i), yIndx(j), zIndx(k))
+                    !            end do
+                    !        end do
+                    !        point2D(1) = position%y
+                    !        point2D(2) = position%z
+                    !        point2D(3) = 0._wp
+!
+                    !        call bilinearInterpolate(corners2D, point2D)
+!
+                    !        escape(loopCounter, m, n, o) = point2D(3)
+                    !    end do
+                    !else if ( (notOnXedge) .and. (.not.notOnYedge) .and. (.not.notOnZedge) ) then
+                    !    !we are on the edge of y and z, perform linear interpolation
+!
+                    !    !get the yindx that is inside
+                    !    if (yIndx(1) >= 1) then
+                    !        j = 1
+                    !    else 
+                    !        j = 2
+                    !    end if
+                    !    !get the zindx that is inside
+                    !    if (zIndx(1) >= 1) then
+                    !        k = 1
+                    !    else 
+                    !        k = 2
+                    !    end if
+!
+                    !    do loopCounter = 1, size(dects)
+                    !        do i = 1,2
+                    !                corners1D(i,1) = (((real(xIndx(i), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nxg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%xmax) - state%symmetryEscapeCartGrid%xmax 
+                    !                corners1D(i,2) = escapeSymmetry(loopCounter, xIndx(i), yIndx(j), zIndx(k))
+                    !        end do
+                    !        point1D(1) = position%x
+                    !        point1D(2) = 0._wp
+!
+                    !        call linearInterpolate(corners1D, point1D)
+!
+                    !        escape(loopCounter, m, n, o) = point1D(2)
+                    !    end do
+                    !else if ( (notOnYedge) .and. (.not.notOnXedge) .and. (.not.notOnZedge) ) then
+                    !    !we are on the edge of x and z, perform linear interpolation
+                    !    !get the xindx that is inside
+                    !    if (xIndx(1) >= 1) then
+                    !        i = 1
+                    !    else 
+                    !        i = 2
+                    !    end if
+                    !    !get the zindx that is inside
+                    !    if (zIndx(1) >= 1) then
+                    !        k = 1
+                    !    else 
+                    !        k = 2
+                    !    end if
+!
+                    !    do loopCounter = 1, size(dects)
+                    !        do j = 1,2
+                    !                corners1D(j,1) = (((real(yIndx(j), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nyg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%ymax) - state%symmetryEscapeCartGrid%ymax 
+                    !                corners1D(j,2) = escapeSymmetry(loopCounter, xIndx(i), yIndx(j), zIndx(k))
+                    !        end do
+                    !        point1D(1) = position%y
+                    !        point1D(2) = 0._wp
+!
+                    !        call linearInterpolate(corners1D, point1D)
+!
+                    !        escape(loopCounter, m, n, o) = point1D(2)
+                    !    end do
+                    !else if ( (notOnZedge) .and. (.not.notOnXedge) .and. (.not.notOnYedge) ) then
+                    !    !we are on the edge of x and y, perform linear interpolation
+                    !    !get the xindx that is inside
+                    !    if (xIndx(1) >= 1) then
+                    !        i = 1
+                    !    else 
+                    !        i = 2
+                    !    end if
+                    !    !get the yindx that is inside
+                    !    if (yIndx(1) >= 1) then
+                    !        j = 1
+                    !    else 
+                    !        j = 2
+                    !    end if
+!
+                    !    do loopCounter = 1, size(dects)
+                    !        do k = 1,2
+                    !                corners1D(k,1) = (((real(zIndx(k), kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+                    !                            2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax 
+                    !                corners1D(k,2) = escapeSymmetry(loopCounter, xIndx(i), yIndx(j), zIndx(k))
+                    !        end do
+                    !        point1D(1) = position%z
+                    !        point1D(2) = 0._wp
+!
+                    !        call linearInterpolate(corners1D, point1D)
+!
+                    !        escape(loopCounter, m, n, o) = point1D(2)
+                    !    end do
+                    !else
+                    !    !we are on the edge of x, y, and z, set it to be equal to the closest value
+                    !    escape(:, m, n, o) = escapeSymmetry(:, indx(1), indx(2), indx(3))
+                    !end if
+                end do   
+            end do
+        end do
+    end subroutine cyl_map_escape_sym
 
     subroutine run_MCRT(input_file, history, packet, dict, & 
                         distances, image, dects, array, nscatt, start, & 

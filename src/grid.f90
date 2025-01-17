@@ -6,7 +6,7 @@ module gridMod
     !! 
     !! Init_grid initialises a cart_grid instance.
 
-    use constants, only : wp
+    use constants, only : wp, TWOPI
 
     implicit none
 
@@ -90,7 +90,7 @@ module gridMod
         integer :: res(3)
 
         res(1) = floor(this%nrg*(sqrt(pos%x**2 + pos%y**2)/this%rmax))+1
-        if (pos%y ==0 .and. pos%x == 0) then
+        if (pos%y == 0 .and. pos%x == 0) then
             res(2) = 1
         else
             res(2) = floor(this%ntg*((atan2(pos%y, pos%x)+ PI)/this%tmax)) + 1
@@ -163,7 +163,7 @@ module gridMod
         init_grid_cyl%nzg = nzg
 
         init_grid_cyl%rmax = rmax
-        init_grid_cyl%tmax = tmax
+        init_grid_cyl%tmax = TWOPI
         init_grid_cyl%zmax = zmax
 
     end function init_grid_cyl
