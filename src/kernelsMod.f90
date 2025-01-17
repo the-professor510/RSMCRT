@@ -210,61 +210,11 @@ contains
                 do n = 1, state%symmetryEscapeCartGrid%nyg
                     do o = 1, state%symmetryEscapeCartGrid%nzg
 
-                        !TO DO
-                        !add some function to do this part for both cart and cyl
+                        !calculate the escape function
+                        call cart_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
+                                                 packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
+                                                 start, tev)
 
-                        ! reset the arrays storing data
-                        call reset(dects)
-
-                        ! find the centre position of the voxel
-                        !first part is to find the position within the the given grid and then the next part is to shift to the correct position
-                        !in the furture you will want to first find the right part, then apply a rotation, and then apply the shift
-
-                        !use sdf_helpers rotate align to get the rotation matrix
-                        !then apply the shift adding the grid position
-
-                        x = (((real(m, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nxg)*& 
-                            2.0_wp*state%symmetryEscapeCartGrid%xmax) - state%symmetryEscapeCartGrid%xmax 
-                        y = (((real(n, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nyg)*& 
-                            2.0_wp*state%symmetryEscapeCartGrid%ymax) - state%symmetryEscapeCartGrid%ymax 
-                        z = (((real(o, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
-                            2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax 
-                        
-                        position = vector(x,y,z)
-
-                        !rotate to align x and y axis after z axis alignment
-                        position = position .dot. rotationAroundZOffSym
-
-                        !align z axis
-                        position = position .dot. rotationOffSym
-
-                        !shift
-                        position = position + gridPos
-
-                        packet%pos = position   ! set the emission location
-
-                        ! get the layer at this position
-                        distances = 0._wp
-                        do loopCounter = 1, size(distances)
-                            distances(loopCounter) = array(loopCounter)%evaluate(position)
-                        end do
-                        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
-
-                        !!  if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-                        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                        !    call run_MCRT(input_file, history, packet, dict, & 
-                        !                    distances, image, dects, array, nscatt, start, & 
-                        !                    tev, spectrum)
-                        !end if
-                        
-                        ! record the efficiency for each detector and add to an array of escape functions
-                        do loopCounter = 1, size(dects)
-                            total = 0._wp
-                            !call dects(loopCounter)%p%total_dect(total)
-                            !escapeSymmetry(loopCounter, m, n, o) = total/state%nphotons
-                            !temporary while testing that this works
-                            escapeSymmetry(loopCounter, m, n, o) = layer
-                        end do
                     end do         
                 end do
             end do
@@ -347,8 +297,6 @@ contains
                             zIndx(2) = indx(3) + 1
                         end if
 
-
-
                         !is the current position on the edge of the symmetry grid
                         if (xIndx(1) < 1 .or. xIndx(2) > state%symmetryEscapeCartGrid%nxg) then
                             notOnXedge = .false.
@@ -366,7 +314,7 @@ contains
                             notOnZedge = .true.
                         end if
 
-                        !are we 
+                        !is the point fully enclosed by 8 points of the symmetry grid or is it on a face, edge or corner
                         if ((notOnXedge) .and. (notOnYedge) .and. (notOnZedge)) then
                             !we are not on an edge or corner perform trilinear interpolation
                             !corners3D = 0._wp
@@ -394,8 +342,6 @@ contains
 
                             escape(loopCounter, m, n, o) = point3D(4)
                             end do
-
-
                         else if ( (notOnXedge .and. notOnYedge) .and. .not.notOnZedge) then
                             !we are on the edge of z, perform bilinear interpolation
 
@@ -478,8 +424,6 @@ contains
     
                                 escape(loopCounter, m, n, o) = point2D(3)
                             end do
-                        
-                        
                         else if ( (notOnXedge) .and. (.not.notOnYedge) .and. (.not.notOnZedge) ) then
                             !we are on the edge of y and z, perform linear interpolation
 
@@ -565,7 +509,6 @@ contains
     
                                 escape(loopCounter, m, n, o) = point1D(2)
                             end do
-
                         else
                             !we are on the edge of x, y, and z, set it to be equal to the closest value
                             escape(:, m, n, o) = escapeSymmetry(:, indx(1), indx(2), indx(3))
@@ -576,6 +519,8 @@ contains
                     end do   
                 end do
             end do
+
+
         case("prism")
             !TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             !what is the normal to the plane this prism is in?
@@ -815,13 +760,123 @@ contains
         !store the escape funcitons for each detector
         call write_escape(dects, dict)
 
+        call finalise(dict, dects, nscatt, start, history)
+
         call cpu_time(toc)
         print*,"Time to Run: ",((toc - tic))
 
     end subroutine escape_Function
 
 
+    subroutine cart_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array, packet, & 
+                                     distances, dict, history, image, input_file, nscatt, spectrum, start, tev)
 
+        !Calculate the cartesian symmetry escape function 
+        use constants, only : wp
+        use iarray
+        use detectors
+        use sdfs,          only : sdf
+        use sdfHelpers,    only : rotationAlign, rotmat
+        use sim_state_mod
+        use vector_class
+        use photonMod,     only : photon, set_photon
+        use historyStack,  only : history_stack_t
+        use piecewiseMod
+
+        !external deps
+        use tev_mod, only : tevipc
+        use tomlf,   only : toml_table, toml_error, get_value
+
+        !> indices of symmetryEscapeCartGrid
+        integer, intent(in) :: m,n,o
+        !> rotation matrix to unrotate around the z axis
+        real(kind=wp), intent(in) :: rotationAroundZOffSym(4,4)
+        !> rotation matrix to unrotate around the z axis
+        real(kind=wp), intent(in) :: rotationOffSym(4,4)
+        !> rotation matrix to unrotate around the z axis
+        type(vector), intent(in) :: gridPos
+        character(len=*), intent(in) :: input_file
+        type(history_stack_t)        , intent(inout) :: history
+        type(photon)                 , intent(inout) :: packet
+        type(toml_table)             , intent(inout) :: dict
+        real(kind=wp),    allocatable, intent(inout) :: distances(:), image(:,:,:)
+        type(dect_array), allocatable, intent(inout) :: dects(:)
+        type(sdf),        allocatable, intent(inout) :: array(:)
+        real(kind=wp)                , intent(inout) :: nscatt, start
+        type(spectrum_t)             , intent(inout) :: spectrum
+        type(tevipc)                 , intent(inout) :: tev
+
+
+        integer :: loopCounter, layer
+        real(kind= wp) :: x,y,z, total
+        type(vector) :: position
+
+        ! reset the arrays storing data
+        call reset(dects)
+
+        ! find the centre position of the voxel
+        x = (((real(m, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nxg)*& 
+            2.0_wp*state%symmetryEscapeCartGrid%xmax) - state%symmetryEscapeCartGrid%xmax 
+        y = (((real(n, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nyg)*& 
+            2.0_wp*state%symmetryEscapeCartGrid%ymax) - state%symmetryEscapeCartGrid%ymax 
+        z = (((real(o, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+            2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax 
+        
+        position = vector(x,y,z)
+
+        !rotate to align x and y axis after z axis alignment
+        position = position .dot. rotationAroundZOffSym
+
+        !align z axis
+        position = position .dot. rotationOffSym
+
+        !shift
+        position = position + gridPos
+
+        !set the emissin location to the centre of the voxel
+        call set_photon(position, vector(0.0_wp,0.0_wp,0.0_wp))
+        packet = photon(state%source)
+        packet%pos = position
+
+        ! get the layer at this position
+        distances = 0._wp
+        do loopCounter = 1, size(distances)
+            distances(loopCounter) = array(loopCounter)%evaluate(position)
+        end do
+        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+
+        !!  if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
+        !    call run_MCRT(input_file, history, packet, dict, & 
+        !                    distances, image, dects, array, nscatt, start, & 
+        !                    tev, spectrum)
+        !end if
+        
+        ! record the efficiency for each detector and add to an array of escape functions
+        do loopCounter = 1, size(dects)
+            if(array(layer)%getkappa() /= real(0, kind=wp)) then
+                !total = 0._wp
+                !call dects(loopCounter)%p%total_dect(total)
+                !escapeSymmetry(loopCounter, m, n, o) = total/state%nphotons
+
+
+                !temporary while testing 
+                escapeSymmetry(loopCounter, m, n, o) = layer
+                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            else
+                escapeSymmetry(loopCounter, m, n, o) = 0.0_wp
+
+                !temporary while testing 
+                escapeSymmetry(loopCounter, m, n, o) = layer
+                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            end if
+        end do
+
+    end subroutine cart_calc_escape_sym
+
+    subroutine cart_map_escape_sym()
+
+    end subroutine cart_map_escape_sym
 
     subroutine run_MCRT(input_file, history, packet, dict, & 
                         distances, image, dects, array, nscatt, start, & 
