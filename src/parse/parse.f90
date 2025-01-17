@@ -288,7 +288,8 @@ module parse_mod
 
             dir = dir%magnitude()
 
-            if (symmetryType == "none" .or. symmetryType == "prism" .or. symmetryType == "flipped") then
+            if (symmetryType == "none" .or. symmetryType == "prism" .or. symmetryType == "flipped" & 
+                .or. symmetryType == "uniformSlab") then
                 state%symGridPos = pos
                 state%symGridDir = dir
                 state%symGridRot = rotation
@@ -298,6 +299,9 @@ module parse_mod
                 state%symGridDir = dir
                 state%symGridRot = rotation
                 state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
+            else
+                call make_error(error, "Unrecognised symmetry type")
+                return
             end if
         else 
             !set the symmetry type to none, and set the other variables to their default values

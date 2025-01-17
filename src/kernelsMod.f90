@@ -332,6 +332,52 @@ contains
             !Go through the base grid and use some form of interpolation to figure out the best match
             call cart_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
 
+        case("uniformSlab")
+            ! The simmulation is a slab code, light is collected uniformly
+
+            print*, "Uniform slab symmetry selected"           
+            print*, "Number of Monte Carlo Simmulations to run: ", (state%symmetryEscapeCartGrid%nzg)
+            
+            !allocate the escape symmetry grids
+            allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
+                                    state%symmetryEscapeCartGrid%nyg, & 
+                                    state%symmetryEscapeCartGrid%nzg))
+            escapeSymmetry = 0._wp
+
+            !precompute the rotation vector here
+            !both for going from the shifted from base
+            ! and for going from base to the shifted
+            direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
+
+            !state%symGridDir is the normal pointing off the face to be flipped on
+
+            rotationOffSym = rotationAlign(direction, state%symGridDir)
+            rotationOnToSym = rotationAlign(state%symGridDir, direction)
+
+            rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
+            rotationAroundZOnSym = rotmat(direction, state%symGridRot)
+
+            gridPos = state%symGridPos
+
+            !get the position of the cell
+            indices = state%symmetryEscapeCartGrid%get_voxel(vector(0.0_wp,0.0_wp,0.0_wp))
+            !loop through every cell
+            do o = 1, state%symmetryEscapeCartGrid%nzg
+                call cart_calc_escape_sym(indices(1),indices(2),o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
+                                            packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
+                                            start, tev)
+            end do
+
+            !fill the rest of the grid
+            do m = 1, state%symmetryEscapeCartGrid%nxg
+                do n = 1, state%symmetryEscapeCartGrid%nyg
+                    escapeSymmetry(:, m, n, :) = escapeSymmetry(:, indices(1), indices(2), :)
+                end do
+            end do
+
+            !Go through the base grid and use some form of interpolation to figure out the best match
+            call cart_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+
         case("360rotational")
             !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             ! do radially and in depth only for a single angle
