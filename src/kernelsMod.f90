@@ -185,8 +185,13 @@ contains
         case("none")
             !there is no symmetry launch from every cell
 
+            print*, "No Symmetry selected"
             print*, "User warning! This may take a long time to run"
             print*, "It is advised to try and find a geometry with symmetry or to reduce the grid size"
+
+            print*, "Number of Monte Carlo Simmulations to run: ", (state%symmetryEscapeCartGrid%nxg* &
+                                                                    state%symmetryEscapeCartGrid%nyg* & 
+                                                                    state%symmetryEscapeCartGrid%nzg)
             
             !allocate the escape symmetry grids
             allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
@@ -226,6 +231,10 @@ contains
 
         case("prism")
             !prism symmetry, launch from a layer of cells
+
+            print*, "Prism symmetry selected"
+            print*, "Number of Monte Carlo Simmulations to run: ", (state%symmetryEscapeCartGrid%nxg* &
+                                                                    state%symmetryEscapeCartGrid%nyg)
 
             !allocate the escape symmetry grids
             allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
@@ -271,6 +280,11 @@ contains
         case("flipped")
             !TO DO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             !flipped symmetry, launch half the cells
+
+            print*, "Flipped symmetry selected"
+            print*, "Number of Monte Carlo Simmulations to run: ", (state%symmetryEscapeCartGrid%nxg* &
+                                                                    state%symmetryEscapeCartGrid%nyg* &
+                                                                    (state%symmetryEscapeCartGrid%nzg/2)+1)
             
             !allocate the escape symmetry grids
             allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
@@ -299,7 +313,6 @@ contains
             do m = 1, state%symmetryEscapeCartGrid%nxg
                 do n = 1, state%symmetryEscapeCartGrid%nyg
                     do o = 1, (state%symmetryEscapeCartGrid%nzg/2)+1
-                        print*, m,n,o
                         call cart_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
                                                     packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                                     start, tev)
@@ -308,8 +321,12 @@ contains
             end do
 
             !fill the rest of the grid
-            do o = 1, (state%symmetryEscapeCartGrid%nzg/2)+1
-                escapeSymmetry(:, :, :, state%symmetryEscapeCartGrid%nzg - o + 1) = escapeSymmetry(:, :, :, o)
+            do m = 1, state%symmetryEscapeCartGrid%nxg
+                do n = 1, state%symmetryEscapeCartGrid%nyg
+                    do o = 1, (state%symmetryEscapeCartGrid%nzg/2)+1
+                        escapeSymmetry(:, m, n, state%symmetryEscapeCartGrid%nzg - o + 1) = escapeSymmetry(:, m, n, o)
+                    end do
+                end do
             end do
 
             !Go through the base grid and use some form of interpolation to figure out the best match
