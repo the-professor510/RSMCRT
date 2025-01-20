@@ -298,7 +298,7 @@ module parse_mod
                 state%symGridPos = pos
                 state%symGridDir = dir
                 state%symGridRot = rotation
-                state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
+                state%symmetryEscapeCylGrid = init_grid_cyl(nxrg, nytg, nzg, xrmax, ytmax, zmax)
             else
                 call make_error(error, "Unrecognised symmetry type")
                 return

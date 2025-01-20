@@ -86,15 +86,22 @@ module gridMod
         class(cyl_grid)         :: this
         !> current vector position of photon packet
         type(vector), intent(IN) :: pos
-    
+
+
+        real(kind=wp) :: rad, theta
         integer :: res(3)
 
-        res(1) = floor(this%nrg*(sqrt(pos%x**2 + pos%y**2)/this%rmax))+1
-        if (pos%y == 0 .and. pos%x == 0) then
-            res(2) = 1
+        !convert to rad and theta
+        rad = sqrt(pos%x**2 + pos%y**2)
+        if(rad == 0)then
+            theta=0.0
         else
-            res(2) = floor(this%ntg*((atan2(pos%y, pos%x)+ PI)/this%tmax)) + 1
+            theta=atan2(pos%y,pos%x)
+            if(theta < 0.0)theta=theta+2*atan2(0.0d0,-1.0d0)
         end if
+
+        res(1) = floor(this%nrg*(rad/this%rmax))+1
+        res(2) = floor(this%ntg*((theta)/this%tmax)) + 1
         res(3) = floor(this%nzg*(pos%z+this%zmax)/(2._wp*this%zmax)) + 1
 
         if(res(1) < 1 .or. res(1) > this%nrg) then

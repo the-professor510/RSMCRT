@@ -4,7 +4,7 @@ module interpolate
     implicit none
     
     private
-    public :: trilinearInterpolate, bilinearInterpolate, linearInterpolate
+    public :: trilinearInterpolate, bilinearInterpolate, linearInterpolate, cylTrilinearInterpolate, cylBilinearInterpolate
 
     contains
 
@@ -102,7 +102,7 @@ module interpolate
         real(kind = wp) :: a00, a01, a10, a11
         real(kind = wp) :: volume, v000, v001, v010, v011, v100, v101, v110, v111
 
-        !calc volume = 0.5 * (thetahigh - thetalow) * (rhigh^2 - rlow^2) * z
+        !calc total volume = 0.5 * (thetahigh - thetalow) * (rhigh^2 - rlow^2) * z
         volume = 0.5_wp * (corners(1,2,1,2) - corners(1,1,1,2)) * (corners(2,1,1,1)**2 - corners(1,1,1,1)**2) * & 
                 (corners(1,1,2,3) - corners(1,1,1,3))
 
@@ -112,7 +112,7 @@ module interpolate
         a10 = 0.5_wp * (corners(1,2,1,2) - point(2)) * (point(1)**2 - corners(1,2,1,1)**2) !enclosed by p and h theta and l r
         a11 = 0.5_wp * (point(2) - corners(1,1,1,2)) * (point(1)**2 - corners(1,1,1,1)**2) !enclosed by p and l theta and l r
 
-        !calc volumes
+        !calc volume weightings
         v000 = a00 * (corners(1,1,2,3) - point(3)) / volume!volume between point and high z
         v001 = a00 * (point(3) - corners(1,1,1,3)) / volume!volume between point and low z
         v010 = a01 * (corners(1,1,2,3) - point(3)) / volume
@@ -122,7 +122,7 @@ module interpolate
         v110 = a11 * (corners(1,1,2,3) - point(3)) / volume
         v111 = a11 * (point(3) - corners(1,1,1,3)) / volume
 
-        !interpolate along z
+        !interpolate by finding the volume weighted average
         c = v000 * corners(1,1,1,4) + & 
             v001 * corners(1,1,2,4) + & 
             v010 * corners(1,2,1,4) + & 
@@ -136,5 +136,44 @@ module interpolate
         point(4) = c
 
     end subroutine cylTrilinearInterpolate
+
+    subroutine cylBilinearInterpolate(corners, point)
+
+        !>corners (r,theta,(pos,value))
+        real(kind=wp), intent(in) :: corners(2,2,3)
+        !> point we want to get the value you of by interpolation
+        real(kind=wp), intent(inout):: point(3)
+
+        !using the fact that bilinear interpolation be seen as a weighted average, do this for cylindrical coordinates
+
+        real(kind = wp) :: c
+        real(kind = wp) :: a00, a01, a10, a11
+        real(kind = wp) :: area, w00, w01, w10, w11
+
+        !calc total area = 0.5 * (thetahigh - thetalow) * (rhigh^2 - rlow^2)
+        area = 0.5_wp * (corners(1,2,2) - corners(1,1,2)) * (corners(2,1,1)**2 - corners(1,1,1)**2) 
+
+        !calc areas = 0.5 * (thetahigh - thetalow) * (rhigh^2 - rlow^2)
+        a00 = 0.5_wp * (corners(2,2,2) - point(2)) * (corners(2,2,1)**2 - point(1)**2) !enclosed by p and h theta and h r
+        a01 = 0.5_wp * (point(2) - corners(2,1,2)) * (corners(2,1,1)**2 - point(1)**2) !enclosed by p and l theta and h r
+        a10 = 0.5_wp * (corners(1,2,2) - point(2)) * (point(1)**2 - corners(1,2,1)**2) !enclosed by p and h theta and l r
+        a11 = 0.5_wp * (point(2) - corners(1,1,2)) * (point(1)**2 - corners(1,1,1)**2) !enclosed by p and l theta and l r
+
+        !calc weightings
+        w00 = a00/area
+        w01 = a01/area
+        w10 = a10/area
+        w11 = a11/area
+        
+        !interpolate by finding the area weighted average
+        c = w00 * corners(1,1,3) + & 
+            w01 * corners(1,2,3) + & 
+            w10 * corners(2,1,3) + & 
+            w11 * corners(2,2,3) 
+            
+        !this is our result
+        point(3) = c
+
+    end subroutine cylBilinearInterpolate
 
 end module interpolate
