@@ -39,6 +39,26 @@ fpm @debugmp
 
 Please see ([here](https://github.com/lewisfish/signedMCRT/blob/main/fpm.rsp)) for other possible options.
 
+To compile and calculate and record the fluence by the pathlength method
+```
+fpm @... --flag "-Dpathlength"
+```
+
+To compile and use survival biasing for variance reduction
+```
+fpm @... --flag "-DsurvivalBias"
+```
+
+To compile and calculate the escape function
+```
+fpm @... --flag "-DescapeFunction"
+```
+
+To compile and use a different toml than the one specified in main.f90
+```
+fpm @... -- "inputFile.toml" 
+```
+
 ## Dependencies
 
 Below is the current list of dependencies:

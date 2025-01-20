@@ -25,12 +25,12 @@ ShellThickness = 0.02
 YolkRadius = 1.0
 
 [symmetry]
-symmetryType = "none"
+symmetryType = "360rotational"
 GridSize = [50,50,50]
 maxValues = [3.0, 4.0, 5.0]
 position = [0.0,0.0,0.0]
-direction = [0.0,0.0,1.0]
-rotation = 45
+direction = [0.0,1.0,0.0]
+rotation = 0
 
 [[detectors]]
 type="fibre"
