@@ -294,7 +294,7 @@ module parse_mod
                 state%symGridDir = dir
                 state%symGridRot = rotation
                 state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
-            else if (symmetryType == "360rotational" .or. symmetryType == "nrotational") then
+            else if (symmetryType == "noneRotational" .or. symmetryType == "360rotational") then
                 state%symGridPos = pos
                 state%symGridDir = dir
                 state%symGridRot = rotation
