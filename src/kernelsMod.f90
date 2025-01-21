@@ -221,6 +221,13 @@ contains
                 do n = 1, state%symmetryEscapeCartGrid%nyg
                     do o = 1, state%symmetryEscapeCartGrid%nzg
 
+                        print*, ""
+                        print*, "Running ", ((m-1)*state%symmetryEscapeCartGrid%nyg*state%symmetryEscapeCartGrid%nzg + & 
+                                             (n-1)*state%symmetryEscapeCartGrid%nzg + o - 1), & 
+                                " out of ", (state%symmetryEscapeCartGrid%nxg* &
+                                                state%symmetryEscapeCartGrid%nyg* & 
+                                                state%symmetryEscapeCartGrid%nzg)
+
                         !calculate the escape function
                         call cart_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
                                                  packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
@@ -267,6 +274,12 @@ contains
             !loop through every cell
             do m = 1, state%symmetryEscapeCartGrid%nxg
                 do n = 1, state%symmetryEscapeCartGrid%nyg
+
+                    print*, ""
+                    print*, "Running ", ((m-1)*state%symmetryEscapeCartGrid%nyg + n - 1), & 
+                            " out of ", (state%symmetryEscapeCartGrid%nxg* &
+                                        state%symmetryEscapeCartGrid%nyg)
+
                     !calculate the escape function
                     call cart_calc_escape_sym(m,n,indices(3), rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
                                                 packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
@@ -318,6 +331,14 @@ contains
             do m = 1, state%symmetryEscapeCartGrid%nxg
                 do n = 1, state%symmetryEscapeCartGrid%nyg
                     do o = 1, (state%symmetryEscapeCartGrid%nzg/2)+1
+
+                        print*, ""
+                        print*, "Running ", ((m-1)*state%symmetryEscapeCartGrid%nyg*((state%symmetryEscapeCartGrid%nzg/2)+1) + & 
+                                            (n-1)*((state%symmetryEscapeCartGrid%nzg/2)+1) + o - 1), & 
+                                " out of ", (state%symmetryEscapeCartGrid%nxg* &
+                                            state%symmetryEscapeCartGrid%nyg* &
+                                            (state%symmetryEscapeCartGrid%nzg/2)+1)
+
                         call cart_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
                                                     packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                                     start, tev)
@@ -369,6 +390,11 @@ contains
             indices = state%symmetryEscapeCartGrid%get_voxel(vector(0.0_wp,0.0_wp,0.0_wp))
             !loop through every cell
             do o = 1, state%symmetryEscapeCartGrid%nzg
+
+                print*, ""
+                print*, "Running ", (o - 1), & 
+                        " out of ", (state%symmetryEscapeCartGrid%nzg)
+
                 call cart_calc_escape_sym(indices(1),indices(2),o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
                                             packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                             start, tev)
@@ -418,6 +444,13 @@ contains
                 do n = 1, state%symmetryEscapeCylGrid%ntg
                     do o = 1, state%symmetryEscapeCylGrid%nzg
 
+                        print*, ""
+                        print*, "Running ", ((m-1)*state%symmetryEscapeCylGrid%ntg*state%symmetryEscapeCylGrid%nzg + & 
+                                             (n-1)*state%symmetryEscapeCylGrid%nzg + o - 1), & 
+                                " out of ", (state%symmetryEscapeCylGrid%nrg* &
+                                            state%symmetryEscapeCylGrid%ntg* & 
+                                            state%symmetryEscapeCylGrid%nzg)
+
                         !calculate the escape function
                         call cyl_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
                                                  packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
@@ -463,6 +496,9 @@ contains
                 do o = 1, state%symmetryEscapeCylGrid%nzg
 
                     !calculate the escape function
+                    print*, ""
+                    print*, "Running ", ((m-1)*state%symmetryEscapeCylGrid%nzg + o - 1), & 
+                            " out of ", (state%symmetryEscapeCylGrid%nrg*state%symmetryEscapeCylGrid%nzg)
                     call cyl_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
                                                 packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                                 start, tev)
@@ -576,23 +612,30 @@ contains
             escapeSymmetry(loopCounter, m, n, o) = 0.0_wp
             return
         end if
+
+        ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+        if(array(layer)%getkappa() /= real(0, kind=wp)) then
+            call run_MCRT(input_file, history, packet, dict, & 
+                            distances, image, dects, array, nscatt, start, & 
+                            tev, spectrum)
+        end if
         
         ! record the efficiency for each detector and add to an array of escape functions
         do loopCounter = 1, size(dects)
             if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                !total = 0._wp
-                !call dects(loopCounter)%p%total_dect(total)
-                !escapeSymmetry(loopCounter, m, n, o) = total/state%nphotons
+                total = 0._wp
+                call dects(loopCounter)%p%total_dect(total)
+                escapeSymmetry(loopCounter, m, n, o) = total/state%nphotons
 
 
                 !temporary while testing 
-                escapeSymmetry(loopCounter, m, n, o) = layer
+                !escapeSymmetry(loopCounter, m, n, o) = layer
                 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             else
                 escapeSymmetry(loopCounter, m, n, o) = 0.0_wp
 
                 !temporary while testing 
-                escapeSymmetry(loopCounter, m, n, o) = layer
+                !escapeSymmetry(loopCounter, m, n, o) = layer
                 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             end if
         end do
@@ -1000,16 +1043,23 @@ contains
             return
         end if
         
+        ! if the layer has a non-zero kappa then it is significant and we want to perform MCRT
+        if(array(layer)%getkappa() /= real(0, kind=wp)) then
+            call run_MCRT(input_file, history, packet, dict, & 
+                            distances, image, dects, array, nscatt, start, & 
+                            tev, spectrum)
+        end if
+
         ! record the efficiency for each detector and add to an array of escape functions
         do loopCounter = 1, size(dects)
             if(array(layer)%getkappa() /= real(0, kind=wp)) then
-                !total = 0._wp
-                !call dects(loopCounter)%p%total_dect(total)
-                !escapeSymmetry(loopCounter, m, n, o) = total/state%nphotons
+                total = 0._wp
+                call dects(loopCounter)%p%total_dect(total)
+                escapeSymmetry(loopCounter, m, n, o) = total/state%nphotons
 
 
                 !temporary while testing 
-                escapeSymmetry(loopCounter, m, n, o) = layer
+                !escapeSymmetry(loopCounter, m, n, o) = layer
                 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             else
                 escapeSymmetry(loopCounter, m, n, o) = 0.0_wp
@@ -1167,13 +1217,17 @@ contains
                         !we need to find the proprotion of areas
 
                         !find the area a1, a2, a3 and use them as weightings
-                        at = PI * (state%symmetryEscapeCylGrid%nrg/state%symmetryEscapeCylGrid%rmax)**2 * & 
+                        at = PI * (((0.5_wp)/state%symmetryEscapeCylGrid%nrg)*state%symmetryEscapeCylGrid%rmax)**2 * & 
                             ((thetaHigh-thetaLow)/TWOPI)
-                        a1 = (0.5_wp * (state%symmetryEscapeCylGrid%nrg/state%symmetryEscapeCylGrid%rmax) * & 
-                            rad * cos(thetaHigh - theta)) / at
-                        a2 = (0.5_wp * (state%symmetryEscapeCylGrid%nrg/state%symmetryEscapeCylGrid%rmax) * & 
-                            rad * cos(theta-thetaLow)) / at
-                        a3 = (at - a1 - a2) / at
+                        a1 = (0.5_wp * (((0.5_wp)/state%symmetryEscapeCylGrid%nrg)*state%symmetryEscapeCylGrid%rmax) * & 
+                            rad * sin(thetaHigh - theta))
+                        a2 = (0.5_wp * (((0.5_wp)/state%symmetryEscapeCylGrid%nrg)*state%symmetryEscapeCylGrid%rmax) * & 
+                            rad * sin(theta-thetaLow))
+                        a3 = (at - a1 - a2)
+
+                        a1 = a1/at
+                        a2 = a2/at
+                        a3 = a3/at
 
                         if (zIndx(1) < 1) then 
                             !we are on the bottom z edge, take average r as your point
@@ -1225,8 +1279,8 @@ contains
                                 do k = 1,2
                                     corners1D(k,1) = (((real(zIndx(k), kind = wp) - 0.5)/state%symmetryEscapeCylGrid%nzg)*& 
                                                 2.0_wp*state%symmetryEscapeCylGrid%zmax) - state%symmetryEscapeCylGrid%zmax 
-                                    corners1D(k,2) = a1 * escapeSymmetry(loopCounter, 1, thetaIndx(1), k) + & 
-                                                     a2 * escapeSymmetry(loopCounter, 1, thetaIndx(2), k) + & 
+                                    corners1D(k,2) = a1 * escapeSymmetry(loopCounter, 1, thetaIndx(1), zIndx(k)) + & 
+                                                     a2 * escapeSymmetry(loopCounter, 1, thetaIndx(2), zIndx(k)) + & 
                                                      a3 * averageRad(k)
                                 end do
 
