@@ -202,6 +202,7 @@ module parse_mod
         character(len=:), allocatable :: symmetryType
         integer :: i, nlen
         integer :: nxrg, nytg, nzg
+        integer :: escapenphotons
         real(kind=wp) :: xrmax, ytmax, zmax, rotation
         type(vector) :: pos, dir
 
@@ -214,6 +215,9 @@ module parse_mod
             !symmetry, used to reduce the computation time of the escape function
             call get_value(child, "symmetryType", symmetryType, "none")
             call set_value(dict, "symmetryType", symmetryType)
+
+            call get_value(child, "escapenphotons", escapenphotons, 100000)
+            state%nphotons = escapenphotons
 
             call get_value(child, "GridSize", children, requested=.false.)
             if(associated(children))then
@@ -307,6 +311,9 @@ module parse_mod
             !set the symmetry type to none, and set the other variables to their default values
             symmetryType = "none"
             call set_value(dict, "symmetryType", symmetryType)
+
+            !set default number of photons to run
+            state%nphotons = 100000
 
             !set default size of symmetry grid
             nxrg = 10
