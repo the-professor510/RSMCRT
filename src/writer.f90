@@ -83,7 +83,7 @@ module writer_mod
                         write(u)  x%pos
                         write(u)  x%dir
                         do j = 1, x%nbins
-                            write(u)real(j,kind=wp) * x%bin_wid, x%data(j)
+                            write(u)(real(j,kind=wp)-0.5_wp) * x%bin_wid, x%data(j)
                         end do
                     type is(fibre_dect)
                         ! write out the fibre detector
@@ -107,7 +107,7 @@ module writer_mod
                         write(u)  x%acceptAngle
                         write(u)  x%coreDiameter
                         do j = 1, x%nbins
-                            write(u)real(j,kind=wp) * x%bin_wid, x%data(j)
+                            write(u)(real(j,kind=wp)-0.5_wp) * x%bin_wid, x%data(j)
                         end do
                     type is(annulus_dect)
                         ! write out the annulus detector
@@ -122,7 +122,7 @@ module writer_mod
                         write(u)  x%pos
                         write(u)  x%dir
                         do j = 1, x%nbins
-                            write(u)(real(j,kind=wp) * x%bin_wid + x%r1), x%data(j)
+                            write(u)((real(j,kind=wp)-0.5_wp) * x%bin_wid + x%r1), x%data(j)
                         end do
                     type is(camera)
                         print*,"Warning camera detector not yet implmented!"
@@ -331,7 +331,7 @@ module writer_mod
             write(u,"(A)")"endian: little"
 
             if(present(dect_ID)) then
-                write(u, "(A)")"dector: "//trim(dect_ID) 
+                write(u, "(A)")"dector: "//str(trim(dect_ID))
             end if
 
         end subroutine write_hdr
