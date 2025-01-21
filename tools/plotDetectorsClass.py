@@ -5,10 +5,9 @@ import sys
 class plotDetectorsClass:
        
     def plot(self, radius, count, nPackets, dectType):
-        print(radius)
-        print(count)       
+             
         totalCounts = sum(count)
-        print(f"Detector Type : {dectType:.4f}")
+        print(f"Detector Type : {dectType}")
         print(f"Total Diffuse : {totalCounts/nPackets}")
 
 
@@ -38,7 +37,7 @@ class plotDetectorsClass:
                 radius = data[n+1]
                 pos = [data[n+2], data[n+3], data[n+4]]
                 dir = [data[n+5], data[n+6], data[n+7]]
-                numBins = (len(data) - (n+7))/2
+                numBins = (len(data) - (n+8))/2
                 
                 radius = []
                 count = []
@@ -73,7 +72,7 @@ class plotDetectorsClass:
                 acceptAngle = data[n+16]
                 coreDiameter = data[n+17]
                 
-                numBins = (len(data) - (n+17))/2
+                numBins = (len(data) - (n+18))/2
                 
                 radius = []
                 count = []
@@ -100,7 +99,7 @@ class plotDetectorsClass:
                 radius2 = data[n+2]
                 pos = [data[n+3], data[n+4], data[n+5]]
                 dir = [data[n+6], data[n+7], data[n+8]]
-                numBins = (len(data) - (n+8))/2
+                numBins = (len(data) - (n+9))/2
                 
                 radius = []
                 count = []

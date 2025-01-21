@@ -49,15 +49,25 @@ class read_nrrd_class:
 
     def _get_value_type(self, key, value):
 
-        if key in ["dimension", "space dimension"]:
+        if key in ["dimension", "space dimension", "num_spheres", "numOptProp", "nphotons"]:
             return int(value)
-        elif key in ["endian", "encoding"]:
+        elif key in ["endian", "encoding", "annulus_type", "focus_type", "units", "grid_data", "real_size", "source", "experiment", "dector", "symmetryType"]:
             return value
         elif key in ["type"]:
             return self._types[value]
         elif key in ["sizes"]:
             return [int(x) for x in value.split()]
+        elif key in ["radius", "focalLength", "rhi", "rlo", "sigma", "beam_size", "tau", 
+                     "musb", "muab", "musc", "muac", "hgga", '"mua%   1"', '"mus%   1"', '"mur%   1"',
+                     '"hgg%   1"', '"n%   1"', '"mua%   2"', '"mus%   2"', '"mur%   2"', '"hgg%   2"', 
+                     '"n%   2"', '"mua%   3"', '"mus%   3"', '"mur%   3"', '"hgg%   3"', '"n%   3"', 
+                     '"position%   1"', '"position%   2"', '"position%   3"', '"boundinglength%   1"',
+                     '"boundinglength%   2"', '"boundinglength%   3"', '"BoxDimensions%   1"', 
+                     '"BoxDimensions%   2"', '"BoxDimensions%   3"']:
+            return float(value)
         else:
+            print(f"Error not implemented {key}")
+            print(repr(key))
             pass
             # raise NotImplementedError
 
