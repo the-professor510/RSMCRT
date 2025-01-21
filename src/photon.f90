@@ -882,6 +882,7 @@ module photonMod
 
             if(beam_type == "tophat")then
                 radius = rlo + (rhi - rlo) * sqrt(ran2())
+                mid = (rhi + rlo) / 2._wp
             elseif(beam_type == "gaussian")then
                 mid = (rhi + rlo) / 2._wp
                 call rang(radius, tmp, mid, sigma)
@@ -898,12 +899,11 @@ module photonMod
             pos = vector(x, y, z)
             this%pos = pos
 
-            
             targ = vector(0._wp,0._wp,-focalLength)
 
-            dist = length(this%pos - targ)
+            dist = length(vector(mid*cosp, mid*sinp, 0.0_wp) - targ)
 
-            dir = (-1._wp)*(this%pos-targ) / dist
+            dir = (-1._wp)*(vector(mid*cosp, mid*sinp, 0.0_wp)-targ) / dist
             dir = dir * sign(1._wp, focalLength)
             dir = dir%magnitude()
 

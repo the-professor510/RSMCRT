@@ -309,6 +309,10 @@ module inttau2
                     
                     !reflect so incrment bounce counter
                     packet%bounces = packet%bounces + 1
+
+                    if (packet%bounces > 1000) then
+                        return
+                    end if
                     
                 end if
             else

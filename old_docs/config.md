@@ -11,7 +11,7 @@ The below sections describe the tables (dictionaries) that are able to be define
 This table defines the parameters for the light source used in the simulation it can have the following:
 
 | Parameter | Type | Options | Default | Notes |
-|:---------:|:----:|:-------:|:-------:|:----:|
+|:---------:|:----:|:-------:|:-------:|:-----:|
 | name | string | point, circular, uniform, pencil, annulus, focus | point | - |
 | nphotons | integer | - | 1000000 | - |
 | position | float array size 3 | - | [0.0, 0.0, 0.0] | Default value only set for point, annular, and focus source type |
@@ -68,17 +68,17 @@ This table defines the parameters for the light source used in the simulation it
 | YolkRadius | float | - | 1.5 | Radius of yolk inside the egg |
 | tau | float | - | 10.0 | Tau value for MCRT scattering test experiment |
 | num_spheres | integer | - | 10 | Number of random spheres for sphere scene, not supported |
-| musb | float | - | 0.0 | Optical properties for experimental geometry for whiskey Raman sensing paper |
+| musb | float | - | 0.00 | Optical properties for experimental geometry for whiskey Raman sensing paper |
 | muab | float | - | 0.01 | See above |
-| musc | float | - | 0.0 | See Above |
+| musc | float | - | 0.00 | See Above |
 | muac | float | - | 0.01 | See Above |
-| hgga | float | - | 0.7 | See Above |
+| hgga | float | - | 0.70 | See Above |
 
 
 ## Detectors
 
 | Parameter | Type | Options | Default | Notes |
-|:---------:|:----:|:-------:|:-------:|:----:|
+|:---------:|:----:|:-------:|:-------:|:-----:|
 | type | string | annulus, circle, fibre, camera | - | - |
 | position | float array size 3 | - | NO DEFAULT! | Central position of detector |
 | direction | float array size 3 | - | [0.0, 0.0, -1.0] | Propagation direction of accepted rays |
@@ -125,3 +125,14 @@ This table defines the parameters for the light source used in the simulation it
 | iseed | integer | 123456789 | seed for simulation. Each thread get its own copy + threadID |
 | tev | boolean | false | Enables TEV image viewer to display simulation as it runs. Must have opened TEV prior to launching simulation. |
 | absorb | boolean | false | Enables writing to file of absorbed energy. |
+
+## Symmetry
+
+| Parameter | Type | Options | Default | Notes |
+|:---------:|:----:|:-------:|:-------:|:-----:|
+| symmetryType | string | none, prism, flipped, uniformSlab, noneRotational, 360rotational | none | - |
+| GridSize | float array size 3 | - | [10, 10, 10] | Number of voxels in symmetry grid in [x, y, z] for cartesian symmetry types, and [radius, theta, z] for rotational symmetry types |
+! maxValues | float array size 3 | - | [1.0, 1.0 or 360 degrees, 1.0] | - |
+| position | float array size 3 | - | [0.0, 0.0, 0.0] | Origin of symmetry grid with respect to absorption grid |
+| direction | float array size 3 | - | [0.0, 0.0, 1.0] | Direction of z axis in symmetry grid with respect to absorption grid |
+| rotation | float | 0.0 <= rotation < 360.0 | 0.0 | Rotation of x and y axis around the z axis |

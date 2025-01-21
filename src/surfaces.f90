@@ -98,13 +98,18 @@ module surfaces
         real(kind=wp) :: costt, sintt, sint2, cost2, tir, f1, f2
 
         costt = abs(I .dot. N)
+        if(costt<0.0_wp)costt=-1._wp*costt
         if(costt>1.0_wp)costt=1.0_wp
         sintt = sqrt(1._wp - costt * costt)
         sint2 = n1/n2 * sintt
+
         if(sint2 > 1._wp)then
+            !total internal reflection occurs
             tir = 1.0_wp
             return
+
         elseif(costt == 1._wp)then
+            !the packet is perpendicular to the surface, and thus transmitted
             tir = 0._wp
             return
         else

@@ -380,7 +380,7 @@ contains
         type(vector)  :: a, b
         real(kind=wp) :: n, optprop(5)
 
-        error stop "add model and subtraction here"
+        !error stop "add model and subtraction here"
         call get_value(dict, "musb", optprop(1))
         call get_value(dict, "muab", optprop(2))
         call get_value(dict, "musc", optprop(3))
@@ -388,11 +388,12 @@ contains
         call get_value(dict, "hgga", optprop(5))
         n = 1._wp
 
+        allocate(array(3))
         opt(1) = mono(optprop(1), optprop(2), optprop(5), 1.5_wp)
         opt(2) = mono(optprop(3), optprop(4), optprop(5), 1.3_wp)
 
-        a = vector(-10._wp, 0._wp, 0._wp)
-        b = vector(10._wp, 0._wp, 0._wp)
+        a = vector(-8._wp, 0._wp, 0._wp)
+        b = vector(8._wp, 0._wp, 0._wp)
         !bottle
         array(2) = cylinder(a, b, 1.75_wp, opt(1), 2)
         ! contents
@@ -401,7 +402,7 @@ contains
         ! t = invert(translate(vector(0._wp, 0._wp, -5._wp+1.75_wp)))
         ! slab = box(vector(10._wp, 10._wp, 10._wp), optprop(3), optprop(4), optprop(5), 1.3_wp, 1, transform=t)
         opt(3) = mono(0.0_wp, 0.0_wp, 0.0_wp, n)
-        array(3) = box(vector(4._wp, 4._wp, 4._wp), opt(3), 2)
+        array(3) = box(vector(20._wp, 20._wp, 20._wp), opt(3), 2)
 
     end function setup_exp
 

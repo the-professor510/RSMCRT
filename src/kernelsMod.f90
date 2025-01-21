@@ -571,12 +571,11 @@ contains
         end do
         layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
-        !!  if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
-        !    call run_MCRT(input_file, history, packet, dict, & 
-        !                    distances, image, dects, array, nscatt, start, & 
-        !                    tev, spectrum)
-        !end if
+        !is this point inside the defined geometry
+        if (layer == 0) then
+            escapeSymmetry(loopCounter, m, n, o) = 0.0_wp
+            return
+        end if
         
         ! record the efficiency for each detector and add to an array of escape functions
         do loopCounter = 1, size(dects)
@@ -995,13 +994,12 @@ contains
         end do
         layer=maxloc(distances,dim=1, mask=(distances<0._wp))
 
-        !!  if the layer has a non-zero kappa then it is significant and we want to perform MCRT
-        !if(array(layer)%getkappa() /= real(0, kind=wp)) then
-        !    call run_MCRT(input_file, history, packet, dict, & 
-        !                    distances, image, dects, array, nscatt, start, & 
-        !                    tev, spectrum)
-        !end if
-
+        !is this point inside the defined geometry
+        if (layer == 0) then
+            escapeSymmetry(loopCounter, m, n, o) = 0.0_wp
+            return
+        end if
+        
         ! record the efficiency for each detector and add to an array of escape functions
         do loopCounter = 1, size(dects)
             if(array(layer)%getkappa() /= real(0, kind=wp)) then
