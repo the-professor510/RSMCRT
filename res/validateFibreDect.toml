@@ -207,7 +207,7 @@ trackHistory = false
 [output]
 fluence = "fluence.nrrd"
 render_geometry_name = "geom_render.nrrd"
-render_geomerty = true
+render_geometry = true
 render_source_name = "source_render.nrrd"
 render_source = true
 render_size = [200,200,200]

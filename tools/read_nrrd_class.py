@@ -37,7 +37,9 @@ class read_nrrd_class:
             elif line == "":
                 break
 
-            key, value = re.split(r"[:=?]", line, 1)  # type: ignore[type-var]
+            splitList = re.split(r"[:=?]", line)  # type: ignore[type-var]
+            key = splitList[0]
+            value = splitList[-1]
             key, value = key.strip(), value.strip()  # type: ignore[attr-defined]
 
             value = self._get_value_type(key, value)
@@ -83,3 +85,4 @@ class read_nrrd_class:
         data = np.fromfile(file, dtype=dtype, sep="")
         data = data.reshape((size))
         return data
+    

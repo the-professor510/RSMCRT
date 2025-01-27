@@ -1,225 +1,166 @@
 [source]
-name = "point"
-nphotons = 100000
-position = [0.0,0.0,0.0]
-spectrum_type = "constant"
-wavelength = 500.0
+name = "pencil"
+nphotons = 1000000
+position = [-25.0,0.0,0.0]
+direction = "x"
+
 
 [grid]
 nxg = 200
-nyg = 200
-nzg = 200
-xmax = 5.0
-ymax = 5.0
-zmax = 5.0
+nyg = 110
+nzg = 100
+xmax = 30.0
+ymax = 31.0
+zmax = 32.0
 
 [geometry]
-geom_name = "egg"
-numOptProp = 3
-boundingBox = [10.0,10.0,10.0]
-position = [0.0,0.0,0.0]
-BottomSphereRadius = 2.0
-TopSphereRadius = 1.5
-SphereSep = 1.4
-ShellThickness = 0.02
-YolkRadius = 1.0
+geom_name = "box"
+boundingBox = [60.0,62.0,64.0]
+BoxDimensions = [50.0,62.0,64.0]
+mus = [1.0]
+mua = [0.0]
+g = [0.0]
+n = [1.0]
+
 
 [symmetry]
 symmetryType = "360rotational"
-GridSize = [50,50,50]
-maxValues = [3.0, 4.0, 5.0]
+escapenphotons = 100000
+GridSize = [100,500,200]
+maxValues = [60.0, 360.0, 30.0]
 position = [0.0,0.0,0.0]
-direction = [0.0,1.0,0.0]
+direction = [1.0,0.0,0.0]
 rotation = 0
 
 [[detectors]]
-type="fibre"
-ID = "1"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 20.0
-f1Aperture = 0.5
-f2Aperture = 0.5
-frontOffset = 0.0
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset1mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 0.0
+radius2 = 1.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-ID = "2"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 20.0
-f1Aperture = 1.0
-f2Aperture = 1.0
-frontOffset = 0.0
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset2mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 1.0
+radius2 = 2.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-ID = "3"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 20.0
-f1Aperture = 1.5
-f2Aperture = 1.5
-frontOffset = 0.0
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset3mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 2.0
+radius2 = 3.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-ID = "4"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 20.0
-f1Aperture = 2.0
-f2Aperture = 2.0
-frontOffset = 0.0
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset4mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 3.0
+radius2 = 4.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-ID = "5"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 20.0
-f1Aperture = 2.5
-f2Aperture = 2.5
-frontOffset = 0.0
-backOffset = 20.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset5mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 4.0
+radius2 = 5.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-ID = "6"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 200.0
-f1Aperture = 3.0
-f2Aperture = 3.0
-frontOffset = 0.0
-backOffset = 200.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset6mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 5.0
+radius2 = 6.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-ID = "7"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 200.0
-f1Aperture = 3.5
-f2Aperture = 3.5
-frontOffset = 0.0
-backOffset = 200.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset7mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 6.0
+radius2 = 7.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-ID = "8"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 200.0
-f1Aperture = 4.0
-f2Aperture = 4.0
-frontOffset = 0.0
-backOffset = 200.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset8mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 7.0
+radius2 = 8.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-ID = "9"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 200.0
-f1Aperture = 4.5
-f2Aperture = 4.5
-frontOffset = 0.0
-backOffset = 200.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset9mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 8.0
+radius2 = 9.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 [[detectors]]
-type="fibre"
-ID = "10"
-position=[0.0, 0.0, 2.0]
-direction=[0.0, 0.0, 1.0]
-focalLength1 = 2.0
-focalLength2 = 200.0
-f1Aperture = 5.0
-f2Aperture = 5.0
-frontOffset = 0.0
-backOffset = 200.0
-pinAperture = 200.0
-acceptAngle = 90.0
-coreDiameter = 1.0
-nbins = 100
-maxval = 1.0
+type="annulus"
+ID = "Offset10mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 9.0
+radius2 = 10.0
+nbins = 10
+maxval = 2.0
+trackHistory = false
+
+[[detectors]]
+type="annulus"
+ID = "Offset11mm"
+position=[-25.0, 0.0, 0.0]
+direction=[-1.0, 0.0, 0.0]
+radius1 = 10.0
+radius2 = 11.0
+nbins = 10
+maxval = 2.0
 trackHistory = false
 
 
 [output]
 fluence = "fluence.nrrd"
 render_geometry_name = "geom_render.nrrd"
-render_geomerty = true
+render_geometry = true
 render_source_name = "source_render.nrrd"
 render_source = true
-render_size = [50,100,150]
+render_size = [200,200,200]
 overwrite = true
 
 [simulation]

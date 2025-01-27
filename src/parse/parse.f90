@@ -126,8 +126,8 @@ module parse_mod
         if(associated(child))then
             call get_value(child, "fluence", state%outfile, "fluence.nrrd")
             call get_value(child, "absorb", state%outfile_absorb, "absorb.nrrd")
-            call get_value(child, "render_geomerty_name", state%rendergeomfile, "geom_render.nrrd")
-            call get_value(child, "render_geomerty", state%render_geom, .false.)
+            call get_value(child, "render_geometry_name", state%rendergeomfile, "geom_render.nrrd")
+            call get_value(child, "render_geometry", state%render_geom, .false.)
             call get_value(child, "render_source_name", state%rendersourcefile, "source_render.nrrd")
             call get_value(child, "render_source", state%render_source, .false.)
 

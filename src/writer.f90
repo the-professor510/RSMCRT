@@ -331,7 +331,7 @@ module writer_mod
             write(u,"(A)")"endian: little"
 
             if(present(dect_ID)) then
-                write(u, "(A)")"dector: "//str(trim(dect_ID))
+                write(u, "(A)")"dector: "//(trim(dect_ID))
             end if
 
         end subroutine write_hdr
