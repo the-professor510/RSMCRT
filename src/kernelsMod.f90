@@ -1501,6 +1501,8 @@ contains
         real(kind = wp) :: maxStepSize, gradStepSize, accuracy
         logical :: findmua, findmus, findg, findn
 
+        integer :: i
+
         if(state%loadckpt)then
             call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .false.)
             open(newunit=j,file=state%ckptfile, access="stream", form="formatted")
@@ -1546,6 +1548,7 @@ contains
         call run_MCRT(input_file, history, packet, dict, & 
                         distances, image, dects, array, nscatt, start, & 
                         tev, spectrum)
+
 
         call finalise(dict, dects, nscatt, start, history)
 
@@ -1597,13 +1600,10 @@ contains
         ! go through another series of if and elif statements updating mus, mua, g, n by newMus = mus - grad*stepSize
         ! evaluate the function at this point, if it is greater than the previous evaluation halve the stepSize and repeat
 
-        ! for evaluation funtion I will need to loop through the detectors and compare the inverse value with the read value if there is a non-negative inverse value
-        ! if the inverse value is not defined it is set as negative, and this means that this detector is to be ignored in the code. This will be the default value.
-        ! the default for inverse will have findmua and find... to be false
 
 
-        ! update parse to include inverse and detector parse to include a inverse default value, partially done
-        ! update detectors to include the inverse default value
+        ! update parse to include inverse and detector parse to include a inverse default value, done
+        ! update detectors to include the inverse default value, done
         ! add functionality to change the optical properties of a layer in the sdf array, done but not tested
         ! 
 
@@ -1613,6 +1613,33 @@ contains
         
 
     end subroutine inverse_MCRT
+
+    subroutine inverse_evaluate(dects, error)
+        !Calculate the error between the detector target values and given detector actual values
+
+        use constants, only : wp
+        use detectors,     only : dect_array
+
+        type(dect_array), allocatable, intent(inout) :: dects(:)
+        real(kind=wp), intent(inout) :: error
+
+        error = 0._wp
+
+        do loopCounter = 1, size(dects)
+            targetVal = dects(loopCounter)%p%targetValue
+            if (targetVal /= -1) then
+                total = 0._wp
+                call dects(loopCounter)%p%total_dect(total)
+
+                !error is defined as average percentage difference between all detectors
+                error = error + abs( (total-targetVal) / ((total+targetVal)/2) )
+                counter = counter + 1
+            end if
+        end do
+
+        error = error/counter
+
+    end subroutine inverse_evaluate
 
 
     subroutine run_MCRT(input_file, history, packet, dict, & 
