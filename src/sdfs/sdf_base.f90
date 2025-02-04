@@ -32,7 +32,8 @@ module sdf_baseMod
         contains
             procedure :: getKappa
             procedure :: getAlbedo
-            procedure :: getMua, gethgg, getG2, getN
+            procedure :: getMua, gethgg, getG2, getN, getLayer
+            procedure :: updateOptProp
             procedure :: evaluate => sdf_evaluate
             procedure, private :: sdf_assign
             generic :: assignment(=) => sdf_assign
@@ -236,6 +237,27 @@ module sdf_baseMod
 
     end function getN
 
+    function getLayer(this) result(res)
+        !! Return layer index for the current SDF
+
+        class(sdf) :: this
+        integer :: res
+
+        res = this%value%layer
+
+    end function getLayer
+
+    function updateOptProp(this, newOptProps) result(res)
+
+        class(sdf) :: this
+        !> Optical property of the SDF
+        type(opticalProp_t), intent(in) :: newOptProps
+        integer :: res
+
+        this%value%optProps = newOptProps
+        res = 0
+    end function updateOptProp
+
     function getAlbedo(this) result(res)
         !! Return albedo for the current SDF.
 
@@ -335,7 +357,8 @@ module sdf_baseMod
                     do u = 1, size(ds)
                         ds(u) = cnt(u)%evaluate(pos)
                     end do
-                    image(i, j, k) = maxloc(ds,dim=1, mask=(ds<0._wp))
+                    image(i, j, k) = cnt(maxloc(ds,dim=1, mask=(ds<0._wp)))%getLayer()
+                    
                 end do
             end do
             call bar%progress()

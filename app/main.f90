@@ -1,6 +1,6 @@
 program mcpolar
 !! Entry point for program
-    use kernels, only : default_MCRT, escape_Function
+    use kernels, only : default_MCRT, escape_Function, inverse_MCRT
 
     integer :: num_args, i
     character(len=64), allocatable :: args(:)
@@ -18,6 +18,8 @@ program mcpolar
     
 #ifdef escapeFunction
     call escape_Function(trim(args(1)))
+#elif inverseMCRT
+    call inverse_MCRT(trim(args(1)))
 #else
     call default_MCRT(trim(args(1)))
 #endif

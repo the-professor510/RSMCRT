@@ -104,7 +104,7 @@ module detectors
 
     contains
     
-    function init_circle_dect(pos, dir, layer, radius, nbins, trackHistory, dect_ID) result(out)
+    function init_circle_dect(pos, dir, layer, radius, nbins, trackHistory, dect_ID, targetValue) result(out)
         !! Initalise Circle detector
         !> Centre of detector
         type(vector),  intent(in) :: pos
@@ -120,6 +120,8 @@ module detectors
         logical,       intent(in) :: trackHistory
         !> Detector ID
         character(len=:), allocatable, intent(in)    :: dect_ID
+        !> Target Value used for inverse MCRT
+        real(kind=wp), intent(in) :: targetValue
 
         type(circle_dect) :: out
 
@@ -138,6 +140,7 @@ module detectors
             out%bin_wid = radius / real(nbins, kind=wp)
         end if
         out%trackHistory = trackHistory
+        out%targetValue = targetValue
 
     end function init_circle_dect
 
@@ -160,7 +163,7 @@ module detectors
         end if
     end function check_hit_circle
 
-    function init_annulus_dect(pos, dir, layer, r1, r2, nbins, maxval, trackHistory, dect_ID) result(out)
+    function init_annulus_dect(pos, dir, layer, r1, r2, nbins, maxval, trackHistory, dect_ID, targetValue) result(out)
         !! Initalise Annular detector
 
         !> Centre of detector
@@ -181,6 +184,8 @@ module detectors
         logical,       intent(in) :: trackHistory
         !> Detector ID
         character(len=:), allocatable, intent(in)    :: dect_ID
+        !> Target Value used for inverse MCRT
+        real(kind=wp), intent(in) :: targetValue
 
         type(annulus_dect) :: out
 
@@ -200,6 +205,7 @@ module detectors
             out%bin_wid = (r2-r1) / real(nbins, kind=wp)
         end if
         out%trackHistory = trackHistory
+        out%targetValue = targetValue
 
     end function init_annulus_dect
 
@@ -239,7 +245,7 @@ module detectors
 
     function init_fibre_dect(pos, dir, layer, nbins, maxval, trackHistory, & 
         focalLength1, focalLength2, f1Aperture, f2Aperture, frontOffset, backOffset, & 
-        frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter, dect_ID) result(out)
+        frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter, dect_ID, targetValue) result(out)
         !! Initialise fibre detector
         
         !> Centre of detector
@@ -278,6 +284,8 @@ module detectors
         real(kind=wp), intent(in) :: coreDiameter
         !> Detector ID
         character(len=:), allocatable, intent(in)    :: dect_ID
+        !> Target Value used for inverse MCRT
+        real(kind=wp), intent(in) :: targetValue
 
         type(fibre_dect) :: out
 
@@ -308,6 +316,7 @@ module detectors
             out%bin_wid = coreDiameter / 2 / real(nbins, kind=wp)
         end if
         out%trackHistory = trackHistory
+        out%targetValue = targetValue
 
     end function init_fibre_dect
 
@@ -383,7 +392,7 @@ module detectors
         hitpoint%value1D = abs(radius)
     end function check_hit_fibre
 
-    function init_camera(p1, p2, p3, layer, nbins, maxval, trackHistory, dect_ID) result(out)
+    function init_camera(p1, p2, p3, layer, nbins, maxval, trackHistory, dect_ID, targetValue) result(out)
         !! Initalise Camera detector
 
         !> Position of the 1st corner of the detector
@@ -402,6 +411,9 @@ module detectors
         logical,       intent(in) :: trackHistory
         !> Detector ID
         character(len=:), allocatable, intent(in)    :: dect_ID
+        !> Target Value used for inverse MCRT
+        real(kind=wp), intent(in) :: targetValue
+
         type(camera) :: out
 
         out%pos = p1
@@ -428,6 +440,7 @@ module detectors
             out%bin_wid_y = maxval / real(out%nbinsY, kind=wp)
         end if
         out%trackHistory = trackHistory
+        out%targetValue = targetValue
 
     end function init_camera
 

@@ -64,6 +64,9 @@ module parse_mod
 #ifdef escapeFunction
         call parse_symmetry(table, dict, error)
         if(allocated(error))return
+#elif inverseMCRT
+        call parse_inverse(table, dict, error)
+        if(allocated(error))return
 #endif
 
     end subroutine parse_params
@@ -335,5 +338,67 @@ module parse_mod
             state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
         end if
     end subroutine parse_symmetry
+
+    subroutine parse_inverse(table, dict, error)
+        !! parse symmetry information, only used in the computation of the escape function
+        use sim_state_mod, only : state
+        use gridMod,       only : init_grid_cart, init_grid_cyl 
+        use vector_class,  only : vector, magnitude
+
+        !> Input Toml table 
+        type(toml_table),              intent(inout) :: table
+        !> Error message
+        type(toml_error), allocatable, intent(out)   :: error
+        !> Dictonary used to store metadata
+        type(toml_table),               intent(inout) :: dict
+
+        type(toml_table), pointer :: child
+        type(toml_array), pointer :: children
+
+        integer :: maxNumSteps, layer
+        real(kind = wp) :: maxStepSize, gradStepSize, accuracy
+        logical :: findmua, findmus, findg, findn
+
+        call get_value(table, "inverse", child)
+
+        if(associated(child))then
+            
+            call get_value(child, "maxStepSize", maxStepSize, 1.0_wp)
+            call set_value(dict, "maxStepSize", maxStepSize)
+
+            call get_value(child, "gradStepSize", gradStepSize, 0.0001_wp)
+            call set_value(dict, "gradStepSize", gradStepSize)
+
+            call get_value(child, "accuracy", accuracy, 0.01_wp)
+            call set_value(dict, "accuracy", accuracy)
+
+            call get_value(child, "maxNumSteps", maxNumSteps, 1000)
+            call set_value(dict, "maxNumSteps", maxNumSteps)
+            
+            call get_value(child, "Findmua", findmua, .false.)
+            call set_value(dict, "Findmua", findmua)
+
+            call get_value(child, "Findmus", findmus, .false.)
+            call set_value(dict, "Findmus", findmus)
+
+            call get_value(child, "Findg", findg, .false.)
+            call set_value(dict, "Findg", findg)
+
+            call get_value(child, "Findn", findn, .false.)
+            call set_value(dict, "Findn", findn)
+
+            call get_value(child, "layer", layer, -985464082)
+            if(layer /= -985464082) then
+               call set_value(dict, "inverseLayer", layer)
+            else 
+                call make_error(error, "Must specifiy a layer in inverse table", -1)
+                return
+            end if
+        else
+            call make_error(error, "Need inverse table in input param file", -1)
+            return
+        end if
+
+    end subroutine parse_inverse
 
 end module parse_mod

@@ -38,6 +38,8 @@ module detector_mod
         logical :: trackHistory
         !> Detector ID
         character(len=:), allocatable :: ID
+        !> Target for inverse MCRT
+        real(kind = wp) :: targetValue
         contains
             
             procedure(recordHitInterface), deferred, public :: record_hit

@@ -4,7 +4,7 @@ module kernels
     implicit none
     
     private
-    public :: default_MCRT, escape_Function, test_kernel
+    public :: default_MCRT, escape_Function, inverse_MCRT, test_kernel
 
 contains
 !###############################################################################
@@ -597,7 +597,6 @@ contains
 
         !set the emissin location to the centre of the voxel
         call set_photon(position, vector(0.0_wp,0.0_wp,0.0_wp))
-        packet = photon(state%source)
         packet%pos = position
 
         ! get the layer at this position
@@ -605,7 +604,7 @@ contains
         do loopCounter = 1, size(distances)
             distances(loopCounter) = array(loopCounter)%evaluate(position)
         end do
-        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+        layer=(maxloc(distances,dim=1, mask=(distances<0._wp)))
 
         !is this point inside the defined geometry
         if (layer == 0) then
@@ -1027,7 +1026,6 @@ contains
 
         !set the emissin location to the centre of the voxel
         call set_photon(position, vector(0.0_wp,0.0_wp,0.0_wp))
-        packet = photon(state%source)
         packet%pos = position
 
         ! get the layer at this position
@@ -1035,7 +1033,7 @@ contains
         do loopCounter = 1, size(distances)
         distances(loopCounter) = array(loopCounter)%evaluate(position)
         end do
-        layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+        layer=(maxloc(distances,dim=1, mask=(distances<0._wp)))
 
         !is this point inside the defined geometry
         if (layer == 0) then
@@ -1461,6 +1459,162 @@ contains
         end do
     end subroutine cyl_map_escape_sym
 
+    subroutine inverse_MCRT(input_file)
+
+        !Shared data
+        use iarray
+        use constants, only : wp
+
+        !subroutines
+        use detectors,     only : dect_array
+        use historyStack,  only : history_stack_t
+        use photonMod,     only : photon
+        use piecewiseMod
+        use random,        only : ran2, init_rng
+        use sdfs,          only : sdf
+        use sim_state_mod, only : state
+
+        !external deps
+        use tev_mod, only : tevipc
+        use tomlf,   only : toml_table, get_value
+#ifdef _OPENMP
+        use omp_lib
+#endif
+        character(len=*), intent(in) :: input_file
+        
+        integer                       :: j
+        type(history_stack_t)         :: history
+        type(photon)                  :: packet
+        type(toml_table)              :: dict
+        real(kind=wp),    allocatable :: distances(:), image(:,:,:)
+        type(dect_array), allocatable :: dects(:)
+        type(sdf),        allocatable :: array(:)
+        real(kind=wp)                 :: nscatt, start
+        type(spectrum_t)              :: spectrum
+        type(tevipc)                  :: tev
+
+        integer :: nphotons_run,pos
+        character(len=128) :: line
+        character(len=:), allocatable :: checkpt_input_file
+
+        integer :: maxNumSteps, layer
+        real(kind = wp) :: maxStepSize, gradStepSize, accuracy
+        logical :: findmua, findmus, findg, findn
+
+        if(state%loadckpt)then
+            call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .false.)
+            open(newunit=j,file=state%ckptfile, access="stream", form="formatted")
+            read(j,"(a)")line
+            pos = scan(line, "=")
+            checkpt_input_file = trim(line(pos+1:))
+
+            read(j,"(a)")line
+            pos = scan(line, "=")
+            read(line(pos+1:),*) nphotons_run
+
+            inquire(j,pos=pos)
+            close(j)
+
+            open(newunit=j,file=state%ckptfile, access="stream", form="unformatted")
+            read(j,pos=pos)jmean
+            close(j)
+
+            call setup(checkpt_input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
+            state%iseed=state%iseed*101
+            state%nphotons = state%nphotons - nphotons_run
+        else
+            call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
+        end if
+
+        
+        call get_value(dict, "maxStepSize", maxStepSize)
+        call get_value(dict, "gradStepSize", gradStepSize)
+        call get_value(dict, "accuracy", accuracy)
+        call get_value(dict, "maxNumSteps", maxNumSteps)
+        call get_value(dict, "Findmua", findmua)
+        call get_value(dict, "Findmus", findmus)
+        call get_value(dict, "Findg", findg)
+        call get_value(dict, "Findn", findn)
+        call get_value(dict, "inverseLayer", layer)
+
+        print*, maxStepSize, maxNumSteps, layer
+        print*, gradStepSize, accuracy
+        print*, findmua, findmus, findg, findn
+
+
+
+        call run_MCRT(input_file, history, packet, dict, & 
+                        distances, image, dects, array, nscatt, start, & 
+                        tev, spectrum)
+
+        call finalise(dict, dects, nscatt, start, history)
+
+        !need to setup with some initial optical properties
+        !need some method to update the initial optical properties every time without completely redifining everything
+
+        !need to perform gradient descent on each of the given parameters
+        !add some if statement maybe to test which of the three or four optical parameters that we perform gradient descent on
+        ! do we perform gradient descent on mua?
+        ! do we perform gradient descent on mus?
+        ! do we perform gradient descent on g?
+        ! do we perform gradient descent on n? add a boolean tracker in the inverse dict of the toml to decide if we do and use the default values given in the initial setup
+        ! use 
+        ! have some adaptive loop that enables us to perform gradient descent on any 
+        !   combination of these three adapting these optical properties of a given layer
+
+        !need to unallocate array and reallocate it after updating the optical properties each time
+        !call setup_simulation(array, dict)
+
+        !inverseLayer = !integer
+        !trialOptProp = !mono(mus, mua, hgg, n)
+
+        !do i = 1, size(array)
+        !    if array(i)%getLayer() == inverseLayer then 
+        !        array(i)%updateOptProp(trialOptProp)
+        !    end if
+        !end do
+
+        ! to update the optical properties
+        ! for i in len(array)
+        !       if array%getlayer == inverseLayer then
+        !           array%updateopticalproperties
+        !       end if
+        ! end for
+        !
+        ! if gradDesmua then
+        !   step in gradDesmua and calculate the grad in gradDesmua
+        !   add the gradient to a global grad value
+        !   add the square to a global grad mag value
+        !   reset optical properties
+        ! elif gradDesmus then
+        !   ...
+        ! elif gradDesg then
+        !   ...
+        ! elif gradDesn then
+        !   ...
+        ! end if
+        ! normalise global grad value by dividing by the srqt of the global grad mag
+        ! go through another series of if and elif statements updating mus, mua, g, n by newMus = mus - grad*stepSize
+        ! evaluate the function at this point, if it is greater than the previous evaluation halve the stepSize and repeat
+
+        ! for evaluation funtion I will need to loop through the detectors and compare the inverse value with the read value if there is a non-negative inverse value
+        ! if the inverse value is not defined it is set as negative, and this means that this detector is to be ignored in the code. This will be the default value.
+        ! the default for inverse will have findmua and find... to be false
+
+
+        ! update parse to include inverse and detector parse to include a inverse default value, partially done
+        ! update detectors to include the inverse default value
+        ! add functionality to change the optical properties of a layer in the sdf array, done but not tested
+        ! 
+
+        !big goals, get the run_MCRT running on the GPU thus speeding up the program exponentially
+        !add more SDFs, and add a tool to create a smooth SDF from a given grid mesh 
+
+        
+
+    end subroutine inverse_MCRT
+
+
     subroutine run_MCRT(input_file, history, packet, dict, & 
                         distances, image, dects, array, nscatt, start, & 
                         tev, spectrum)
@@ -1623,7 +1777,7 @@ contains
         do i = 1, size(distances)
             distances(i) = array(i)%evaluate(packet%pos)
         end do
-        packet%layer=maxloc(distances,dim=1, mask=(distances<0._wp))
+        packet%layer=(maxloc(distances,dim=1, mask=(distances<0._wp)))
         
         if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
         ! Find scattering location
@@ -1807,7 +1961,7 @@ contains
                 distances(i) = array(i)%evaluate(packet%pos)
                 !if(distances(i) > 0._wp)distances(i)=-999.0_wp
             end do
-            packet%layer=maxloc(distances,dim=1, mask=(distances<=0._wp))
+            packet%layer=(maxloc(distances,dim=1, mask=(distances<=0._wp)))
 
             ! Find scattering location
             call tauint2(state%grid, packet, array, dects, history)

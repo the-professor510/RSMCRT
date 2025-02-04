@@ -37,6 +37,7 @@ contains
         type(fibre_dect), target, save, allocatable :: dect_f(:)
         type(camera), target, save, allocatable :: dect_cam(:)
         integer :: i, c_counter, a_counter, f_counter, cam_counter, j, k,origin, l
+        real(kind=wp) :: targetValue
 
         c_counter = 0
         a_counter = 0
@@ -98,18 +99,19 @@ contains
             call get_value(child, "type", dect_type)
             call get_value(child, "ID", dect_ID, "none", origin=origin)
             call get_value(child, "historyFileName", state%historyFilename, "photPos.obj")
+            call get_value(child, "inverseTarget", targetValue, -1._wp)
             select case(dect_type)
             case("circle")
-                call handle_circle_dect(child, dect_c, c_counter, context, error, dect_ID)
+                call handle_circle_dect(child, dect_c, c_counter, context, error, dect_ID, targetValue)
                 if(allocated(error))return
             case("annulus")
-                call handle_annulus_dect(child, dect_a, a_counter, context, error, dect_ID)
+                call handle_annulus_dect(child, dect_a, a_counter, context, error, dect_ID, targetValue)
                 if(allocated(error))return
             case("fibre")
-                call handle_fibre_collection_dect(child, dect_f, f_counter, context, error, dect_ID)
+                call handle_fibre_collection_dect(child, dect_f, f_counter, context, error, dect_ID, targetValue)
                 if(allocated(error))return
             case("camera")
-                call handle_camera(child, dect_cam, cam_counter, context, error, dect_ID)
+                call handle_camera(child, dect_cam, cam_counter, context, error, dect_ID, targetValue)
                 if(allocated(error))return
             end select
         end do
@@ -138,7 +140,7 @@ contains
 
     end subroutine parse_detectors
 
-    subroutine handle_camera(child, dects, counts, context, error, dect_ID)
+    subroutine handle_camera(child, dects, counts, context, error, dect_ID, targetValue)
         !! Read in Camera settings and initalise variable
         use detectors,     only : camera
         use sim_state_mod, only : state
@@ -155,6 +157,8 @@ contains
         type(toml_error), allocatable, intent(out)   :: error
         !> Detector ID
         character(len=:), allocatable, intent(in)    :: dect_ID
+        !> Target Value used for inverse MCRT
+        real(kind=wp), intent(in) :: targetValue
 
         integer       :: layer, nbins
         real(kind=wp) :: maxval
@@ -176,12 +180,12 @@ contains
             return
         end if
 #endif
-        dects(counts) = camera(p1, p2, p3, layer, nbins, maxval, trackHistory, dect_ID)
+        dects(counts) = camera(p1, p2, p3, layer, nbins, maxval, trackHistory, dect_ID, targetValue)
         counts = counts + 1
 
     end subroutine handle_camera
 
-    subroutine handle_circle_dect(child, dects, counts, context, error, dect_ID)
+    subroutine handle_circle_dect(child, dects, counts, context, error, dect_ID, targetValue)
         !! Read in Circle_detector settings and initalise variable
         use detectors,     only : circle_dect
         use sim_state_mod, only : state
@@ -198,6 +202,8 @@ contains
         type(toml_error), allocatable, intent(out)   :: error
         !> Detector ID
         character(len=:), allocatable, intent(in)    :: dect_ID
+        !> Target Value used for inverse MCRT
+        real(kind=wp), intent(in) :: targetValue
 
         integer       :: layer, nbins
         real(kind=wp) :: maxval, radius
@@ -219,12 +225,12 @@ contains
             return
         end if
 #endif
-        dects(counts) = circle_dect(pos, dir, layer, radius, nbins, trackHistory, dect_ID)
+        dects(counts) = circle_dect(pos, dir, layer, radius, nbins, trackHistory, dect_ID, targetValue)
         counts = counts + 1
 
     end subroutine handle_circle_dect
 
-    subroutine handle_fibre_collection_dect(child, dects, counts, context, error, dect_ID)
+    subroutine handle_fibre_collection_dect(child, dects, counts, context, error, dect_ID, targetValue)
         !! Read in handle_fibre_collection_dector settings and initalise variable
         use detectors,     only : fibre_dect
         use sim_state_mod, only : state
@@ -241,6 +247,8 @@ contains
         type(toml_error), allocatable, intent(out)   :: error
         !> Detector ID
         character(len=:), allocatable, intent(in)    :: dect_ID
+        !> Target Value used for inverse MCRT
+        real(kind=wp), intent(in) :: targetValue
 
         integer       :: layer, nbins
         real(kind=wp) :: maxval
@@ -279,12 +287,13 @@ contains
 #endif
         dects(counts) = fibre_dect(pos, dir, layer, nbins, maxval, trackHistory, focalLength1, & 
                                     focalLength2, f1Aperture, f2Aperture, frontOffset, backOffset, & 
-                                    frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter, dect_ID)
+                                    frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter, & 
+                                    dect_ID, targetValue)
         counts = counts + 1
 
     end subroutine handle_fibre_collection_dect
 
-    subroutine handle_annulus_dect(child, dects, counts, context, error, dect_ID)
+    subroutine handle_annulus_dect(child, dects, counts, context, error, dect_ID, targetValue)
         !! Read in Annulus_detector settings and initalise variable
         
         use detectors,     only : annulus_dect
@@ -303,6 +312,8 @@ contains
         type(toml_error), allocatable, intent(out)   :: error
         !> Detector ID
         character(len=:), allocatable, intent(in)    :: dect_ID
+        !> Target Value used for inverse MCRT
+        real(kind=wp), intent(in) :: targetValue
 
 
         integer       :: layer, nbins, origin
@@ -333,7 +344,7 @@ contains
             return
         end if
 #endif
-        dects(counts) = annulus_dect(pos, dir, layer, radius1, radius2, nbins, maxval, trackHistory, dect_ID)
+        dects(counts) = annulus_dect(pos, dir, layer, radius1, radius2, nbins, maxval, trackHistory, dect_ID, targetValue)
         counts = counts + 1
     end subroutine handle_annulus_dect
 end module parse_detectorsMod
