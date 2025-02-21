@@ -1507,12 +1507,10 @@ contains
         real(kind=wp) :: mus, mua, hgg, n
         integer :: i, SDF_array_index
 
-        real(kind = wp) :: gradient(4), tempGrad, dotGrad
+
         integer :: NoVariablesToOptimize
-        real(kind = wp) :: x1, x2, y1, y2
         type(opticalProp_t) :: trialOptProp
 
-        real(kind=wp) :: epoch(4), gamma, learning_rate
 
         real(kind=wp) :: probability, alpha, k
         real(kind=wp) :: musboundupper, musboundlower, muaboundupper, muaboundlower
@@ -1521,13 +1519,10 @@ contains
         real(kind=wp) :: minError, maxRatio, ratioCounter
         real(kind=wp), allocatable :: ratios(:)
 
-        integer :: maxNumMus, maxNumMua, u
-        real(kind=wp) :: startMus, MusStep, startMua, MuaStep 
-        real(kind=wp), allocatable :: dataToExport(:,:)
+        real(kind=wp) :: ran !used to temporarily store a random number
+        real(kind=wp) :: leftMin, rightMax !sides of the LIPO condition
+        real(kind=wp) :: runningTotal
 
-        epoch = 0._wp
-        gamma = 0.9
-        learning_rate = 0.1
 
         if(state%loadckpt)then
             call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .false.)
@@ -1603,7 +1598,7 @@ contains
             print*, "Selected layer not found in SDF array please choose a layer inside the SDF array"
             return
         end if
-        
+
 
         !set the values for AdaLIPO
         probability = 1.0_wp
@@ -1694,6 +1689,11 @@ contains
                 end if
 
                 nb_samples = nb_samples + 1
+
+                !update the optical properties
+                trialOptProp = mono(mus, mua, hgg, n)
+                temp = array(SDF_array_index)%updateOptProp(trialOptProp)
+
                 !evaluate, by running MCRT
                 call run_MCRT(input_file, history, packet, dict, & 
                             distances, image, dects, array, nscatt, start, & 
@@ -1728,7 +1728,11 @@ contains
                         gradDescentData(i,4) = n
                     end if
 
-                    left_min = min(gradDescentData + k * (gradDescentData(i,1)**2) )
+                    !update the optical properties
+                    trialOptProp = mono(mus, mua, hgg, n)
+                    temp = array(SDF_array_index)%updateOptProp(trialOptProp)
+
+                    !left_min = min(gradDescentData + k * (gradDescentData(i,1)**2) )
                 end do
             end if
         end do
