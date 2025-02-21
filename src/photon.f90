@@ -854,7 +854,7 @@ module photonMod
             use tomlf,         only : toml_table, get_value
             use sdfHelpers,    only : rotationAlign, translate
             use mat_class,     only : invert
-            use random,        only : ran2, rang, seq
+            use random,        only : ran2, rang, seq, ranu
             use sim_state_mod, only : state
             use piecewiseMod
 
@@ -881,7 +881,10 @@ module photonMod
             call get_value(dict, "rotation%z", rotationz)
 
             if(beam_type == "tophat")then
-                radius = rlo + (rhi - rlo) * sqrt(ran2())
+                radius = sqrt(rlo**2 + (rhi**2 - rlo**2) * ran2())
+                mid = (rhi + rlo) / 2._wp
+            elseif(beam_type == "besselAnnulus")then
+                radius = rlo + (rhi-rlo) * ran2()
                 mid = (rhi + rlo) / 2._wp
             elseif(beam_type == "gaussian")then
                 mid = (rhi + rlo) / 2._wp
