@@ -1,0 +1,57 @@
+[source]
+name = "annulus"
+nphotons = 10000000
+position = [-1.5,0.0,0.0]
+rotation = [1.0,0.0,0.0]
+direction = "x"
+rhi = 0.52
+rlo = 0.48
+sigma = 0.05
+annulus_type = "besselAnnulus"
+focalLength = 1.5
+
+[grid]
+nxg = 301
+nyg = 301
+nzg = 301
+xmax = 1.5
+ymax = 1.0
+zmax = 1.0
+
+[geometry]
+geom_name = "box"
+boundingBox = [3.0,2.0,2.0]
+BoxDimensions = [0.0,2.0,2.0]
+position = [-0.75,0.0,0.0]
+mus = [10.0]
+mua = [0.075]
+hgg = [0.0]
+n = [1.0]
+
+[inverse]
+maxStepSize = 1
+gradStepSize = 0.0005
+accuracy = 0.001
+maxNumSteps = 30000
+Findmua = true
+Findmus = true
+Findg = false
+Findn = false
+layer = 1
+
+
+[output]
+fluence = "fluence.nrrd"
+render_geometry_name = "geom_render.nrrd"
+render_geometry = true
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [200,200,200]
+overwrite = true
+
+[simulation]
+iseed = 123456789
+absorb=true
+load_checkpoint=false
+checkpoint_file="check.ckpt"
+checkpoint_every_n=10000
