@@ -1463,7 +1463,7 @@ contains
 
         !Shared data
         use iarray
-        use constants, only : wp
+        use constants, only : wp, fileplace
 
         !subroutines
         use detectors,     only : dect_array
@@ -1514,6 +1514,17 @@ contains
 
         real(kind=wp) :: epoch(4), gamma, learning_rate
 
+        real(kind=wp) :: probability, alpha, k
+        real(kind=wp) :: musboundupper, musboundlower, muaboundupper, muaboundlower
+        real(kind=wp) :: gboundupper, gboundlower, nboundupper, nboundlower
+        integer :: nb_samples, indexOfMinError, indexOfMaxRatio
+        real(kind=wp) :: minError, maxRatio, ratioCounter
+        real(kind=wp), allocatable :: ratios(:)
+
+        integer :: maxNumMus, maxNumMua, u
+        real(kind=wp) :: startMus, MusStep, startMua, MuaStep 
+        real(kind=wp), allocatable :: dataToExport(:,:)
+
         epoch = 0._wp
         gamma = 0.9
         learning_rate = 0.1
@@ -1543,7 +1554,7 @@ contains
             call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
         end if
 
-        !read in the data used in gardient Descent
+        !read in the data used in gardient Descent or AdaLIPO
         call get_value(dict, "maxStepSize", maxStepSize)
         call get_value(dict, "gradStepSize", gradStepSize)
         call get_value(dict, "accuracy", accuracy)
@@ -1592,332 +1603,136 @@ contains
             print*, "Selected layer not found in SDF array please choose a layer inside the SDF array"
             return
         end if
+        
 
-        !initialise array storing the guessed values for mua, mus, g, n, and their associated error
-        !(:, 1) = mus
-        !(:, 1) = mua
-        !(:, 1) = hgg
-        !(:, 1) = n
-        !(:, 1) = error
+        !set the values for AdaLIPO
+        probability = 1.0_wp
+        alpha = 0.01
+        nb_samples = 0
+        k = 0.0_wp
+
+        musboundlower = 0.0_wp
+        musboundupper = 100.0_wp
+        muaboundlower = 0.0_wp
+        muaboundupper = 100.0_wp
+        gboundlower = -1.0_wp
+        gboundupper = 1.0_wp
+        nboundlower = 1.0_wp
+        nboundupper = 20.0_wp
+
+
         allocate(gradDescentData(maxNumSteps, 5))
-        gradDescentData = 0._wp
+        if (findmus) then
+            gradDescentData(1,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+        else 
+            gradDescentData(1,1) = mus
+        end if 
+        if (findmua) then
+            gradDescentData(1,2) = ran2() * (muaboundupper-muaboundlower) + muaboundlower
+        else
+            gradDescentData(1,2) = mua
+        end if 
+        if (findg) then
+            gradDescentData(1,3) = ran2() * (gboundupper-gboundlower) + gboundlower
+        else 
+            gradDescentData(1,3) = hgg
+        end if 
+        if (findn) then
+            gradDescentData(1,4) = ran2() * (nboundupper-nboundlower) + nboundlower
+        else 
+            gradDescentData(1,4) = n
+        end if
 
-        gradDescentData(1,1) = mus
-        gradDescentData(1,2) = mua
-        gradDescentData(1,3) = hgg
-        gradDescentData(1,4) = n
-
+        !evaluate, by running MCRT
         call run_MCRT(input_file, history, packet, dict, & 
                         distances, image, dects, array, nscatt, start, & 
                         tev, spectrum)
-
         error = 0._wp
         call inverse_evaluate(dects, error)
         gradDescentData(1,5) = error
 
         ! reset the arrays storing data
-        call reset(dects)        
+        call reset(dects)  
 
-        !perform gradient descent for maxNumSteps or until error<accuracy
+        !store the position of minimum error
+        minError = gradDescentData(1,5)
+        indexOfMinError = 1
+
+        !allocate the ratio array (it will be of the size maxNumSteps triangular number)
+        allocate(ratios(int(nint(maxNumSteps * (maxNumSteps+1)/2.0_wp))))
+        ratios = 0.0_wp
+        ratioCounter = 1
+        maxRatio = 1
+        indexOfMaxRatio = 1
+
         do i = 2, maxNumSteps
 
-            !reset the gradient
-            gradient = 0._wp 
-            dotGrad = 0._wp
-
-            !what is the gradient in mus
-            if (findmus) then
-                x1 = mus
-                x2 = mus + gradStepSize
-
-                !mus cannot be less than 0
-                if(x2 < 0.0_wp) x2 = 0.0_wp
-
-                y1 = gradDescentData((i-1), 5)
-                
-                !find y2 by find the error if we change mus                
-                trialOptProp = mono(x2, mua, hgg, n)
-                temp = array(SDF_array_index)%updateOptProp(trialOptProp)
-
-                call run_MCRT(input_file, history, packet, dict, & 
-                        distances, image, dects, array, nscatt, start, & 
-                        tev, spectrum)
-
-                y2 = 0._wp
-                call inverse_evaluate(dects, y2)
-                
-                ! reset the arrays storing data
-                call reset(dects)
-
-                !calculate the gradient in mus add it to the 
-                tempGrad = (y2 - y1)/(x2 - x1)
-                gradient(1) = tempGrad
-                dotGrad = dotGrad + tempGrad*tempGrad
-            end if
-
-            !what is the gradient in mua
-            if (findmua) then
-                x1 = mua
-                x2 = mua + gradStepSize
-
-                !mua cannot be less than 0
-                if(x2 < 0.0_wp) x2 = 0.0_wp
-
-                y1 = gradDescentData((i-1), 5)
-                
-                !find y2 by find the error if we change mus                
-                trialOptProp = mono(mus, x2, hgg, n)
-                temp = array(SDF_array_index)%updateOptProp(trialOptProp)
-
-                call run_MCRT(input_file, history, packet, dict, & 
-                        distances, image, dects, array, nscatt, start, & 
-                        tev, spectrum)
-
-                y2 = 0._wp
-                call inverse_evaluate(dects, y2)
-                
-                ! reset the arrays storing data
-                call reset(dects)
-
-                tempGrad = (y2 - y1)/(x2 - x1)
-                gradient(2) = tempGrad
-                dotGrad = dotGrad + tempGrad*tempGrad
-            end if
-
-            !what is the gradient in hgg
-            if (findg) then
-                x1 = hgg
-                x2 = hgg + gradStepSize
-
-                !hgg cannot be less than -1.0 or greater than 1.0
-                if(x2 < -1.0_wp) x2 = -1.0_wp
-                if(x2 > 1.0_wp) x2 = 1.0_wp
-
-                y1 = gradDescentData((i-1), 5)
-                
-                !find y2 by find the error if we change mus                
-                trialOptProp = mono(mus, mua, x2, n)
-                temp = array(SDF_array_index)%updateOptProp(trialOptProp)
-
-                call run_MCRT(input_file, history, packet, dict, & 
-                        distances, image, dects, array, nscatt, start, & 
-                        tev, spectrum)
-
-                y2 = 0._wp
-                call inverse_evaluate(dects, y2)
-                
-                ! reset the arrays storing data
-                call reset(dects)
-
-                tempGrad = (y2 - y1)/(x2 - x1)
-                gradient(3) = tempGrad
-                dotGrad = dotGrad + tempGrad*tempGrad
-            end if
-
-            !what is the gradient in n
-            if (findn) then
-                x1 = n
-                x2 = n + gradStepSize
-
-                !n cannot be less than 1.0
-                if(x2 < 1.0_wp) x2 = 1.0_wp
-
-                y1 = gradDescentData((i-1), 5)
-                
-                !find y2 by find the error if we change mus                
-                trialOptProp = mono(mus, mua, hgg, x2)
-                temp = array(SDF_array_index)%updateOptProp(trialOptProp)
-
-                call run_MCRT(input_file, history, packet, dict, & 
-                        distances, image, dects, array, nscatt, start, & 
-                        tev, spectrum)
-
-                y2 = 0._wp
-                call inverse_evaluate(dects, y2)
-                
-                ! reset the arrays storing data
-                call reset(dects)
-
-                tempGrad = (y2 - y1)/(x2 - x1)
-                gradient(4) = tempGrad
-                dotGrad = dotGrad + tempGrad*tempGrad
-            end if
-
             
-            !method of RMSprop
-            !works when we are close to the initial optimum values
-            !need more work for when we are far away from the optimum values
-            !update the epochs
-            epoch(1) = gamma * epoch(1) + (1-gamma) * gradient(1)**2
-            epoch(2) = gamma * epoch(2) + (1-gamma) * gradient(2)**2
-            epoch(3) = gamma * epoch(3) + (1-gamma) * gradient(3)**2
-            epoch(4) = gamma * epoch(4) + (1-gamma) * gradient(4)**2
-
-            !update the optical properties
-            if (findmus) then
-                mus = mus - learning_rate * gradient(1) / sqrt(epoch(1) + 1e-8_wp)
-
-                !mus cannot be less than 0
-                if(mus < 0.0_wp) mus = 0.0_wp
-            end if
-            if (findmua) then
-                mua = mua - learning_rate * gradient(2) / sqrt(epoch(2) + 1e-8_wp)
-
-                !mua cannot be less than 0
-                if(mua < 0.0_wp) mua = 0.0_wp
-            end if
-            if (findg) then
-                hgg = hgg - learning_rate * gradient(3) / sqrt(epoch(3) + 1e-8_wp)
-
-                !hgg cannot be less than -1.0 or greater than 1.0
-                if(hgg < -1.0_wp) hgg = -1.0_wp
-                if(hgg > 1.0_wp) hgg = 1.0_wp
-            end if
-            if (findn) then
-                n = n - learning_rate * gradient(4) / sqrt(epoch(4) + 1e-8_wp)
-
-                !n cannot be less than 1.0
-                if(n < 1.0_wp) n = 1.0_wp
-            end if
-
-            trialOptProp = mono(mus, mua, hgg, n)
-            temp = array(SDF_array_index)%updateOptProp(trialOptProp)
-
-            call run_MCRT(input_file, history, packet, dict, & 
-                    distances, image, dects, array, nscatt, start, & 
-                    tev, spectrum)
-
-            error = 0._wp
-            call inverse_evaluate(dects, error)
-            
-            ! reset the arrays storing data
-            call reset(dects)
-
-
-            !works but could be very slow
-
-            !!update the optical properties
-            !if (findmus) then
-            !    mus = mus - gradient(1)*maxStepSize
-!
-            !    !mus cannot be less than 0
-            !    if(mus < 0.0_wp) mus = 0.0_wp
-            !end if
-            !if (findmua) then
-            !    mua = mua - gradient(2)*maxStepSize
-!
-            !    !mua cannot be less than 0
-            !    if(mua < 0.0_wp) mua = 0.0_wp
-            !end if
-            !if (findg) then
-            !    hgg = hgg - gradient(3)*maxStepSize
-!
-            !    !hgg cannot be less than -1.0 or greater than 1.0
-            !    if(hgg < -1.0_wp) hgg = -1.0_wp
-            !    if(hgg > 1.0_wp) hgg = 1.0_wp
-            !end if
-            !if (findn) then
-            !    n = n - gradient(4)*maxStepSize
-!
-            !    !n cannot be less than 1.0
-            !    if(n < 1.0_wp) n = 1.0_wp
-            !end if
-!
-            !!find error after changes in mus, mua, hgg, and n                
-            !trialOptProp = mono(mus, mua, hgg, n)
-            !temp = array(SDF_array_index)%updateOptProp(trialOptProp)
-!
-            !call run_MCRT(input_file, history, packet, dict, & 
-            !        distances, image, dects, array, nscatt, start, & 
-            !        tev, spectrum)
-!
-            !error = 0._wp
-            !call inverse_evaluate(dects, error)
-            !
-            !! reset the arrays storing data
-            !call reset(dects)
-!
-            !
-            !!while the error is greater than the current error halve the stepsize and recalculate the error
-            !do while(error > gradDescentData(i-1,5))
-!
-            !    maxStepSize = maxStepSize/2
-            !    !if the maxStepSize is too small we are in a minima
-            !    if(maxStepSize < 0.0001) then
-            !        exit
-            !    end if
-!
-            !    !update the optical properties
-            !    if (findmus) then
-            !        mus = mus - gradient(1)*maxStepSize
-!
-            !        !mus cannot be less than 0
-            !        if(x2 < 0.0_wp) x2 = 0.0_wp
-            !    end if
-            !    if (findmua) then
-            !        mua = mua - gradient(2)*maxStepSize
-!
-            !        !mua cannot be less than 0
-            !        if(x2 < 0.0_wp) x2 = 0.0_wp
-            !    end if
-            !    if (findg) then
-            !        hgg = hgg - gradient(3)*maxStepSize
-!
-            !        !hgg cannot be less than -1.0 or greater than 1.0
-            !        if(x2 < -1.0_wp) x2 = -1.0_wp
-            !        if(x2 > 1.0_wp) x2 = 1.0_wp
-            !    end if
-            !    if (findn) then
-            !        n = n - gradient(4)*maxStepSize
-!
-            !        !n cannot be less than 1.0
-            !        if(x2 < 1.0_wp) x2 = 1.0_wp
-            !    end if
-!
-            !    !find error after changes in mus, mua, hgg, and n                
-            !    trialOptProp = mono(mus, mua, hgg, n)
-            !    temp = array(SDF_array_index)%updateOptProp(trialOptProp)
-!
-            !    call run_MCRT(input_file, history, packet, dict, & 
-            !            distances, image, dects, array, nscatt, start, & 
-            !            tev, spectrum)
-!
-            !    error = 0._wp
-            !    call inverse_evaluate(dects, error)
-            !    
-            !    ! reset the arrays storing data
-            !    call reset(dects)
-            !end do
-            
-            !store the new optical properties and the associate error
-            gradDescentData(i,1) = mus
-            gradDescentData(i,2) = mua
-            gradDescentData(i,3) = hgg
-            gradDescentData(i,4) = n
-            gradDescentData(i,5) = error
-
-            print*, ""
-            print*, "Number of Steps Run: ", i
-            print*, "Step size", maxStepSize
-            print*, "mus: ", mus
-            print*, "mua: ", mua
-            print*, "hgg: ", hgg
-            print*, "n: ", n
-            print*, "error: ", error 
-            print*, "gradient: ", dotGrad
-            print*, ""
-
-            !check if the error meets the accuracy target
-            if (gradDescentData(i,5) <= accuracy) then
-                print*, "Exit due to being below accuracy"
-                exit
-            else if(dotGrad <= 0.0000001_wp) then
-                if(gradDescentData(i,5) < gradDescentData(i-1,5)) then
-                    print*, "Exit Due to finding local minima"
-                    exit
+            ran = ran2()
+            if( ran <= 1.0_wp) then
+                !we are in the explore stage
+                !get the new guesses for the mua, mus, n, and g
+                if (findmus) then
+                    gradDescentData(i,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+                else 
+                    gradDescentData(i,1) = mus
+                end if 
+                if (findmua) then
+                    gradDescentData(i,2) = ran2() * (muaboundupper-muaboundlower) + muaboundlower
+                else
+                    gradDescentData(i,2) = mua
+                end if 
+                if (findg) then
+                    gradDescentData(i,3) = ran2() * (gboundupper-gboundlower) + gboundlower
+                else 
+                    gradDescentData(i,3) = hgg
+                end if 
+                if (findn) then
+                    gradDescentData(i,4) = ran2() * (nboundupper-nboundlower) + nboundlower
+                else 
+                    gradDescentData(i,4) = n
                 end if
+
+                nb_samples = nb_samples + 1
+                !evaluate, by running MCRT
+                call run_MCRT(input_file, history, packet, dict, & 
+                            distances, image, dects, array, nscatt, start, & 
+                            tev, spectrum)
+                error = 0._wp
+                call inverse_evaluate(dects, error)
+                gradDescentData(i,5) = error
+
+                ! reset the arrays storing data
+                call reset(dects) 
+            else
+                do while(.true.)
+                    !get the new guesses for the mua, mus, n, and g
+                    if (findmus) then
+                        gradDescentData(i,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+                    else 
+                        gradDescentData(i,1) = mus
+                    end if 
+                    if (findmua) then
+                        gradDescentData(i,2) = ran2() * (muaboundupper-muaboundlower) + muaboundlower
+                    else
+                        gradDescentData(i,2) = mua
+                    end if 
+                    if (findg) then
+                        gradDescentData(i,3) = ran2() * (gboundupper-gboundlower) + gboundlower
+                    else 
+                        gradDescentData(i,3) = hgg
+                    end if 
+                    if (findn) then
+                        gradDescentData(i,4) = ran2() * (nboundupper-nboundlower) + nboundlower
+                    else 
+                        gradDescentData(i,4) = n
+                    end if
+
+                    left_min = min(gradDescentData + k * (gradDescentData(i,1)**2) )
+                end do
             end if
         end do
+        
         
         !we have finished the gradient descent output the gradDescentData to a file and write the error
         
@@ -1963,7 +1778,7 @@ contains
             end if
         end do
 
-        error = error/counter
+        error = -error/counter
 
     end subroutine inverse_evaluate
 
