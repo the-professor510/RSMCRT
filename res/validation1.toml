@@ -1,6 +1,6 @@
 [source]
 name = "pencil"
-nphotons = 1000000
+nphotons = 100000
 direction = "z"
 position = [0.0,0.0,-0.01]
 spectrum_type = "constant"
@@ -19,10 +19,21 @@ geom_name = "box"
 BoxDimensions = [100.0,100.0,0.02]
 boundingBox = [100.0,100.0,0.03]
 position = [0.0,0.0,0.0]
-mus = [90]
+mus = [90.0]
+mua = [10.0]
 hgg = [0.75]
-mua = [10]
 n = [1.0]
+
+[inverse]
+maxStepSize = 1
+gradStepSize = 0.0005
+accuracy = 0.001
+maxNumSteps = 1000
+Findmus = true
+Findmua = true
+Findg = false
+Findn = false
+layer = 1
 
 [[detectors]]
 type="circle"
@@ -33,6 +44,7 @@ radius=20
 nbins=100
 maxval = 1.0
 trackHistory=false
+inverseTarget = 0.09746
 
 [[detectors]]
 type="circle"
@@ -43,6 +55,7 @@ radius=20
 nbins=100
 maxval = 1.0
 trackHistory=false
+inverseTarget = 0.66065
 
 [output]
 fluence = "fluence.nrrd"

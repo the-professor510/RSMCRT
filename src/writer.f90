@@ -19,7 +19,7 @@ module writer_mod
     end interface raw_write
 
     private
-    public :: normalise_fluence, write_data, write_detected_photons, checkpoint, write_escape
+    public :: normalise_fluence, write_data, write_detected_photons, checkpoint, write_escape, write_inverse
 
     contains
         subroutine normalise_fluence(grid, array, nphotons)
@@ -132,6 +132,38 @@ module writer_mod
             end do
 
         end subroutine write_detected_photons
+
+        subroutine write_inverse(optimizeData, fileName, numGuesses, bestGuess)
+
+            use detectors
+            use constants, only: fileplace, wp
+            use utils, only : str
+            use sim_state_mod, only : state
+
+            real(kind=wp), intent(inout) :: optimizeData(:,:)
+            character(*), intent(inout) :: fileName
+            integer, intent(inout) :: numGuesses
+            integer, intent(inout) :: bestGuess
+
+            integer :: i, j, u, test
+            character(len=:), allocatable :: hdr
+
+                
+            open(newunit=u,file=trim(fileplace)//"inverse/"//fileName//".dat",&
+                access='stream',status='REPLACE',form='unformatted')
+            write(u) (real(bestGuess, kind=wp) - 0.999)   !index of best guess
+            write(u) optimizeData(bestGuess, 1) !best guess mus
+            write(u) optimizeData(bestGuess, 2) !best guess mua
+            write(u) optimizeData(bestGuess, 3) !best guess hgg
+            write(u) optimizeData(bestGuess, 4) !best guess n
+            write(u) optimizeData(bestGuess, 5) !best guess error
+            do i = 1, numGuesses 
+                write(u) optimizeData(i, 1), optimizeData(i, 2), optimizeData(i,3), optimizeData(i,4), optimizeData(i,5)
+            end do
+            close(u)
+
+
+        end subroutine write_inverse
 
         subroutine write_escape(dects, dict, overwrite)
 

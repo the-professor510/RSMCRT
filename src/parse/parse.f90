@@ -358,6 +358,11 @@ module parse_mod
         integer :: maxNumSteps, layer
         real(kind = wp) :: maxStepSize, gradStepSize, accuracy
         logical :: findmua, findmus, findg, findn
+        character(len=:), allocatable :: outputFile
+        real(kind=wp) :: muaUpper, muaLower
+        real(kind=wp) :: musUpper, musLower
+        real(kind=wp) :: hggUpper, hggLower
+        real(kind=wp) :: nUpper, nLower
 
         call get_value(table, "inverse", child)
 
@@ -387,6 +392,86 @@ module parse_mod
             call get_value(child, "Findn", findn, .false.)
             call set_value(dict, "Findn", findn)
 
+            !get bounds on mua
+            call get_value(child, "muaUpper", muaUpper, 100.0_wp)
+            if (muaUpper < 0.0_wp) then
+                call make_error(error, "Must set muaUpper to be greater than 0.0")
+                return
+            end if
+            call set_value(dict, "muaUpper", muaUpper)
+            call get_value(child, "muaLower", muaLower, 0.0_wp)
+            if(muaLower < 0.0_wp) then
+                muaLower = 0.0_wp
+            end if
+            if(muaLower >= muaUpper) then
+                call make_error(error, "Must set muaLower to be less than muaUpper")
+                return
+            end if
+            call set_value(dict, "muaLower", muaLower)
+
+            !get bounds on mus
+            call get_value(child, "musUpper", musUpper, 100.0_wp)
+            if (musUpper < 0.0_wp) then
+                call make_error(error, "Must set musUpper to be greater than 0.0")
+                return
+            end if
+            call set_value(dict, "musUpper", musUpper)
+            call get_value(child, "musLower", musLower, 0.0_wp)
+            if(musLower < 0.0_wp) then
+                musLower = 0.0_wp
+            end if
+            if(musLower >= musUpper) then
+                call make_error(error, "Must set musLower to be less than musUpper")
+                return
+            end if
+            call set_value(dict, "musLower", musLower)
+
+            !get bounds on hgg
+            call get_value(child, "hggUpper", hggUpper, 1.0_wp)
+            if (hggUpper < -1.0_wp) then
+                call make_error(error, "Must set hggUpper to be greater than or equal to -1.0")
+                return
+            else if (hggUpper > 1.0_wp) then
+                call make_error(error, "Must set hggUpper to be less than or equal to 1.0")
+                return
+            end if
+            call set_value(dict, "hggUpper", hggUpper)
+            call get_value(child, "hggLower", hggLower, -1.0_wp)
+            if (hggLower < -1.0_wp) then
+                call make_error(error, "Must set hggLower to be greater than or equal to -1.0")
+                return
+            else if (hggLower > 1.0_wp) then
+                call make_error(error, "Must set hggLower to be less than or equal to 1.0")
+            end if
+            if(hggLower >= hggUpper) then
+                call make_error(error, "Must set hggLower to be less than hggUpper")
+                return
+            end if
+            call set_value(dict, "hggLower", hggLower)
+
+            !get bounds on n
+            call get_value(child, "nUpper", nUpper, 20.0_wp)
+            if (nUpper < 1.0_wp) then
+                call make_error(error, "Must set nUpper to be greater than 1.0")
+                return
+            end if
+            call set_value(dict, "nUpper", nUpper)
+            call get_value(child, "nLower", nLower, 1.0_wp)
+            if(nLower < 1.0_wp) then
+                nLower = 1.0_wp
+            end if
+            if(nLower >= nUpper) then
+                call make_error(error, "Must set nLower to be less than nUpper")
+                return
+            end if
+            call set_value(dict, "nLower", nLower)
+
+
+            print*, musLower, musUpper
+            print*, muaLower, muaUpper
+            print*, hggLower, hggUpper
+            print*, nLower, nUpper
+
             call get_value(child, "layer", layer, -985464082)
             if(layer /= -985464082) then
                call set_value(dict, "inverseLayer", layer)
@@ -394,6 +479,9 @@ module parse_mod
                 call make_error(error, "Must specifiy a layer in inverse table", -1)
                 return
             end if
+
+            call get_value(child, "inverseFileName", outputFile, "inverse")
+            call set_value(dict, "inverseOutputFileName", outputFile)
         else
             call make_error(error, "Need inverse table in input param file", -1)
             return

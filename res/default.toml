@@ -1,27 +1,49 @@
 [source]
 name = "pencil"
-nphotons = 1000000
-position = [-25.0,0.0,0.0]
-direction = "x"
-
+nphotons = 100000
+direction = "z"
+position = [0.0,0.0,-10.0]
+spectrum_type = "constant"
+wavelength = 500.0
 
 [grid]
-nxg = 200
-nyg = 110
-nzg = 100
-xmax = 30.0
-ymax = 31.0
-zmax = 32.0
+nxg = 500
+nyg = 500
+nzg = 500
+xmax = 50.0
+ymax = 50.0
+zmax = 0.015
 
 [geometry]
-geom_name = "box"
-boundingBox = [60.0,62.0,64.0]
-BoxDimensions = [50.0,62.0,64.0]
-mus = [1.0]
-mua = [0.0]
-g = [0.0]
-n = [1.0]
+geom_name = "cuvette"
+innerCuvetteDimensions = [8.0,8.0,8.0]
+outerCuvetteDimensions = [9.0,9.0,9.0]
+BoxDimensions = [100.0,100.0,0.02]
+boundingBox = [10.0,10.0,10.0]
+position = [0.0,0.0,0.0]
+mus = [5.0]
+mua = [20.0]
+hgg = [0.75]
+n = [1.2]
 
+[inverse]
+maxStepSize = 1
+gradStepSize = 0.0005
+accuracy = 0.001
+maxNumSteps = 2000
+Findmus = true
+Findmua = true
+Findg = true
+Findn = true
+musUpper = 79.0
+musLower = 76.0
+muaUpper = 37.0
+muaLower = 35.0
+hggUpper = 0.70
+hggLower = 0.5
+nUpper = 70.0
+nLower = 42.0
+layer = 1
 
 [symmetry]
 symmetryType = "360rotational"
@@ -33,126 +55,59 @@ direction = [1.0,0.0,0.0]
 rotation = 0
 
 [[detectors]]
-type="annulus"
-ID = "Offset1mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 0.0
-radius2 = 1.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
+type="circle"
+ID = "this is a test"
+position=[0.0, 0.0, -0.01]
+direction=[0.0, 0.0, -1.0]
+radius= 5
+nbins=100
+maxval = 1.0
+trackHistory=false
+inverseTarget = 6.06E-06
 
 [[detectors]]
-type="annulus"
-ID = "Offset2mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 1.0
-radius2 = 2.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
+type="circle"
+ID = "1"
+position=[0.0, 0.0, 0.01]
+direction=[0.0, 0.0, 1.0]
+radius=5
+nbins=100
+maxval = 1.0
+trackHistory=false
+inverseTarget = 0.104622437
 
 [[detectors]]
-type="annulus"
-ID = "Offset3mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 2.0
-radius2 = 3.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
+type="circle"
+ID = "2"
+position=[0.0, 0.01, 0.0]
+direction=[0.0, 1.0, 0.0]
+radius=5
+nbins=100
+maxval = 1.0
+trackHistory=false
+inverseTarget = 0.108356081
 
 [[detectors]]
-type="annulus"
-ID = "Offset4mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 3.0
-radius2 = 4.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
+type="circle"
+ID = "3"
+position=[0.0, 0.01, 0.01]
+direction=[0.0, 1.0, 1.0]
+radius=5
+nbins=100
+maxval = 1.0
+trackHistory=false
+inverseTarget = 0.065549636
 
 [[detectors]]
-type="annulus"
-ID = "Offset5mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 4.0
-radius2 = 5.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
-
-[[detectors]]
-type="annulus"
-ID = "Offset6mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 5.0
-radius2 = 6.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
-
-[[detectors]]
-type="annulus"
-ID = "Offset7mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 6.0
-radius2 = 7.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
-
-[[detectors]]
-type="annulus"
-ID = "Offset8mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 7.0
-radius2 = 8.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
-
-[[detectors]]
-type="annulus"
-ID = "Offset9mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 8.0
-radius2 = 9.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
-
-[[detectors]]
-type="annulus"
-ID = "Offset10mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 9.0
-radius2 = 10.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
-
-[[detectors]]
-type="annulus"
-ID = "Offset11mm"
-position=[-25.0, 0.0, 0.0]
-direction=[-1.0, 0.0, 0.0]
-radius1 = 10.0
-radius2 = 11.0
-nbins = 10
-maxval = 2.0
-trackHistory = false
-
+type="circle"
+ID = "4"
+position=[0.0, 0.01, -0.01]
+direction=[0.0, 1.0, -1.0]
+radius=5
+nbins=100
+maxval = 1.0
+trackHistory=false
+inverseTarget = 0.062327753
 
 [output]
 fluence = "fluence.nrrd"
@@ -164,7 +119,7 @@ render_size = [200,200,200]
 overwrite = true
 
 [simulation]
-iseed = 123456789
+iseed = 321321354
 absorb=true
 load_checkpoint=false
 checkpoint_file="check.ckpt"

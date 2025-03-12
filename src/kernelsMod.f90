@@ -1474,6 +1474,8 @@ contains
         use sdfs,          only : sdf
         use sim_state_mod, only : state
         use opticalProperties, only : opticalProp_t, mono
+        use setupMod, only : setup_inverseDirectory
+        use writer_mod,    only : write_inverse
 
         !external deps
         use tev_mod, only : tevipc
@@ -1497,8 +1499,8 @@ contains
         integer :: nphotons_run,pos
         character(len=128) :: line
         character(len=:), allocatable :: checkpt_input_file
-
-        integer :: maxNumSteps, layer
+        character(len=:), allocatable :: outputFile
+        integer :: maxNumSteps, layer, numGuesses
         real(kind = wp) :: maxStepSize, gradStepSize, accuracy
         logical :: findmua, findmus, findg, findn
         real(kind=wp) :: temp, error
@@ -1512,16 +1514,19 @@ contains
         type(opticalProp_t) :: trialOptProp
 
 
-        real(kind=wp) :: probability, alpha, k
+        real(kind=wp) :: probability, alpha, k, it
         real(kind=wp) :: musboundupper, musboundlower, muaboundupper, muaboundlower
         real(kind=wp) :: gboundupper, gboundlower, nboundupper, nboundlower
-        integer :: nb_samples, indexOfMinError, indexOfMaxRatio
+        integer :: nb_samples, indexOfMinError, indexOfMaxRatio, index
         real(kind=wp) :: minError, maxRatio, ratioCounter
         real(kind=wp), allocatable :: ratios(:)
 
-        real(kind=wp) :: ran !used to temporarily store a random number
-        real(kind=wp) :: leftMin, rightMax !sides of the LIPO condition
+        real(kind=wp) :: ranNum !used to temporarily store a random number
+        real(kind=wp) :: leftMin, rightMax, tempMin !sides of the LIPO condition
         real(kind=wp) :: runningTotal
+
+        integer, allocatable :: seed(:)
+        integer :: sizeRanSeed
 
 
         if(state%loadckpt)then
@@ -1559,6 +1564,24 @@ contains
         call get_value(dict, "Findg", findg)
         call get_value(dict, "Findn", findn)
         call get_value(dict, "inverseLayer", layer)
+        call get_value(dict, "inverseOutputFileName", outputFile)
+
+        !check if the inverse MCRT directory exists
+        call setup_inverseDirectory()
+
+        !setup different random number seed for the 
+        call random_seed(size=sizeRanSeed)
+        allocate(seed(sizeRanSeed))
+        seed = 0
+        seed = state%iseed
+        call random_seed(put=seed)
+        call random_seed(get=seed)
+        !discard first 100 to ensure that we get random numbers
+        do i = 1, 100
+            call random_number(ranNum)
+        end do
+        call random_seed(get=seed)
+
 
         !check how many variables we will optimize/search for
         NoVariablesToOptimize = 0
@@ -1606,16 +1629,21 @@ contains
         nb_samples = 0
         k = 0.0_wp
 
-        musboundlower = 0.0_wp
-        musboundupper = 100.0_wp
-        muaboundlower = 0.0_wp
-        muaboundupper = 100.0_wp
-        gboundlower = -1.0_wp
-        gboundupper = 1.0_wp
-        nboundlower = 1.0_wp
-        nboundupper = 20.0_wp
+        !bounds for AdaLIPO
+        call get_value(dict, "musLower", musboundlower)
+        call get_value(dict, "musUpper", musboundupper)
+        call get_value(dict, "muaLower", muaboundlower)
+        call get_value(dict, "muaUpper", muaboundupper)
+        call get_value(dict, "hggLower", gboundlower)
+        call get_value(dict, "hggUpper", gboundupper)
+        call get_value(dict, "nLower", nboundlower)
+        call get_value(dict, "nUpper", nboundupper)
+        print*, musboundlower, musboundupper
+        print*, muaboundlower, muaboundupper
+        print*, gboundlower, gboundupper
+        print*, nboundlower, nboundupper
 
-
+        !set the initial guess
         allocate(gradDescentData(maxNumSteps, 5))
         if (findmus) then
             gradDescentData(1,1) = ran2() * (musboundupper-musboundlower) + musboundlower
@@ -1638,13 +1666,19 @@ contains
             gradDescentData(1,4) = n
         end if
 
+        trialOptProp = mono(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4))
+        temp = array(SDF_array_index)%updateOptProp(trialOptProp)
+
         !evaluate, by running MCRT
+        call random_seed(get=seed) !store the random seed for optical properties
         call run_MCRT(input_file, history, packet, dict, & 
                         distances, image, dects, array, nscatt, start, & 
                         tev, spectrum)
+        call random_seed(put=seed) !restart the random seed for optical properties
         error = 0._wp
         call inverse_evaluate(dects, error)
         gradDescentData(1,5) = error
+        print*, error
 
         ! reset the arrays storing data
         call reset(dects)  
@@ -1653,18 +1687,21 @@ contains
         minError = gradDescentData(1,5)
         indexOfMinError = 1
 
+        !store the maximum value
+        rightMax = gradDescentData(1,5)
+
         !allocate the ratio array (it will be of the size maxNumSteps triangular number)
         allocate(ratios(int(nint(maxNumSteps * (maxNumSteps+1)/2.0_wp))))
         ratios = 0.0_wp
         ratioCounter = 1
-        maxRatio = 1
+        maxRatio = 0.0_wp
         indexOfMaxRatio = 1
 
         do i = 2, maxNumSteps
 
             
-            ran = ran2()
-            if( ran <= 1.0_wp) then
+            ranNum = ran2()
+            if( ranNum <= probability) then
                 !we are in the explore stage
                 !get the new guesses for the mua, mus, n, and g
                 if (findmus) then
@@ -1691,19 +1728,9 @@ contains
                 nb_samples = nb_samples + 1
 
                 !update the optical properties
-                trialOptProp = mono(mus, mua, hgg, n)
+                trialOptProp = mono(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4))
                 temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
-                !evaluate, by running MCRT
-                call run_MCRT(input_file, history, packet, dict, & 
-                            distances, image, dects, array, nscatt, start, & 
-                            tev, spectrum)
-                error = 0._wp
-                call inverse_evaluate(dects, error)
-                gradDescentData(i,5) = error
-
-                ! reset the arrays storing data
-                call reset(dects) 
             else
                 do while(.true.)
                     !get the new guesses for the mua, mus, n, and g
@@ -1728,23 +1755,134 @@ contains
                         gradDescentData(i,4) = n
                     end if
 
+                    nb_samples = nb_samples + 1
+
+                    temp=exp(-1._wp*(((gradDescentData(i,1)-gradDescentData(indexOfMinError,1))**2/ & 
+                                                               (2*abs(musboundupper-musboundlower))) &
+                        + ((gradDescentData(i,2)-gradDescentData(indexOfMinError,2))**2/(2*abs(muaboundupper-muaboundlower))) & 
+                        + ((gradDescentData(i,3)-gradDescentData(indexOfMinError,3))**2/(2*abs(gboundupper-gboundlower))) & 
+                        + ((gradDescentData(i,4)-gradDescentData(indexOfMinError,4))**2/(2*abs(nboundupper-nboundlower)))))
+
+                    !print*, temp, (1-(1.10*maxNumSteps - i)/maxNumSteps)
+                    !if(temp <= ran2()) then
+                        !print*, temp, (1-(1.10*maxNumSteps - i)/maxNumSteps)
+                    !    cycle
+                    !end if
+
                     !update the optical properties
-                    trialOptProp = mono(mus, mua, hgg, n)
+                    trialOptProp = mono(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4))
                     temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
-                    !left_min = min(gradDescentData + k * (gradDescentData(i,1)**2) )
+                    
+                    !find the minimum of left_Min
+                    leftMin = gradDescentData(1,5) + k * sqrt((gradDescentData(i,1) - gradDescentData(1,1))**2 & 
+                                                            + (gradDescentData(i,2) - gradDescentData(1,2))**2 & 
+                                                            + (gradDescentData(i,3) - gradDescentData(1,3))**2 & 
+                                                            + (gradDescentData(i,4) - gradDescentData(1,4))**2)
+                    do j = 2,(i-1)
+                        tempMin = gradDescentData(j,5) + k * sqrt((gradDescentData(i,1) - gradDescentData(j,1))**2 &  
+                                                                + (gradDescentData(i,2) - gradDescentData(j,2))**2 & 
+                                                                + (gradDescentData(i,3) - gradDescentData(j,3))**2 & 
+                                                                + (gradDescentData(i,4) - gradDescentData(j,4))**2)
+                        if (tempMin < leftMin) then
+                            leftMin = tempMin
+                        end if
+                    end do
+
+
+                    !LIPO condition
+                    if (leftMin >= rightMax) then
+                        exit
+                    end if
                 end do
             end if
-        end do
-        
+
+            
+            
+            !evaluate, by running MCRT
+            call random_seed(get=seed) !store the random seed for optical properties
+            call run_MCRT(input_file, history, packet, dict, & 
+                        distances, image, dects, array, nscatt, start, & 
+                        tev, spectrum)
+            call random_seed(put=seed) !restart the random seed for optical properties
+            error = 0._wp
+            call inverse_evaluate(dects, error)
+            gradDescentData(i,5) = error
+
+            ! reset the arrays storing data
+            call reset(dects) 
+
+            print*, " "
+            print*, "Last Guess", i
+            print*, "mus", gradDescentData(i, 1)
+            print*, "mua", gradDescentData(i, 2)
+            print*, "hgg", gradDescentData(i, 3)
+            print*, "n", gradDescentData(i, 4)
+            print*, "error", gradDescentData(i, 5)
+            print*, "k", k
+            print*, " "
+
+            !check if this is a new minimum score
+            if(gradDescentData(i,5) > minError) then
+                minError = gradDescentData(i,5)
+                indexOfMinError = i
+                rightMax = gradDescentData(i,5)
+            end if
+
+            ! find the ratios, and find the new maximum ratio
+            probability = 1.0_wp/log(real(i, kind=wp))
+
+            !print*, gradDescentData(1,1)
+            !print*, "current gradDescentData index", i
+            do j = 1, i-1
+                !print*, "polling gradDescentData index", j
+                if (sqrt((gradDescentData(i,1) - gradDescentData(j,1))**2 & 
+                + (gradDescentData(i,2) - gradDescentData(j,2))**2 & 
+                + (gradDescentData(i,3) - gradDescentData(j,3))**2 & 
+                + (gradDescentData(i,4) - gradDescentData(j,4))**2) == 0.0_wp) then
+                    print*, "zero"
+                    ratios(ratioCounter) = -99999._wp
+                    ratioCounter = ratioCounter + 1
+                    cycle
+                end if
+                ratios(ratioCounter) = abs(gradDescentData(i,5) - gradDescentData(j,5))/ & 
+                                sqrt((gradDescentData(i,1) - gradDescentData(j,1))**2 & 
+                                + (gradDescentData(i,2) - gradDescentData(j,2))**2 & 
+                                + (gradDescentData(i,3) - gradDescentData(j,3))**2 & 
+                                + (gradDescentData(i,4) - gradDescentData(j,4))**2)
+                if (ratios(ratioCounter) > maxRatio) then
+                    maxRatio = ratios(ratioCounter)
+                    indexOfMaxRatio = ratioCounter
+                end if
+                ratioCounter = ratioCounter + 1
+            end do
+
+            !update the value of k
+            it = int(ceiling(log(maxRatio)/log(1+alpha)))
+            k = (1+alpha)** it
+            !k = 0.5
+
+            print*, " "
+            print*, "Best Guess", indexOfMinError
+            print*, "mus", gradDescentData(indexOfMinError, 1)
+            print*, "mua", gradDescentData(indexOfMinError, 2)
+            print*, "hgg", gradDescentData(indexOfMinError, 3)
+            print*, "n", gradDescentData(indexOfMinError, 4)
+            print*, "error", gradDescentData(indexOfMinError, 5)
+            print*, " "
+            print*, " "
+
+            !check if we have reached an accuracy value less than the target accuracy, if true then break
+            if (abs(minError) < accuracy) then
+                print*, "Below min error threshold"
+                exit
+            end if
+
+        end do        
         
         !we have finished the gradient descent output the gradDescentData to a file and write the error
-        
-
-
-
-        !big goals, get the run_MCRT running on the GPU thus speeding up the program exponentially
-        !add more SDFs, and add a tool to create a smooth SDF from a given grid mesh 
+        numGuesses = i-1
+        call write_inverse(gradDescentData, outputFile, numGuesses, indexOfMinError)
 
         
 
@@ -1776,7 +1914,9 @@ contains
                 total = total / real(state%nphotons, kind=wp)
 
                 !error is defined as average absolute difference between all detectors
-                error = error + abs((total-targetVal))
+                error = error + abs((total-targetVal)/(targetVal+1e-16_wp))            !relative difference
+                !error = error + (log(total+1e-16_wp) - log(targetVal+1e-16_wp))**2     !log difference
+                !error = error + abs(total-targetVal)                                   !absolute difference
 
                 counter = counter + 1
             end if
