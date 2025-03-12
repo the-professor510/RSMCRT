@@ -7,7 +7,7 @@ module setupMod
     implicit none
 
     private
-    public  :: setup_simulation, dealloc_array, directory, zarray, setup_escapeFunction
+    public  :: setup_simulation, dealloc_array, directory, zarray, setup_escapeFunction, setup_inverseDirectory
 
     contains
 
@@ -53,6 +53,8 @@ module setupMod
                     sdfarray = setup_box(dict)
                 case("egg")
                     sdfarray = setup_egg(dict)
+                case("cuvette")
+                    sdfarray = setup_cuvette(dict)
                 case("exp")
                     sdfarray = setup_exp(dict)
                 case default
@@ -232,4 +234,34 @@ module setupMod
             allocate(escape(numDects, state%grid%nxg, state%grid%nyg, state%grid%nzg))
 
         end subroutine setup_escapeFunction
+
+
+        subroutine setup_inverseDirectory()
+            !!  subroutine creates escape function folder and creates    
+            use constants,      only : homedir, fileplace, resdir
+            use iarray
+            use sim_state_mod,  only : state
+
+            character(len=256) :: cwd
+            logical :: inverseExists
+
+            !get current working directory
+            call get_environment_variable('PWD', cwd)
+  
+            ! get 'home' dir from cwd
+            homedir = trim(cwd)
+            ! get data dir
+            fileplace = trim(homedir)//'/data/'
+            !check if data directory and subdirectories exists. if not create it
+#ifdef __GFORTRAN__
+            inquire(file=trim(fileplace)//"/inverse/.", exist=inverseExists)
+#elif __INTEL_COMPILER
+            inquire(directory=trim(fileplace)//"/inverse", exist=inverseExists)
+#else 
+    inverseExists=.true.
+    ! error stop "Compiler not supported!"
+#endif
+            call create_directory("inverse/", inverseExists, "data/", .true.)
+
+        end subroutine setup_inverseDirectory
 end module setupMod
