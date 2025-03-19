@@ -247,6 +247,96 @@ contains
 
     end function setup_egg
 
+    function setup_cuvette(dict) result(array)
+        !! setup a rectangular cuvette
+
+        use opticalProperties, only : opticalProp_t, mono
+        use sdfs,              only : sdf, box
+        use sdfHelpers,        only : translate
+        use vector_class,      only : vector
+        use mat_class,         only : invert
+
+        type(toml_table), intent(inout) :: dict
+        type(sdf), allocatable :: array(:)
+
+        type(opticalProp_t) :: opt(3)
+        type(vector) :: pos
+        real(kind=wp), allocatable :: mus(:), mua(:), hgg(:), n(:)
+        real(kind=wp) :: t(4,4), x, y, z, radius
+        real(kind=wp) :: ixlength, iylength, izlength
+        real(kind=wp) :: cxlength, cylength, czlength 
+        real(kind=wp) :: bxlength, bylength, bzlength
+        integer :: numOptProp, i
+        character(4) :: string 
+
+        call get_value(dict, "numOptProp", numOptProp)
+        allocate(mus(numOptProp))
+        allocate(mua(numOptProp))
+        allocate(hgg(numOptProp))
+        allocate(n(numOptProp))
+        mus = 0.0_wp
+        mua = 0.0_wp
+        hgg = 0.0_wp
+        n = 0.0_wp
+        
+        do i = 1, numOptProp
+            write(string,'(I4)') i
+            call get_value(dict, "mua%"//string, mua(i))
+            call get_value(dict, "mus%"//string, mus(i))
+            call get_value(dict, "hgg%"//string, hgg(i))
+            call get_value(dict, "n%"//string, n(i))
+        end do
+        
+        write(string,'(I4)') 1
+        call get_value(dict, "position%"//string, x)
+        write(string,'(I4)') 2
+        call get_value(dict, "position%"//string, y)
+        write(string,'(I4)') 3
+        call get_value(dict, "position%"//string, z)
+
+        write(string,'(I4)') 1
+        call get_value(dict, "boundinglength%"//string, bxlength)
+        write(string,'(I4)') 2
+        call get_value(dict, "boundinglength%"//string, bylength)
+        write(string,'(I4)') 3
+        call get_value(dict, "boundinglength%"//string, bzlength)
+
+        write(string,'(I4)') 1
+        call get_value(dict, "innerCuvetteDimensions%"//string, ixlength)
+        write(string,'(I4)') 2
+        call get_value(dict, "innerCuvetteDimensions%"//string, iylength)
+        write(string,'(I4)') 3
+        call get_value(dict, "innerCuvetteDimensions%"//string, izlength)
+
+        write(string,'(I4)') 1
+        call get_value(dict, "outerCuvetteDimensions%"//string, cxlength)
+        write(string,'(I4)') 2
+        call get_value(dict, "outerCuvetteDimensions%"//string, cylength)
+        write(string,'(I4)') 3
+        call get_value(dict, "outerCuvetteDimensions%"//string, czlength)
+        
+        allocate(array(3))
+                
+        pos = vector(x, y, z)
+        t = invert(translate(pos))
+
+        print*, vector(ixlength, iylength, izlength)
+        print*, vector(cxlength, cylength, czlength)
+        print*, vector(bxlength, bylength, bzlength)
+
+        !interior box filled with the cuvette contents
+        opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
+        array(1) = box(vector(ixlength, iylength, izlength), opt(1), 1, transform=t)
+
+        !cuvette box, assumed to be a solid cuvette all of the same material completely surrounding the medium
+        opt(2) = mono(mus(2), mua(2), hgg(2), n(2))
+        array(2) = box(vector(cxlength, cylength, czlength), opt(2), 2, transform=t)  
+        
+        !bounding box
+        opt(3) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
+        array(3) = box(vector(bxlength, bylength, bzlength), opt(3), 3)  
+    end function setup_cuvette
+
     function setup_sphere_scene(dict) result(array)
     !! setup a test scene with user defined spheres
 

@@ -1860,7 +1860,6 @@ contains
             !update the value of k
             it = int(ceiling(log(maxRatio)/log(1+alpha)))
             k = (1+alpha)** it
-            !k = 0.5
 
             print*, " "
             print*, "Best Guess", indexOfMinError

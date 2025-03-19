@@ -83,6 +83,10 @@ contains
                 call make_error(error, &
                 context%report("For geometry of egg must set numOptProp to three", origin, &
                                 "numOptProp Incorrectly Specified"), -1)
+            else if ((state%experiment == "cuvette") .and. (numOptProp /= 2)) then
+                call make_error(error, &
+                context%report("For geometry of cuvette must set numOptProp to two", origin, &
+                                "numOptProp Incorrectly Specified"), -1)
             end if
 
             children => null()
@@ -122,6 +126,7 @@ contains
                     call make_error(error, &
                         context%report("length of mus must be equal to numOptProp", origin, &
                                 "mus Incorrectly Specified"), -1)
+                    return
                 end if
             else
                 do i = 1, numOptProp
@@ -144,6 +149,7 @@ contains
                     call make_error(error, &
                         context%report("length of mur must be equal to numOptProp", origin, &
                                 "mur Incorrectly Specified"), -1)
+                    return
                 end if
             else
                 do i = 1, numOptProp
@@ -166,6 +172,7 @@ contains
                     call make_error(error, &
                         context%report("length of hgg must be equal to numOptProp", origin, &
                                 "hgg Incorrectly Specified"), -1)
+                    return
                 end if
             else
                 do i = 1, numOptProp
@@ -188,6 +195,7 @@ contains
                     call make_error(error, &
                         context%report("length of n must be equal to numOptProp", origin, &
                                 "n Incorrectly Specified"), -1)
+                    return
                 end if
             else
                 do i = 1, numOptProp
@@ -279,6 +287,50 @@ contains
                 call set_value(dict, "ShellThickness", ShellThickness)
                 call get_value(child, "YolkRadius", YolkRadius, 1.5_wp)
                 call set_value(dict, "YolkRadius", YolkRadius)
+            end if
+
+            if (state%experiment == "cuvette") then
+                call get_value(child, "outerCuvetteDimensions", children, requested=.false., origin=origin)
+                if(associated(children))then
+                    nlen = len(children)
+                    if(nlen /= 3)then
+                        call make_error(error, &
+                        context%report("Need a matrix row for points", origin, "expected matrix row of size 3"), -1)
+                        return
+                    end if
+                    do i = 1, len(children)
+                        write(string,'(I4)') i
+                        call get_value(children, i, tempLength)
+                        call set_value(dict, "outerCuvetteDimensions%"//string, tempLength)
+                    end do
+                else
+                    do i = 1, 3
+                        tempLength = 1.0_wp
+                        write(string,'(I4)') i
+                        call set_value(dict, "outerCuvetteDimensions%"//string, tempLength)
+                    end do
+                end if
+
+                call get_value(child, "innerCuvetteDimensions", children, requested=.false., origin=origin)
+                if(associated(children))then
+                    nlen = len(children)
+                    if(nlen /= 3)then
+                        call make_error(error, &
+                        context%report("Need a matrix row for points", origin, "expected matrix row of size 3"), -1)
+                        return
+                    end if
+                    do i = 1, len(children)
+                        write(string,'(I4)') i
+                        call get_value(children, i, tempLength)
+                        call set_value(dict, "innerCuvetteDimensions%"//string, tempLength)
+                    end do
+                else
+                    do i = 1, 3
+                        tempLength = 1.0_wp
+                        write(string,'(I4)') i
+                        call set_value(dict, "innerCuvetteDimensions%"//string, tempLength)
+                    end do
+                end if
             end if
 
         else
