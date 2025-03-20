@@ -1502,11 +1502,11 @@ contains
         character(len=:), allocatable :: outputFile
         integer :: maxNumSteps, layer, numGuesses
         real(kind = wp) :: maxStepSize, gradStepSize, accuracy
-        logical :: findmua, findmus, findg, findn
+        logical :: findmua, findmus, findg, findn, reducedmusGuessing
         real(kind=wp) :: temp, error
 
         real(kind=wp), allocatable :: gradDescentData(:,:)
-        real(kind=wp) :: mus, mua, hgg, n
+        real(kind=wp) :: mus, mua, hgg, n, reducedmus
         integer :: i, SDF_array_index
 
 
@@ -1517,6 +1517,7 @@ contains
         real(kind=wp) :: probability, alpha, k, it
         real(kind=wp) :: musboundupper, musboundlower, muaboundupper, muaboundlower
         real(kind=wp) :: gboundupper, gboundlower, nboundupper, nboundlower
+        real(kind=wp) :: reducedmuslower, reducedmusupper
         integer :: nb_samples, indexOfMinError, indexOfMaxRatio, index
         real(kind=wp) :: minError, maxRatio, ratioCounter
         real(kind=wp), allocatable :: ratios(:)
@@ -1563,6 +1564,7 @@ contains
         call get_value(dict, "Findmus", findmus)
         call get_value(dict, "Findg", findg)
         call get_value(dict, "Findn", findn)
+        call get_value(dict, "ReducedmusGuessing", reducedmusGuessing)
         call get_value(dict, "inverseLayer", layer)
         call get_value(dict, "inverseOutputFileName", outputFile)
 
@@ -1638,27 +1640,47 @@ contains
         call get_value(dict, "hggUpper", gboundupper)
         call get_value(dict, "nLower", nboundlower)
         call get_value(dict, "nUpper", nboundupper)
+        call get_value(dict, "reducedmusLower", reducedmuslower)
+        call get_value(dict, "reducedmusUpper", reducedmusupper)
         print*, musboundlower, musboundupper
         print*, muaboundlower, muaboundupper
         print*, gboundlower, gboundupper
         print*, nboundlower, nboundupper
+        print*, reducedmuslower, reducedmusupper
 
-        !set the initial guess
+        !set the initial guesses
         allocate(gradDescentData(maxNumSteps, 5))
-        if (findmus) then
-            gradDescentData(1,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+        if (reducedmusGuessing) then
+            do while (.true.)
+                !choose a random reducedmus and mus
+                reducedmus = ran2() * (reducedmusupper-reducedmuslower) + reducedmuslower
+                gradDescentData(1,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+
+                !calculate hgg, and check that it is within the given bounds
+                ! hgg = 1 - (mus'/mus)
+                gradDescentData(1,3) = 1.0_wp - (reducedmus/gradDescentData(1,1))
+                if (gradDescentData(1,3) <= gboundupper .and. gradDescentData(1,3) >= gboundlower) then
+                    !g is within bounds, exit while loop
+                    exit
+                end if
+            end do
         else 
-            gradDescentData(1,1) = mus
-        end if 
+            !choose mus, and hgg from a random range
+            if (findmus) then
+                gradDescentData(1,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+            else 
+                gradDescentData(1,1) = mus
+            end if 
+            if (findg) then
+                gradDescentData(1,3) = ran2() * (gboundupper-gboundlower) + gboundlower
+            else 
+                gradDescentData(1,3) = hgg
+            end if 
+        end if
         if (findmua) then
             gradDescentData(1,2) = ran2() * (muaboundupper-muaboundlower) + muaboundlower
         else
             gradDescentData(1,2) = mua
-        end if 
-        if (findg) then
-            gradDescentData(1,3) = ran2() * (gboundupper-gboundlower) + gboundlower
-        else 
-            gradDescentData(1,3) = hgg
         end if 
         if (findn) then
             gradDescentData(1,4) = ran2() * (nboundupper-nboundlower) + nboundlower
@@ -1704,20 +1726,37 @@ contains
             if( ranNum <= probability) then
                 !we are in the explore stage
                 !get the new guesses for the mua, mus, n, and g
-                if (findmus) then
-                    gradDescentData(i,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+                if (reducedmusGuessing) then
+                    do while (.true.)
+                        !choose a random reducedmus and mus
+                        reducedmus = ran2() * (reducedmusupper-reducedmuslower) + reducedmuslower
+                        gradDescentData(i,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+        
+                        !calculate hgg, and check that it is within the given bounds
+                        ! hgg = 1 - (mus'/mus)
+                        gradDescentData(i,3) = 1.0_wp - (reducedmus/gradDescentData(i,1))
+                        if (gradDescentData(i,3) <= gboundupper .and. gradDescentData(i,3) >= gboundlower) then
+                            !g is within bounds, exit while loop
+                            exit
+                        end if
+                    end do
                 else 
-                    gradDescentData(i,1) = mus
-                end if 
+                    !choose mus, and hgg from a random range
+                    if (findmus) then
+                        gradDescentData(i,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+                    else 
+                        gradDescentData(i,1) = mus
+                    end if 
+                    if (findg) then
+                        gradDescentData(i,3) = ran2() * (gboundupper-gboundlower) + gboundlower
+                    else 
+                        gradDescentData(i,3) = hgg
+                    end if 
+                end if
                 if (findmua) then
                     gradDescentData(i,2) = ran2() * (muaboundupper-muaboundlower) + muaboundlower
                 else
                     gradDescentData(i,2) = mua
-                end if 
-                if (findg) then
-                    gradDescentData(i,3) = ran2() * (gboundupper-gboundlower) + gboundlower
-                else 
-                    gradDescentData(i,3) = hgg
                 end if 
                 if (findn) then
                     gradDescentData(i,4) = ran2() * (nboundupper-nboundlower) + nboundlower
@@ -1734,20 +1773,37 @@ contains
             else
                 do while(.true.)
                     !get the new guesses for the mua, mus, n, and g
-                    if (findmus) then
-                        gradDescentData(i,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+                    if (reducedmusGuessing) then
+                        do while (.true.)
+                            !choose a random reducedmus and mus
+                            reducedmus = ran2() * (reducedmusupper-reducedmuslower) + reducedmuslower
+                            gradDescentData(i,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+            
+                            !calculate hgg, and check that it is within the given bounds
+                            ! hgg = 1 - (mus'/mus)
+                            gradDescentData(i,3) = 1.0_wp - (reducedmus/gradDescentData(i,1))
+                            if (gradDescentData(i,3) <= gboundupper .and. gradDescentData(i,3) >= gboundlower) then
+                                !g is within bounds, exit while loop
+                                exit
+                            end if
+                        end do
                     else 
-                        gradDescentData(i,1) = mus
-                    end if 
+                        !choose mus, and hgg from a random range
+                        if (findmus) then
+                            gradDescentData(i,1) = ran2() * (musboundupper-musboundlower) + musboundlower
+                        else 
+                            gradDescentData(i,1) = mus
+                        end if 
+                        if (findg) then
+                            gradDescentData(i,3) = ran2() * (gboundupper-gboundlower) + gboundlower
+                        else 
+                            gradDescentData(i,3) = hgg
+                        end if 
+                    end if
                     if (findmua) then
                         gradDescentData(i,2) = ran2() * (muaboundupper-muaboundlower) + muaboundlower
                     else
                         gradDescentData(i,2) = mua
-                    end if 
-                    if (findg) then
-                        gradDescentData(i,3) = ran2() * (gboundupper-gboundlower) + gboundlower
-                    else 
-                        gradDescentData(i,3) = hgg
                     end if 
                     if (findn) then
                         gradDescentData(i,4) = ran2() * (nboundupper-nboundlower) + nboundlower
@@ -1818,6 +1874,7 @@ contains
             print*, "mua", gradDescentData(i, 2)
             print*, "hgg", gradDescentData(i, 3)
             print*, "n", gradDescentData(i, 4)
+            print*, "mus'", gradDescentData(i, 1)*(1-gradDescentData(i, 3))
             print*, "error", gradDescentData(i, 5)
             print*, "k", k
             print*, " "
@@ -1867,6 +1924,7 @@ contains
             print*, "mua", gradDescentData(indexOfMinError, 2)
             print*, "hgg", gradDescentData(indexOfMinError, 3)
             print*, "n", gradDescentData(indexOfMinError, 4)
+            print*, "mus'", gradDescentData(indexOfMinError, 1)*(1-gradDescentData(indexOfMinError, 3))
             print*, "error", gradDescentData(indexOfMinError, 5)
             print*, " "
             print*, " "

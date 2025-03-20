@@ -2,7 +2,7 @@
 name = "pencil"
 nphotons = 100000
 direction = "z"
-position = [0.0,0.0,-10.0]
+position = [0.0,0.0,-1.0]
 spectrum_type = "constant"
 wavelength = 500.0
 
@@ -10,39 +10,43 @@ wavelength = 500.0
 nxg = 500
 nyg = 500
 nzg = 500
-xmax = 50.0
-ymax = 50.0
-zmax = 0.015
+xmax = 2.5
+ymax = 2.5
+zmax = 2.5
 
 [geometry]
-geom_name = "cuvette"
-innerCuvetteDimensions = [8.0,8.0,8.0]
-outerCuvetteDimensions = [9.0,9.0,9.0]
-BoxDimensions = [100.0,100.0,0.02]
-boundingBox = [10.0,10.0,10.0]
+geom_name = "box"
+numOptProp = 1
+innerCuvetteDimensions = [1.0,1.0,1.0]
+outerCuvetteDimensions = [1.25,1.25,1.25]
+BoxDimensions = [1.0,1.0,1.0]
+boundingBox = [5.0,5.0,5.0]
 position = [0.0,0.0,0.0]
 mus = [5.0]
-mua = [20.0]
-hgg = [0.75]
+mua = [5.0]
+hgg = [0.4]
 n = [1.2]
 
 [inverse]
 maxStepSize = 1
 gradStepSize = 0.0005
 accuracy = 0.001
-maxNumSteps = 2000
+maxNumSteps = 1000
 Findmus = true
-Findmua = true
+Findmua = false
 Findg = true
-Findn = true
-musUpper = 79.0
-musLower = 76.0
-muaUpper = 37.0
-muaLower = 35.0
-hggUpper = 0.70
-hggLower = 0.5
-nUpper = 70.0
-nLower = 42.0
+Findn = false
+ReducedmusGuessing = true
+musUpper = 100.0
+musLower = 30.0
+muaUpper = 100.0
+muaLower = 0.0
+hggUpper = 1.0
+hggLower = 0.0
+nUpper = 5.0
+nLower = 1.0
+reducedmusUpper = 31.0
+reducedmusLower = 28.0
 layer = 1
 
 [symmetry]
@@ -57,57 +61,42 @@ rotation = 0
 [[detectors]]
 type="circle"
 ID = "this is a test"
-position=[0.0, 0.0, -0.01]
+position=[0.0, 0.0, -1.414213562]
 direction=[0.0, 0.0, -1.0]
-radius= 5
+radius= 1
 nbins=100
 maxval = 1.0
 trackHistory=false
-inverseTarget = 6.06E-06
+inverseTarget = 0.136278311
 
-[[detectors]]
-type="circle"
-ID = "1"
-position=[0.0, 0.0, 0.01]
-direction=[0.0, 0.0, 1.0]
-radius=5
-nbins=100
-maxval = 1.0
-trackHistory=false
-inverseTarget = 0.104622437
+
+
 
 [[detectors]]
 type="circle"
 ID = "2"
-position=[0.0, 0.01, 0.0]
+position=[0.0, 1.414213562, 0.0]
 direction=[0.0, 1.0, 0.0]
-radius=5
+radius=1
 nbins=100
 maxval = 1.0
 trackHistory=false
-inverseTarget = 0.108356081
+inverseTarget = 0.002608717	
 
-[[detectors]]
-type="circle"
-ID = "3"
-position=[0.0, 0.01, 0.01]
-direction=[0.0, 1.0, 1.0]
-radius=5
-nbins=100
-maxval = 1.0
-trackHistory=false
-inverseTarget = 0.065549636
+
+
 
 [[detectors]]
 type="circle"
 ID = "4"
-position=[0.0, 0.01, -0.01]
+position=[0.0, 1.0, -1.0]
 direction=[0.0, 1.0, -1.0]
-radius=5
+radius=1
 nbins=100
 maxval = 1.0
 trackHistory=false
-inverseTarget = 0.062327753
+inverseTarget = 0.066143302
+
 
 [output]
 fluence = "fluence.nrrd"
@@ -119,7 +108,7 @@ render_size = [200,200,200]
 overwrite = true
 
 [simulation]
-iseed = 321321354
+iseed = 321321359
 absorb=true
 load_checkpoint=false
 checkpoint_file="check.ckpt"

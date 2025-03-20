@@ -357,12 +357,13 @@ module parse_mod
 
         integer :: maxNumSteps, layer
         real(kind = wp) :: maxStepSize, gradStepSize, accuracy
-        logical :: findmua, findmus, findg, findn
+        logical :: findmua, findmus, findg, findn, reducedmusGuessing
         character(len=:), allocatable :: outputFile
         real(kind=wp) :: muaUpper, muaLower
         real(kind=wp) :: musUpper, musLower
         real(kind=wp) :: hggUpper, hggLower
         real(kind=wp) :: nUpper, nLower
+        real(kind=wp) :: reducedmusUpper, reducedmusLower
 
         call get_value(table, "inverse", child)
 
@@ -391,6 +392,16 @@ module parse_mod
 
             call get_value(child, "Findn", findn, .false.)
             call set_value(dict, "Findn", findn)
+
+            call get_value(child, "ReducedmusGuessing", reducedmusGuessing, .false.)
+            call set_value(dict, "ReducedmusGuessing", reducedmusGuessing)
+
+            if (reducedmusGuessing) then
+                if (.not. (findmus .and. findg)) then
+                    call make_error(error, "Must set findmus and findg to be true if using Reducedmus Guessing")
+                    return
+                end if
+            end if
 
             !get bounds on mua
             call get_value(child, "muaUpper", muaUpper, 100.0_wp)
@@ -466,11 +477,28 @@ module parse_mod
             end if
             call set_value(dict, "nLower", nLower)
 
+            !get bounds on reducedmus
+            call get_value(child, "reducedmusUpper", reducedmusUpper, 200.0_wp)
+            if (reducedmusUpper < 0.0_wp) then
+                call make_error(error, "Must set reducedmusUpper to be greater than 0.0")
+                return
+            end if
+            call set_value(dict, "reducedmusUpper", reducedmusUpper)
+            call get_value(child, "reducedmusLower", reducedmusLower, 0.0_wp)
+            if(reducedmusLower < 0.0_wp) then
+                reducedmusLower = 0.0_wp
+            end if
+            if(reducedmusLower > reducedmusUpper) then
+                call make_error(error, "Must set reducedmusLower to be less than reducedmusUpper")
+                return
+            end if
+            call set_value(dict, "reducedmusLower", reducedmusLower)
 
             print*, musLower, musUpper
             print*, muaLower, muaUpper
             print*, hggLower, hggUpper
             print*, nLower, nUpper
+            print*, reducedmusLower, reducedmusUpper
 
             call get_value(child, "layer", layer, -985464082)
             if(layer /= -985464082) then
