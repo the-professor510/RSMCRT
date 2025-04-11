@@ -22,7 +22,8 @@ This table defines the parameters for the light source used in the simulation it
 | radius | float | - | 0.5 | Used by circular source  |
 | rhi | float | - | 0.6 | Annular source upper radius |
 | rlo | float | - | 0.5 | Annular source lower radius |
-| annulus_type | string | gaussian, tophat | gaussian | Type of annular beam |
+| sigma | float | - | 0.04 | Standard Deviation for the gaussian annulus beam |
+| annulus_type | string | gaussian, tophat, besselAnnulus | gaussian | Type of annular beam |
 | focalLength | float | - | 1.0 | Used by annular and focus, the distance from zmax to the focus point of the annular and focus sources, positive for converging beam, negative for diverging beam |
 | rotation | float array size 3 | - | [1.0, 0.0, 0.0] | Beam direction for annular and focus |
 | focus_type | string | gaussian, circle, square | gaussian | Shape of focus source |

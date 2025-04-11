@@ -380,7 +380,7 @@ module inttau2
         !> d_sdf is the distance to travel in voxel grid
         real(kind=wp),   intent(IN)    :: d_sdf
         !> absoprtion coefficent
-        real(kind=wp), optional, intent(IN) :: mua
+        real(kind=wp),   intent(IN) :: mua
         !> pos is current position with origin in centre of medium (0,0,0)
         type(vector),    intent(INOUT) :: pos
         !> packet stores the photon related variables
@@ -391,12 +391,6 @@ module inttau2
         logical       :: ldir(3)
         integer       :: celli, cellj, cellk
         real(kind=wp) :: dcell, delta=1e-8_wp, d, mua_real
-
-        if(present(mua))then
-            mua_real = mua
-        else
-            mua_real = 1._wp
-        end if
 
         !convert to different coordinate system. Origin is at lower left corner of fluence grid
         old_pos = vector(pos%x+grid%xmax, pos%y+grid%ymax, pos%z+grid%zmax)
@@ -425,6 +419,7 @@ module inttau2
                 packet%phase = packet%phase + dcell
 !$omp atomic
                     jmean(celli,cellj,cellk) = jmean(celli,cellj,cellk) + real(dcell, kind=sp)*packet%weight
+                    absorb(celli,cellj,cellk) = absorb(celli,cellj,cellk) + real(dcell, kind=sp)*packet%weight*mua
                 call update_pos(grid, old_pos, celli, cellj, cellk, dcell, .false., dir, ldir, delta)
                 exit
             else
@@ -432,6 +427,7 @@ module inttau2
                 packet%phase = packet%phase + dcell
 !$omp atomic
                     jmean(celli,cellj,cellk) = jmean(celli,cellj,cellk) + real(dcell, kind=sp)*packet%weight
+                    absorb(celli,cellj,cellk) = absorb(celli,cellj,cellk) + real(dcell, kind=sp)*packet%weight*mua
                 call update_pos(grid, old_pos, celli, cellj, cellk, dcell, .true., dir, ldir, delta)
             end if
             if(celli == -1 .or. cellj == -1 .or. cellk == -1)then

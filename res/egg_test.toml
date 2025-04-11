@@ -9,14 +9,14 @@ wavelength = 500.0
 nxg = 500
 nyg = 500
 nzg = 500
-xmax = 2.5
-ymax = 2.5
-zmax = 2.5
+xmax = 5.0
+ymax = 5.0
+zmax = 5.0
 
 [geometry]
 geom_name = "egg"
 numOptProp = 3
-boundingBox = [5.0,5.0,5.0]
+boundingBox = [10.0,10.0,10.0]
 position = [0.0,0.0,0.0]
 BottomSphereRadius = 2.0
 TopSphereRadius = 1.5

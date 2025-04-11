@@ -1,6 +1,6 @@
 [source]
 name = "pencil"
-nphotons = 100000
+nphotons = 1000000
 direction = "z"
 position = [0.0,0.0,-0.01]
 spectrum_type = "constant"
@@ -40,7 +40,7 @@ type="circle"
 ID = "this is a test"
 position=[0.0, 0.0, -0.01]
 direction=[0.0, 0.0, -1.0]
-radius=20
+radius=200
 nbins=100
 maxval = 1.0
 trackHistory=false
@@ -51,7 +51,7 @@ type="circle"
 ID = "1"
 position=[0.0, 0.0, 0.01]
 direction=[0.0, 0.0, 1.0]
-radius=20
+radius=200
 nbins=100
 maxval = 1.0
 trackHistory=false

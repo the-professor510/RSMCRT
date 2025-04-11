@@ -11,9 +11,9 @@ annulus_type="gaussian"
 nxg = 200
 nyg = 200
 nzg = 200
-xmax = 1.55
-ymax = 1.55
-zmax = 1.55
+xmax = 10
+ymax = 10
+zmax = 10
 
 [geometry]
 geom_name = "exp"

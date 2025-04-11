@@ -8,9 +8,9 @@ module iarray
     implicit none
     !> phase data array
     complex(kind=sp), allocatable :: phasor(:,:,:), phasorGLOBAL(:,:,:)
-    !> fluence data array
+    !> local fluence data array
     real(kind=sp), allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
-    !> dropped packet weight absorption data array
+    !> local energy absorption data array
     real(kind=sp), allocatable :: absorb(:,:,:), absorbGLOBAL(:,:,:) 
     !> emission location
     real(kind=sp), allocatable :: emission(:,:,:), emissionGLOBAL(:,:,:)

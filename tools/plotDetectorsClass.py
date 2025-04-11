@@ -6,7 +6,7 @@ class plotDetectorsClass:
        
     def plot(self, radius, count, nPackets, dectType):
              
-        totalCounts = sum(count)
+        totalCounts = np.sum(count)
         print(f"Detector Type : {dectType}")
         print(f"Total Diffuse : {totalCounts/nPackets}")
 

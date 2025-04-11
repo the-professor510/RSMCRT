@@ -19,9 +19,13 @@ class plotInverseClass:
         
     def plot2D(self, x, y, error, bestIndex, xName = "optical Prop A", yName = "optical Prop B"):
         fig = plt.figure(1)
+        #ax1 = fig.add_subplot(projection='3d')
         ax1 = fig.add_subplot()
+
+        
+        #ax1.scatter(x,y, error, c=error)
         ax1.scatter(x,y, c=error)
-        ax1.scatter(x[bestIndex], y[bestIndex], color = "red", label = "Best Guess")
+        ax1.scatter(x[bestIndex], y[bestIndex], color = "blue", label = "Best Guess", marker = "x")
         ax1.set_xlabel(xName)
         ax1.set_ylabel(yName)
         plt.show()

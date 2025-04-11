@@ -1932,13 +1932,16 @@ contains
             !check if we have reached an accuracy value less than the target accuracy, if true then break
             if (abs(minError) < accuracy) then
                 print*, "Below min error threshold"
-                exit
+
+                numGuesses = i
+                call write_inverse(gradDescentData, outputFile, numGuesses, indexOfMinError)
+                return
             end if
 
         end do        
         
         !we have finished the gradient descent output the gradDescentData to a file and write the error
-        numGuesses = i-1
+        numGuesses = i - 1
         call write_inverse(gradDescentData, outputFile, numGuesses, indexOfMinError)
 
         
@@ -2163,7 +2166,12 @@ contains
                 packet%step = packet%step + 1
             else
                 packet%tflag = .true.
-                call recordWeight(packet, 1.0_wp)
+#ifdef pathlength
+                !do nothing
+#else
+                !record the fluence and absorption
+                call recordWeight(packet, 1.0_wp, array(packet%layer)%getMua())
+#endif
                 exit
             end if
             ! Find next scattering location
@@ -2238,7 +2246,12 @@ contains
             weight_absorb = packet%weight * (1._wp - array(packet%layer)%getAlbedo())
             packet%weight = packet%weight - weight_absorb
         
-            call recordWeight(packet, weight_absorb)
+#ifdef pathlength
+            !do nothing
+#else
+            !record the fluence and absorption
+            call recordWeight(packet, weight_absorb, array(packet%layer)%getMua())
+#endif
 
             ! is the packet weight below a threshold
             if(packet%weight < THRESHOLD)then
@@ -2396,8 +2409,8 @@ contains
         emission(celli,cellj,cellk) = emission(celli,cellj,cellk) + real(1.0, kind=sp)
     end subroutine recordEmissionLocation
 
-    subroutine recordWeight(packet, weightAbsorbed)
-        !! record weight absorbed
+    subroutine recordWeight(packet, weightAbsorbed, absorptionCoefficient)
+        !! record energy absorbed and fluence
         use photonMod
         use iarray,     only: phasor, jmean, emission, absorb
         use constants , only : wp
@@ -2406,14 +2419,24 @@ contains
         type(photon),    intent(IN) :: packet
         !> weight absorbed at this point in space
         real(kind=wp),   intent(IN) :: weightAbsorbed
+        !> Absoption Ceofficient at this point in space
+        real(kind=wp),  intent(IN) :: absorptionCoefficient
         
         integer       :: celli, cellj, cellk
+        real(kind=wp) :: mua
         celli = packet%xcell
         cellj = packet%ycell
         cellk = packet%zcell
 
+        if (absorptionCoefficient == 0.0_wp) then
+            mua = 1e-15_wp
+        else 
+            mua = absorptionCoefficient
+        end if
+
 !$omp atomic
         absorb(celli, cellj, cellk) = absorb(celli, cellj, cellk) + weightAbsorbed
+        jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + weightAbsorbed/mua
     end subroutine recordWeight
 
 
@@ -2578,15 +2601,16 @@ subroutine finalise(dict, dects, nscatt, start, history)
         call set_value(dict, "source", state%source)
         call set_value(dict, "experiment", state%experiment)
 
-#ifdef pathlength
+
         call normalise_fluence(state%grid, jmeanGLOBAL, state%nphotons)
         call write_data(jmeanGLOBAL, trim(fileplace)//"jmean/"//state%outfile, state, dict)
-#endif
 
         call normalise_fluence(state%grid, emissionGLOBAL, state%nphotons)
         call write_data(emissionGLOBAL, trim(fileplace)//"emission/"//state%rendersourcefile, state, dict)
 
+        call normalise_fluence(state%grid, absorbGLOBAL, state%nphotons)
         call write_data(absorbGLOBAL, trim(fileplace)//"absorb/"//"absorb.nrrd", state, dict)
+
         ! if(state%absorb)call write_data(absorbGLOBAL, trim(fileplace)//"deposit/"//state%outfile_absorb, state, dict)
         !INTENSITY
         ! call write_data(abs(phasorGLOBAL)**2, trim(fileplace)//"phasor/"//state%outfile, state, dict)    
