@@ -1,0 +1,179 @@
+[source]
+name = "circular"
+nphotons = 10000000
+direction = "z"
+position = [0.0,0.0,-25.0]
+rotation = [0.0,0.0,0.0]
+radius = 0.001
+spectrum_type = "constant"
+wavelength = 500.0
+
+[grid]
+nxg = 500
+nyg = 500
+nzg = 500
+xmax = 25.0
+ymax = 25.0
+zmax = 25.0
+
+[geometry]
+geom_name = "box"
+numOptProp = 1
+BoxDimensions = [48.0,48.0,48.0]
+boundingBox = [50.0,50.0,50.0]
+position = [0.0,0.0,0.0]
+mus = [5.0]
+mua = [0.000001]
+hgg = [0.0]
+n = [1.0]
+
+
+[symmetry]
+symmetryType = "360rotational"
+escapenphotons = 100000
+GridSize = [50,500,100]
+maxValues = [50.0, 360.0, 24.0]
+position = [0.0,0.0,0.0]
+direction = [0.0,0.0,1.0]
+rotation = 0.0
+
+[[detectors]]
+type="circle"
+ID = "0.5mm"
+position=[0.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.25
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "1.5mm"
+position=[1.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius= 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "2.5mm"
+position=[2.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "3.5mm"
+position=[3.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "4.5mm"
+position=[4.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "5.5mm"
+position=[5.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "6.5mm"
+position=[6.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "7.5mm"
+position=[7.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+	
+[[detectors]]
+type="circle"
+ID = "8.5mm"
+position=[8.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "9.5mm"
+position=[9.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "10.5mm"
+position=[10.5, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.5
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+
+
+
+
+[output]
+fluence = "fluence.nrrd"
+render_geometry_name = "geom_render.nrrd"
+render_geometry = true
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [200,200,200]
+overwrite = true
+
+[simulation]
+iseed = 32132135
+absorb=true
+load_checkpoint=false
+checkpoint_file="check.ckpt"
+checkpoint_every_n=10000

@@ -2,7 +2,7 @@ import numpy as np
 import plotDetectorsClass
 
 
-folderName = "RSMCRT/data/detectors/"
+folderName = "data/detectors/"
 filename = folderName + "detector_1.dat"
 
 readDetectors = plotDetectorsClass.plotDetectorsClass()
@@ -16,7 +16,7 @@ print(f"Simulated Total Diffuse Reflection : {totalCounts:.5f}")
 print(f"%Diff : {((np.abs(totalCounts-0.09739)*100)/((0.09739 + totalCounts)/2)):.5f}")
 print()
 
-folderName = "RSMCRT/data/detectors/"
+folderName = "data/detectors/"
 filename = folderName + "detector_2.dat"
 
 readDetectors = plotDetectorsClass.plotDetectorsClass()

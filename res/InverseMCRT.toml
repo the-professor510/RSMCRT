@@ -7,9 +7,9 @@ spectrum_type = "constant"
 wavelength = 500.0
 
 [grid]
-nxg = 500
-nyg = 500
-nzg = 500
+nxg = 250
+nyg = 250
+nzg = 250
 xmax = 2.5
 ymax = 2.5
 zmax = 2.5
@@ -19,104 +19,96 @@ geom_name = "box"
 numOptProp = 1
 innerCuvetteDimensions = [1.0,1.0,1.0]
 outerCuvetteDimensions = [1.25,1.25,1.25]
-BoxDimensions = [1.5,1.5,1.5]
+BoxDimensions = [1.0,1.0,1.0]
 boundingBox = [5.0,5.0,5.0]
 position = [0.0,0.0,0.0]
-mus = [7.0]
-mua = [10.0]
-hgg = [0.5]
+mus = [5.0]
+mua = [2.0]
+hgg = [0.4]
 n = [1.2]
 
 [inverse]
 maxStepSize = 1
 gradStepSize = 0.0005
 accuracy = 0.001
-maxNumSteps = 1000
+maxNumSteps = 2500
 Findmus = true
-Findmua = false
+Findmua = true
 Findg = true
 Findn = false
 ReducedmusGuessing = true
-musUpper = 7.0
+musUpper = 6.0
 musLower = 4.5
-muaUpper = 100.0
-muaLower = 0.0
-hggUpper = 1.0
-hggLower = -1.0
-nUpper = 5.0
+muaUpper = 2.5
+muaLower = 1.5
+hggUpper = 0.5
+hggLower = 0.0
+nUpper = 3.0
 nLower = 1.0
-reducedmusUpper = 4.0
-reducedmusLower = 3.0
+reducedmusUpper = 4.5
+reducedmusLower = 2.5
 layer = 1
-
-[symmetry]
-symmetryType = "360rotational"
-escapenphotons = 100000
-GridSize = [100,500,200]
-maxValues = [60.0, 360.0, 30.0]
-position = [0.0,0.0,0.0]
-direction = [1.0,0.0,0.0]
-rotation = 0
 
 [[detectors]]
 type="circle"
-ID = "this is a test"
+ID = "Phase180"
 position=[0.0, 0.0, -2.121320343559643]
 direction=[0.0, 0.0, -1.0]
 radius= 1
 nbins=100
 maxval = 1.0
 trackHistory=false
-inverseTarget = 0.049009826	
-	
-
-
-
+inverseTarget = 0.00014331163666621584
+acceptanceAngle = 2.5
 
 
 [[detectors]]
 type="circle"
-ID = "1"
+ID = "Phase000"
 position=[0.0, 0.0, 2.121320343559643]
 direction=[0.0, 0.0, 1.0]
 radius=1
 nbins=100
 maxval = 1.0
 trackHistory=false
-inverseTarget = 0.001513141	
+inverseTarget = 0.0009356042584481451
+acceptanceAngle = 2.5
 
 [[detectors]]
 type="circle"
-ID = "2"
+ID = "Phase090"
 position=[0.0, 2.121320343559643, 0.0]
 direction=[0.0, 1.0, 0.0]
 radius=1
 nbins=100
 maxval = 1.0
 trackHistory=false
-inverseTarget = 0.006638955	
+inverseTarget = 4.4099032304478285e-05
+acceptanceAngle = 2.5
 
 [[detectors]]
 type="circle"
-ID = "3"
+ID = "Phase045"
 position=[0.0, 1.5, 1.5]
 direction=[0.0, 1.5, 1.5]
 radius=1
 nbins=100
 maxval = 1.0
 trackHistory=false
-inverseTarget = 0.002500116	
+inverseTarget = 4.1588672603293064e-05
+acceptanceAngle = 2.5
 
 [[detectors]]
 type="circle"
-ID = "4"
+ID = "Phase135"
 position=[0.0, 1.5, -1.5]
 direction=[0.0, 1.5, -1.5]
 radius=1
 nbins=100
 maxval = 1.0
 trackHistory=false
-inverseTarget = 0.027544986	
+inverseTarget = 0.00012704355675066328
+acceptanceAngle = 2.5
 
 [output]
 fluence = "fluence.nrrd"

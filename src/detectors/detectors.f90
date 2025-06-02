@@ -13,6 +13,8 @@ module detectors
     type, extends(detector1D) :: circle_dect
         !> Radius of detector
         real(kind=wp) :: radius
+        !> maximum annulus acceptance angle above the optical axis
+        real(kind=wp) :: acceptAngle
     contains
         procedure :: check_hit  => check_hit_circle
     end type circle_dect
@@ -61,6 +63,8 @@ module detectors
         real(kind=wp) :: r1
         !> Outer radius
         real(kind=wp) :: r2
+        !> maximum annulus acceptance angle above the optical axis
+        real(kind=wp) :: acceptAngle
         contains
         procedure :: check_hit => check_hit_annulus
     end type annulus_dect
@@ -104,7 +108,7 @@ module detectors
 
     contains
     
-    function init_circle_dect(pos, dir, layer, radius, nbins, trackHistory, dect_ID, targetValue) result(out)
+    function init_circle_dect(pos, dir, layer, radius, acceptAngle, nbins, trackHistory, dect_ID, targetValue) result(out)
         !! Initalise Circle detector
         !> Centre of detector
         type(vector),  intent(in) :: pos
@@ -116,6 +120,8 @@ module detectors
         integer,       intent(in) :: nbins
         !> Radius of the detector
         real(kind=wp), intent(in) :: radius
+        !> maximum fibre acceptance angle above the optical axis
+        real(kind=wp), intent(in) :: acceptAngle
         !> Boolean on if to store photon's history prior to hitting the detector.
         logical,       intent(in) :: trackHistory
         !> Detector ID
@@ -132,6 +138,7 @@ module detectors
         !extra bin for data beyond end of array
         out%nbins = nbins + 1
         out%radius = radius
+        out%acceptAngle = acceptAngle
         allocate(out%data(out%nbins))
         out%data = 0.0_wp
         if(nbins == 0)then
@@ -147,23 +154,30 @@ module detectors
     logical function check_hit_circle(this, hitpoint)
         !! Check if a hitpoint is in the circle
         
+        use constants, only : TWOPI
         use geometry, only : intersectCircle
 
         class(circle_dect), intent(INOUT) :: this
         !> Hitpoint to check
         type(hit_t),        intent(inout) :: hitpoint
         
-        real(kind=wp) :: t 
+        real(kind=wp) :: t, costt
 
         check_hit_circle = .false.
         check_hit_circle = intersectCircle(this%dir, this%pos, this%radius, hitpoint%pos, hitpoint%dir, t, hitpoint%value1D)
         if(check_hit_circle)then
             if(t <= 0.0_wp .or. t > hitpoint%pointSep)check_hit_circle=.false.
             !is the interaction point outside of the packet path
+
+            !what is the angle of incidence with respect to the detector
+            costt = this%dir .dot. hitpoint%dir
+            if (costt < cos(this%acceptAngle*TWOPI/360))check_hit_circle=.false. 
+            !we are outside the acceptance angle
+
         end if
     end function check_hit_circle
 
-    function init_annulus_dect(pos, dir, layer, r1, r2, nbins, maxval, trackHistory, dect_ID, targetValue) result(out)
+    function init_annulus_dect(pos, dir, layer, r1, r2, acceptAngle, nbins, maxval, trackHistory, dect_ID, targetValue) result(out)
         !! Initalise Annular detector
 
         !> Centre of detector
@@ -176,6 +190,8 @@ module detectors
         real(kind=wp), intent(IN) :: r1
         !> Outer radius
         real(kind=wp), intent(IN) :: r2
+        !> maximum fibre acceptance angle above the optical axis
+        real(kind=wp), intent(in) :: acceptAngle
         !> Number of bins in the detector
         integer,       intent(in) :: nbins
         !> Maximum value to store in bins
@@ -197,6 +213,7 @@ module detectors
         out%nbins = nbins + 1
         out%r1 = r1
         out%r2 = r2
+        out%acceptAngle = acceptAngle
         allocate(out%data(out%nbins))
         out%data = 0.0_wp
         if(nbins == 0)then
@@ -211,6 +228,7 @@ module detectors
 
     logical function check_hit_annulus(this, hitpoint)
 
+        use constants, only : TWOPI
         use geometry, only : intersectCircle
 
         !! Check if a hitpoint is in the annulus
@@ -219,7 +237,7 @@ module detectors
         type(hit_t),         intent(inout)    :: hitpoint
 
         logical :: hit_circle_r2, hit_circle_r1
-        real(kind=wp) :: t
+        real(kind=wp) :: t, costt
 
         check_hit_annulus = .false.
         !do we hit the inner void
@@ -235,7 +253,16 @@ module detectors
                 check_hit_annulus=.false.
             else 
                 ! it is inside the packet path
-                check_hit_annulus = .true.
+
+                !what is the angle of incidence with respect to the detector
+                costt = this%dir .dot. hitpoint%dir
+                if (costt < cos(this%acceptAngle*TWOPI/360)) then 
+                    !we are outside the acceptance angle
+                    check_hit_annulus=.false.
+                else
+                    check_hit_annulus = .true.
+                    !we are inside the acceptance angle
+                end if
             end if
         end if
 

@@ -206,7 +206,7 @@ contains
         real(kind=wp), intent(in) :: targetValue
 
         integer       :: layer, nbins
-        real(kind=wp) :: maxval, radius
+        real(kind=wp) :: maxval, radius, acceptAngle
         type(vector)  :: pos, dir
         logical       :: trackHistory
 
@@ -215,6 +215,10 @@ contains
         dir = dir%magnitude()
         call get_value(child, "layer", layer, 1)
         call get_value(child, "radius", radius, 1.0_wp)
+
+        !testing accpetanceAngle
+        call get_value(child, "acceptanceAngle", acceptAngle, 90.0_wp)
+
         call get_value(child, "nbins", nbins, 100)
         call get_value(child, "maxval", maxval, 100._wp)
         call get_value(child, "trackHistory", trackHistory, .false.)
@@ -225,7 +229,7 @@ contains
             return
         end if
 #endif
-        dects(counts) = circle_dect(pos, dir, layer, radius, nbins, trackHistory, dect_ID, targetValue)
+        dects(counts) = circle_dect(pos, dir, layer, radius, acceptAngle, nbins, trackHistory, dect_ID, targetValue)
         counts = counts + 1
 
     end subroutine handle_circle_dect
@@ -317,7 +321,7 @@ contains
 
 
         integer       :: layer, nbins, origin
-        real(kind=wp) :: maxval, radius1, radius2
+        real(kind=wp) :: maxval, radius1, radius2, acceptAngle
         type(vector)  :: pos, dir
         logical       :: trackHistory
 
@@ -326,6 +330,9 @@ contains
         call get_value(child, "layer", layer, 1)
         call get_value(child, "radius1", radius1, 0.1_wp)
         call get_value(child, "radius2", radius2, 0.2_wp, origin=origin)
+        
+        !testing accpetanceAngle
+        call get_value(child, "acceptanceAngle", acceptAngle, 90.0_wp)
         
         if(radius2 <= radius1)then
             call make_error(error,&
@@ -344,7 +351,8 @@ contains
             return
         end if
 #endif
-        dects(counts) = annulus_dect(pos, dir, layer, radius1, radius2, nbins, maxval, trackHistory, dect_ID, targetValue)
+        dects(counts) = annulus_dect(pos, dir, layer, radius1, radius2, acceptAngle, nbins, maxval, & 
+                                     trackHistory, dect_ID, targetValue)
         counts = counts + 1
     end subroutine handle_annulus_dect
 end module parse_detectorsMod

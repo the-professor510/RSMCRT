@@ -292,6 +292,7 @@ module photonMod
 
             call spectrum%p%sample(this%wavelength, tmp)
             
+            this%phase = 0.0_wp
             this%tflag  = .false.
             this%cnts   = 0
             this%bounces = 0
@@ -337,6 +338,7 @@ module photonMod
             this%nyp = this%sint * this%sinp
             this%nzp = this%cost
 
+            this%phase = 0.0_wp
             this%tflag  = .false.
             this%cnts   = 0
             this%bounces = 0
@@ -483,6 +485,7 @@ module photonMod
             this%cost = this%nzp
             this%sint = sqrt(1._wp - this%cost**2)
 
+            this%phase = 0.0_wp
             this%tflag = .false.
             this%bounces = 0
             this%cnts = 0
@@ -636,7 +639,7 @@ module photonMod
             call spectrum%p%sample(this%wavelength, tmp)
             this%energy = 1._wp
             this%fact = TWOPI/(this%wavelength)
-            this%phase = 0._wp
+            this%phase = 0.0_wp
 
             ! Linear Grid 
             cell = state%grid%get_voxel(this%pos)
@@ -694,6 +697,7 @@ module photonMod
             this%cost = this%nzp
             this%sint = sqrt(1._wp - this%cost**2)
 
+            this%phase = 0.0_wp
             this%tflag = .false.
             this%bounces = 0
             this%cnts = 0
@@ -965,6 +969,7 @@ module photonMod
             this%cost = this%nzp
             this%sint = sqrt(1._wp - this%cost**2)
 
+            this%phase = 0.0_wp
             this%tflag = .false.
             this%bounces = 0
             this%cnts = 0

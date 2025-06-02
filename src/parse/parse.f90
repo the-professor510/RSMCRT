@@ -212,6 +212,9 @@ module parse_mod
         pos = vector(0._wp,0._wp,0._wp)
         dir = vector(0._wp,0._wp,1._wp)
 
+        state%source = "point"
+
+
         call get_value(table, "symmetry", child)
 
         if(associated(child))then

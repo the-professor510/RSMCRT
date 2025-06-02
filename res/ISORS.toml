@@ -1,0 +1,168 @@
+[source]
+name = "annulus"
+nphotons = 10000000
+position = [0.0,0.0,-25.0]
+rotation = [0.0,0.0,1.0]
+focalLength = 10000.0
+rhi = 5.0
+rlo = 4.0
+spectrum_type = "constant"
+wavelength = 500.0
+
+[grid]
+nxg = 500
+nyg = 500
+nzg = 500
+xmax = 25.0
+ymax = 25.0
+zmax = 25.0
+
+[geometry]
+geom_name = "box"
+numOptProp = 1
+BoxDimensions = [48.0,48.0,48.0]
+boundingBox = [50.0,50.0,50.0]
+position = [0.0,0.0,0.0]
+mus = [1.0]
+mua = [0.000001]
+hgg = [0.0]
+n = [1.0]
+
+
+[symmetry]
+symmetryType = "360rotational"
+escapenphotons = 1000000
+GridSize = [50,500,100]
+maxValues = [50.0, 360.0, 24.0]
+position = [0.0,0.0,0.0]
+direction = [0.0,0.0,1.0]
+rotation = 0.0
+
+[[detectors]]
+type="circle"
+ID = "0.05mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.05
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "0.10mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius= 0.10
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "0.15mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.15
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "0.20mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.20
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "0.25mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.25
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "0.30mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.30
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "0.35mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.35
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "0.40mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.40
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+	
+[[detectors]]
+type="circle"
+ID = "0.45mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.45
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+[[detectors]]
+type="circle"
+ID = "0.50mm"
+position=[0.0, 0.0, -24.00001]
+direction=[0.0, 0.0, -1.0]
+radius = 0.50
+acceptanceAngle = 12.7
+nbins=100
+maxval = 100.0
+trackHistory=false
+
+
+
+
+[output]
+fluence = "fluence.nrrd"
+render_geometry_name = "geom_render.nrrd"
+render_geometry = true
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [200,200,200]
+overwrite = true
+
+[simulation]
+iseed = 32132135
+absorb=true
+load_checkpoint=false
+checkpoint_file="check.ckpt"
+checkpoint_every_n=10000

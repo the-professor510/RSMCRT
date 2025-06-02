@@ -15,15 +15,6 @@ import sys
 import os
 
 #Excitation light distribution
-#Try either absorb or fluence, comment out which one you don't use
-#Personally I only use fluence, if the absorption cross section was set to 0.0
-
-#folderNameAbsorb = "RSMCRT/data/absorb/"
-#filenameAbsorb = "absorb.dat"
-#file = folderNameAbsorb + filenameAbsorb
-#plot_nrrd_object = read_nrrd_class.read_nrrd_class()
-#gridAbsorb, hdrAbsorb = plot_nrrd_object.read_nrrd(file)
-
 folderNameFluence = "RSMCRT/data/jmean/"
 filenameFluence = "fluence.nrrd"
 file = folderNameFluence + filenameFluence
@@ -35,7 +26,8 @@ gridAbsorb, hdrAbsorb = plot_nrrd_object.read_nrrd(file)
 folderNameEscape = "RSMCRT/data/escape/"
 #i = 11
 i = args.i
-fileNameEscape = "dectID_Offset"+str(i) + "mm__escape"+str(i)+".nrrd"
+distance = (int(i)+1) * 0.05
+fileNameEscape = "dectID_"+ "{:.2f}".format(distance) + "mm__escape"+str(int(i)+1)+".nrrd"
 file = folderNameEscape + fileNameEscape
 plot_nrrd_object = read_nrrd_class.read_nrrd_class()
 gridEscape, hdrEscape = plot_nrrd_object.read_nrrd(file)
