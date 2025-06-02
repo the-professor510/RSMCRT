@@ -5,14 +5,13 @@ option build --compiler gfortran-10 --profile debug --flag "-fopenmp"
 option build --compiler ifort
 
 @runmp
-option run sMCRT --compiler gfortran-10 --profile release --flag "-fopenmp -O2 -flto -march=native -fPIC -funroll-loops -fstack-arrays"
+option run sMCRT --compiler gfortran-10 --flag "-fopenmp -O2 -march=native -fmax-stack-var-size=1000000"
 
 @debug
-option run sMCRT --compiler gfortran-10 --flag "-O2 -march=native -flto -mavx -g -fbacktrace -fcheck=all -fbounds-check -ffpe-trap=invalid,overflow,underflow,denormal"
+option run sMCRT --compiler gfortran-10 --flag "-O2 -march=native -mavx -g -fbacktrace -fcheck=all -ffpe-trap=invalid,overflow,underflow,denormal"
 
 @debugmp
-option run sMCRT --compiler gfortran-10 --flag "-fopenmp -O2 -march=native -flto -mavx -g -fbacktrace -fcheck=all -fbounds-check -ffpe-trap=invalid,overflow,underflow,denormal -fstack-arrays"
-
+option run --compiler gfortran-10 --flag "-fopenmp -mcmodel=medium -O2 -march=native -mavx -g -fbacktrace -fcheck=array-temps,bits,bounds,do,mem,pointer -ffpe-trap=invalid,overflow,underflow,denormal -fmax-stack-var-size=1000000"
 
 @test
 option test --compiler gfortran-10 --flag "-O0 -fPIE -fprofile-arcs -ftest-coverage --coverage"
