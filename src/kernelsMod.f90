@@ -1498,7 +1498,7 @@ contains
         use setupMod, only : setup_inverseDirectory
         use writer_mod,    only : write_inverse
 
-        use sposvInterface, only :sposv
+        use Interfaces, only : sposv, sgesv
 
         !external deps
         use tev_mod, only : tevipc
@@ -1548,11 +1548,13 @@ contains
 
         real(kind=sp), allocatable :: kernelObs(:,:)
         real(kind=sp), allocatable :: kernelObstoPred(:,:)
-        real(kind=sp), allocatable :: solved(:,:)
-        integer :: INFO
+        real(kind=sp), allocatable :: inverse(:,:)
+        real(kind=sp), allocatable :: solved(:,:), solved2(:,:)
+        real(kind=sp), allocatable :: tempKernelObs(:,:)
+        integer :: INFO, INFO2, IPIV
         real(kind=wp), allocatable :: mean(:,:)
         real(kind=sp), allocatable :: kernelPred(:,:)
-        real(kind=wp), allocatable :: solvedmatmulkernelObstoPred(:,:)
+        real(kind=sp), allocatable :: solvedmatmulkernelObstoPred(:,:)
         real(kind=wp), allocatable :: covariance(:,:)
         real(kind=wp), allocatable :: std(:,:)
 
@@ -1568,6 +1570,9 @@ contains
         integer, allocatable :: seed(:)
         integer :: sizeRanSeed
         real(kind=wp) :: ranNum !used to temporarily store a random number
+
+        !timing
+        real :: startTime, stopTime
 
 
         if(state%loadckpt)then
@@ -1605,11 +1610,11 @@ contains
         call get_value(dict, "inverseLayer", layer)
         call get_value(dict, "inverseOutputFileName", outputFile)
 
-        niterations = 1000 ! Number of iterations of optimization process
+        niterations = 995 ! Number of iterations of optimization process
         n1 = 5 ! Number of points to begin training with
-        n2 = 1000 ! Number of points to sample fitted function
+        n2 = 2500 ! Number of points to sample fitted function
         tune = 0.1 ! exploitation and exploration factor for Expected Improvement
-        observationNoise = 0.1 ! Noise in observations for training datas
+        observationNoise = 0.01 ! Noise in observations for training datas
 
         !check if the inverse MCRT directory exists
         call setup_inverseDirectory()
@@ -1689,6 +1694,7 @@ contains
 
         !set the initial guesses
         allocate(optimizationData(n1+niterations,5))
+        optimizationData = 0._wp
 
         !fill optimizationData with the training data
         count = 0
@@ -1712,7 +1718,7 @@ contains
             call random_seed(put=seed) !restart the random seed for optical properties
             error = 0._wp
             call inverse_evaluate(dects, error)
-            optimizationData(1,5) = error
+            optimizationData(i,5) = error
             ! reset the arrays storing data
             call reset(dects)
 
@@ -1724,13 +1730,19 @@ contains
             print*, "reducedmus", reducedmus
             print*, "error: ", optimizationData(i,5)
         end do
-                
+              
+
+        print*, " "
+        print*, " "
+        print*, "training data over"
+        print*, " "
+        print*, " "
+
         
 
         !store the position of minimum error
-        minError = optimizationData((maxloc(optimizationData(:,5),dim=1)), 5)
-        indexOfMinError = (maxloc(optimizationData(:,5),dim=1))
-
+        minError = optimizationData((maxloc(optimizationData(1:n1,5),dim=1)), 5)
+        indexOfMinError = (maxloc(optimizationData(1:n1,5),dim=1))
         
         !do BayesianOptimization
         do i = n1+1, n1+niterations
@@ -1763,6 +1775,7 @@ contains
                 fittingData(j,4) = n
             end do
 
+            call cpu_time(startTime)
             ! Kernel of the observations
             call produceKernel(trainingData, trainingData, kernelObs)
             do x = 1, size(kernelObs, dim=1)
@@ -1770,19 +1783,36 @@ contains
                     if (x==y) kernelObs(x,y) = kernelObs(x, y) + real(observationNoise**2)
                 end do
             end do
+            call cpu_time(stopTime)
+            print '("Time to build kernel of observations: ", f6.3, " seconds")',stopTime-startTime
 
+            call cpu_time(startTime)
             ! Kernel of observations to predictions
             call produceKernel(trainingData, fittingData, kernelObstoPred)
+            call cpu_time(stopTime)
+            print '("Time to build kernel of observations to predictions: ", f6.3, " seconds")',stopTime-startTime
+
 
             if(allocated(solved)) deallocate(solved)
             allocate(solved(size(kernelObstoPred, dim=1), size(kernelObstoPred, dim=2)))
             solved = kernelObstoPred
 
+            if(allocated(tempKernelObs)) deallocate(tempKernelObs)
+            allocate(tempKernelObs(size(kernelObs, dim=1), size(kernelObs, dim=2)))
+            tempKernelObs = kernelObs
+
+            
+            call cpu_time(startTime)
             ! solve KernelObs * x = KernelObstoPred and to return KernelObs^-1*KernelObstoPred
-            call sposv("U", size(kernelObs, dim = 1), size(kernelObstoPred, dim = 2), &
-                                        kernelObs, size(kernelObs, dim=2), & 
-                                        kernelObstoPred, size(kernelObstoPred, dim=1), &
-                                        INFO)
+
+            call sposv("U", size(tempKernelObs, dim = 1), size(solved, dim = 2), &
+                    tempKernelObs, size(tempKernelObs, dim=2), solved, size(solved, dim=1), INFO)
+
+            
+            !call sgesv(size(tempKernelObs, dim = 1), size(solved, dim = 2), &
+            !                            tempKernelObs, size(tempKernelObs, dim=2), IPIV, & 
+            !                            solved, size(solved, dim=1), &
+            !                            INFO)
             if (INFO /= 0) then
                 print*, "error could not perform solution of linear equations in fitting Bayesian Model"
                 print*, "INFO: ", INFO
@@ -1793,14 +1823,24 @@ contains
                         &and the solution has not been computed."
             end if
 
-            solved = transpose(solved)
 
+            solved = transpose(solved)
+      
+            call cpu_time(stopTime)
+            print '("Time to solve: ", f6.3, " seconds")',stopTime-startTime
+
+            call cpu_time(startTime)
             mean = matmul(solved, trainingDataError)
+            call cpu_time(stopTime)
+            print '("Time to find mean: ", f6.3, " seconds")',stopTime-startTime
 
             ! Kernel of predictions to predictions
             call produceKernel(fittingData, fittingData, kernelPred)
 
+            call cpu_time(startTime)
             solvedmatmulkernelObstoPred = matmul(solved, kernelObstoPred)
+            call cpu_time(stopTime)
+            print '("Time to find intermediatary step to find std: ", f6.3, " seconds")',stopTime-startTime
 
             if(allocated(covariance)) deallocate(covariance)
             allocate(covariance(size(kernelPred, dim =1), size(kernelPred, dim =2)))
@@ -1808,6 +1848,7 @@ contains
             allocate(std(size(kernelPred, dim =1), 1))
 
             !calculate covariance matrix and standard devaition from sqrt(diag(covariance))
+            call cpu_time(startTime)
             covariance = 0.0_wp
             std = 0.0_wp
             do x = 1, size(kernelPred, dim =1)
@@ -1817,16 +1858,22 @@ contains
                     if (x==y) std(x,1) = sqrt(covariance(x,y))
                 end do
             end do
-
+            call cpu_time(stopTime)
+            print '("Time to find std: ", f6.3, " seconds")',stopTime-startTime
+            
             !calculate expected improvement
+            call cpu_time(startTime)
             if(allocated(expectedImp)) deallocate(expectedImp)
             allocate(expectedImp(size(mean, dim=1)))
-            bestGuess = maxval(trainingDataError)
+            bestGuess = minError
             do j = 1, size(mean, dim=1)
-                expectedImp(j) = (mean(j,1)-bestGuess-tune)*(0.5*(1+erf((mean(j,1)-bestGuess-tune)/(std(j,1) + 1e-8_wp)))) &
+                expectedImp(j) = (mean(j,1)-bestGuess-tune)*(0.5*(1+erf((mean(j,1)-bestGuess-tune)/ &
+                                                                (sqrt(2.0)*(std(j,1) + 1e-8_wp))))) &
                                 + (std(j,1)+1e-8_wp)*(1/sqrt(TWOPI))*exp(-((mean(j,1)-bestGuess-tune)/(std(j,1) + 1e-8_wp))**2/2)
             end do
 
+            call cpu_time(stopTime)
+            print '("Time to find EI: ", f6.3, " seconds")',stopTime-startTime
 
             !find the maximum of the acquisition function
             maxExpectedImpIndx = maxloc(expectedImp, dim = 1)
@@ -1852,13 +1899,11 @@ contains
             call random_seed(put=seed) !restart the random seed for optical properties
             error = 0._wp
             call inverse_evaluate(dects, error)
-            optimizationData(1,5) = error
+            optimizationData(i,5) = error
             ! reset the arrays storing data
             call reset(dects)
 
-            print*, " "
-            print*, " "
-            print*, "Last Guess"
+            print*, "Last Guess", i
             print*, "mus: ", mus
             print*, "mua: ", mua
             print*, "hgg: ", hgg
@@ -1866,11 +1911,11 @@ contains
             print*, "reducedmus", reducedmus
             print*, "error: ", optimizationData(i,5)
 
-            indexOfMinError = (maxloc(optimizationData(:,5),dim=1))
+            indexOfMinError = (maxloc(optimizationData(1:i,5),dim=1))
             minError = optimizationData(indexOfMinError,5)
 
             print*, " "
-            print*, "Best Guess"
+            print*, "Best Guess", indexOfMinError
             print*, "mus: ", optimizationData(indexOfMinError,1)
             print*, "mua: ", optimizationData(indexOfMinError,2)
             print*, "hgg: ", optimizationData(indexOfMinError,3)
@@ -1902,6 +1947,7 @@ contains
         real(kind=sp), allocatable, intent(inout) :: kernel(:,:)
 
         integer :: i, j
+        real(kind=wp) :: temp
 
         if(allocated(kernel)) deallocate(kernel)
         allocate(kernel(size(pointsArray1, dim = 1), size(pointsArray2, dim = 1)))
@@ -1909,10 +1955,18 @@ contains
         do i = 1, size(pointsArray1, dim = 1)
             do j = 1, size(pointsArray2, dim = 1)
                 !take exp(-0.5 * square euclidean distance)
-                kernel(i,j) = exp(-0.5_sp*  ((real(pointsArray1(i,1)) - real(pointsArray2(j,1)))**2 + &
-                                             (real(pointsArray1(i,2)) - real(pointsArray2(j,2)))**2 + &
-                                             (real(pointsArray1(i,3)) - real(pointsArray2(j,3)))**2 + &
-                                             (real(pointsArray1(i,4)) - real(pointsArray2(j,4)))**2))
+                temp = -0.5 *  ((real(pointsArray1(i,1)) - real(pointsArray2(j,1)))**2 + &
+                                (real(pointsArray1(i,2)) - real(pointsArray2(j,2)))**2 + &
+                                (real(pointsArray1(i,3)) - real(pointsArray2(j,3)))**2 + &
+                                (real(pointsArray1(i,4)) - real(pointsArray2(j,4)))**2)
+
+                ! if kernel(i,j) < 1e-10 round to zero
+                if (temp < -23.02585) then
+                    kernel(i,j) = 0.0
+                else 
+                    kernel(i,j) = exp(temp)
+                end if
+
             end do
         end do
 
@@ -1926,7 +1980,7 @@ contains
         use random, only : ran2
         use constants, only : wp
 
-        real(kind=wp), intent(inout) :: mus, mua, hgg, n, reducedmus
+        real(kind=wp), intent(out) :: mus, mua, hgg, n, reducedmus
         real(kind=wp), intent(in) :: Tmus, Tmua, Thgg, Tn
         logical, intent(in) :: findmua, findmus, findg, findn, reducedmusGuessing
         real(kind=wp) :: domain(5,2)
@@ -2009,7 +2063,7 @@ contains
 #endif
         character(len=*), intent(in) :: input_file
         
-        integer                       :: j
+        integer                       :: j, loopCounter
         type(history_stack_t)         :: history
         type(photon)                  :: packet
         type(toml_table)              :: dict
@@ -2031,6 +2085,8 @@ contains
 
         real(kind=wp), allocatable :: gradDescentData(:,:)
         real(kind=wp) :: mus, mua, hgg, n, reducedmus
+        real(kind=wp) :: tempMus, tempMua, tempHgg, tempN, tempReducedmus
+        real(kind=wp) :: trialMus, trialMua, trialHgg, trialN, trialReducedmus
         integer :: i, SDF_array_index
 
 
@@ -2040,13 +2096,12 @@ contains
 
         real(kind=wp) :: probability, alpha, k, it
         real(kind=wp) :: domain(5,2)
-        integer :: nb_samples, indexOfMinError, indexOfMaxRatio, index
-        real(kind=wp) :: minError, maxRatio, ratioCounter
+        integer :: indexOfMinError, indexOfMaxRatio, index, ratioCounter
+        real(kind=wp) :: minError, maxRatio
         real(kind=wp), allocatable :: ratios(:)
 
         real(kind=wp) :: ranNum !used to temporarily store a random number
         real(kind=wp) :: leftMin, rightMax, tempMin !sides of the LIPO condition
-        real(kind=wp) :: runningTotal
 
         integer, allocatable :: seed(:)
         integer :: sizeRanSeed
@@ -2148,7 +2203,6 @@ contains
         !set the values for AdaLIPO
         probability = 1.0_wp
         alpha = 0.01
-        nb_samples = 0
         k = 0.0_wp
 
         !bounds for AdaLIPO
@@ -2218,8 +2272,6 @@ contains
                 call randomOptProp(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4), & 
                                 reducedmus, mus, mua, hgg, n, findmua, findmus, findg, findn, reducedmusGuessing, domain)
 
-                nb_samples = nb_samples + 1
-
                 !update the optical properties
                 trialOptProp = mono(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4))
                 temp = array(SDF_array_index)%updateOptProp(trialOptProp)
@@ -2228,43 +2280,40 @@ contains
                 do while(.true.)
                     !get the new guesses for the mua, mus, n, and g
                     !choose random mus, mua, hgg, n
-                    call randomOptProp(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4), &
-                                    reducedmus, mus, mua, hgg, n, findmua, findmus, findg, findn, reducedmusGuessing, domain)
+                    call randomOptProp(tempMus, tempMua, tempHgg, tempN, tempReducedmus, &
+                                     mus, mua, hgg, n, findmua, findmus, findg, findn, reducedmusGuessing, domain)
 
-                    nb_samples = nb_samples + 1
-
-                    temp=exp(-1._wp*(((gradDescentData(i,1)-gradDescentData(indexOfMinError,1))**2/ & 
-                                                               (2*abs(domain(1,2)-domain(1,1)))) &
-                        + ((gradDescentData(i,2)-gradDescentData(indexOfMinError,2))**2/(2*abs(domain(2,2)-domain(2,1)))) & 
-                        + ((gradDescentData(i,3)-gradDescentData(indexOfMinError,3))**2/(2*abs(domain(3,2)-domain(3,1)))) & 
-                        + ((gradDescentData(i,4)-gradDescentData(indexOfMinError,4))**2/(2*abs(domain(4,2)-domain(4,1))))))
-
-                    
-
-                    !update the optical properties
-                    trialOptProp = mono(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4))
-                    temp = array(SDF_array_index)%updateOptProp(trialOptProp)
-
-                    
                     !find the minimum of left_Min
-                    leftMin = gradDescentData(1,5) + k * sqrt((gradDescentData(i,1) - gradDescentData(1,1))**2 & 
-                                                            + (gradDescentData(i,2) - gradDescentData(1,2))**2 & 
-                                                            + (gradDescentData(i,3) - gradDescentData(1,3))**2 & 
-                                                            + (gradDescentData(i,4) - gradDescentData(1,4))**2)
+                    leftMin = gradDescentData(1,5) + k * sqrt((tempMus - gradDescentData(1,1))**2 & 
+                                                            + (tempMua - gradDescentData(1,2))**2 & 
+                                                            + (tempHgg - gradDescentData(1,3))**2 & 
+                                                            + (tempN - gradDescentData(1,4))**2)
                     do j = 2,(i-1)
-                        tempMin = gradDescentData(j,5) + k * sqrt((gradDescentData(i,1) - gradDescentData(j,1))**2 &  
-                                                                + (gradDescentData(i,2) - gradDescentData(j,2))**2 & 
-                                                                + (gradDescentData(i,3) - gradDescentData(j,3))**2 & 
-                                                                + (gradDescentData(i,4) - gradDescentData(j,4))**2)
+                        tempMin = gradDescentData(j,5) + k * sqrt((tempMus - gradDescentData(j,1))**2 &  
+                                                                + (tempMua - gradDescentData(j,2))**2 & 
+                                                                + (tempHgg - gradDescentData(j,3))**2 & 
+                                                                + (tempN - gradDescentData(j,4))**2)
                         if (tempMin < leftMin) then
                             leftMin = tempMin
                         end if
                     end do
 
-
                     !LIPO condition
                     if (leftMin >= rightMax) then
+
+                        !update gradDescentData
+                        gradDescentData(i,1) = tempMus
+                        gradDescentData(i,2) = tempMua
+                        gradDescentData(i,3) = tempHgg
+                        gradDescentData(i,4) = tempN
+
+                        !update the optical properties
+                        trialOptProp=mono(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4))
+                        temp = array(SDF_array_index)%updateOptProp(trialOptProp)
+
+                        !exit while loop
                         exit
+
                     end if
                 end do
             end if
@@ -2305,10 +2354,8 @@ contains
             ! find the ratios, and find the new maximum ratio
             probability = 1.0_wp/log(real(i, kind=wp))
 
-            !print*, gradDescentData(1,1)
-            !print*, "current gradDescentData index", i
+            
             do j = 1, i-1
-                !print*, "polling gradDescentData index", j
                 if (sqrt((gradDescentData(i,1) - gradDescentData(j,1))**2 & 
                 + (gradDescentData(i,2) - gradDescentData(j,2))**2 & 
                 + (gradDescentData(i,3) - gradDescentData(j,3))**2 & 
@@ -2398,12 +2445,15 @@ contains
             end if
         end do
 
-        error = -error/counter
-
-        !limit error between 0 and -1.0_wp
-        if (error < -1.0_wp) then
-            error = -1.0_wp
+        !! current tested method of error
+        error = 1.0_wp-error/counter
+        
+        !limit error between 1.0_wp and 0.0_wp
+        if (error < 0.0_wp) then
+            error = 0.0_wp
         end if
+
+
 
     end subroutine inverse_evaluate
 
@@ -3126,24 +3176,3 @@ subroutine display_settings(state, input_file, packet, kernel_type)
 
 end subroutine display_settings
 end module kernels
-
-module sposvInterface
-
-    use constants, only : sp
-    
-    implicit none
-    
-    interface stdlib_sposv
-        subroutine sposv(uplo, n, nrhs, A, Ida, B, Idb, info)
-            character, intent(in) :: uplo
-            integer, intent(in) :: n
-            integer, intent(in) :: nrhs
-            real(kind=4), intent(inout) :: A(1:Ida,*)
-            integer, intent(in) :: Ida
-            real(kind=4), intent(inout) :: B(1:Ida,*)
-            integer, intent(in) :: Idb
-            integer, intent(out) :: info
-
-        end subroutine sposv
-    end interface stdlib_sposv
-end module sposvInterface

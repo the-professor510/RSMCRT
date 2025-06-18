@@ -19,8 +19,8 @@ program mcpolar
 #ifdef escapeFunction
     call escape_Function(trim(args(1)))
 #elif inverseMCRT
-    !call inverse_MCRT(trim(args(1)))
-    call bayesian_inverse_MCRT(trim(args(1)))
+    call inverse_MCRT(trim(args(1)))
+    !call bayesian_inverse_MCRT(trim(args(1)))
 #else
     call default_MCRT(trim(args(1)))
 #endif

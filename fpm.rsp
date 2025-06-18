@@ -11,7 +11,7 @@ option run sMCRT --compiler gfortran-10 --flag "-fopenmp -O2 -march=native -fmax
 option run sMCRT --compiler gfortran-10 --flag "-O2 -march=native -mavx -g -fbacktrace -fcheck=all -ffpe-trap=invalid,overflow,underflow,denormal"
 
 @debugmp
-option run --compiler gfortran-10 --flag "-fopenmp -mcmodel=medium -O2 -march=native -mavx -g -fbacktrace -fcheck=array-temps,bits,bounds,do,mem,pointer -ffpe-trap=invalid,overflow,underflow,denormal -fmax-stack-var-size=1000000"
+option run --compiler gfortran-10 --flag "-o test.o -fopenmp -mcmodel=medium -O2 -march=native -mavx -Wall -g -fbacktrace -fcheck=all "
 
 @test
 option test --compiler gfortran-10 --flag "-O0 -fPIE -fprofile-arcs -ftest-coverage --coverage"
