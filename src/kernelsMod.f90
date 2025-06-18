@@ -5,6 +5,7 @@ module kernels
     
     private
     public :: default_MCRT, escape_Function, inverse_MCRT, test_kernel, bayesian_inverse_MCRT
+    public :: AdaLIPOwithBayesianOnTrustedRegion_Inverse
 
 contains
 !###############################################################################
@@ -1478,7 +1479,561 @@ contains
         print*, "Finished Interpolation"
     end subroutine cyl_map_escape_sym
 
+    subroutine AdaLIPOwithBayesianOnTrustedRegion_Inverse(input_file)
 
+        !Shared data
+        use iarray
+        use constants, only : wp, fileplace, sp, TWOPI
+
+        !subroutines
+        use detectors,     only : dect_array
+        use historyStack,  only : history_stack_t
+        use photonMod,     only : photon
+        use piecewiseMod
+        use random,        only : ran2, init_rng
+        use sdfs,          only : sdf
+        use sim_state_mod, only : state
+        use opticalProperties, only : opticalProp_t, mono
+        use setupMod, only : setup_inverseDirectory
+        use writer_mod,    only : write_inverse
+
+        !interface for stdlib
+        use Interfaces, only : sposv
+
+        !external deps
+        use tev_mod, only : tevipc
+        use tomlf,   only : toml_table, get_value
+#ifdef _OPENMP
+        use omp_lib
+#endif
+        character(len=*), intent(in) :: input_file
+        
+        integer                       :: j, loopCounter
+        type(history_stack_t)         :: history
+        type(photon)                  :: packet
+        type(toml_table)              :: dict
+        real(kind=wp),    allocatable :: distances(:), image(:,:,:)
+        type(dect_array), allocatable :: dects(:)
+        type(sdf),        allocatable :: array(:)
+        real(kind=wp)                 :: nscatt, start
+        type(spectrum_t)              :: spectrum
+        type(tevipc)                  :: tev
+
+        integer :: nphotons_run,pos
+        character(len=128) :: line
+        character(len=:), allocatable :: checkpt_input_file
+        character(len=:), allocatable :: outputFile
+        integer :: maxNumSteps, layer, numGuesses
+        real(kind = wp) :: accuracy
+        logical :: findmua, findmus, findg, findn, reducedmusGuessing
+        real(kind=wp) :: temp, error
+
+        real(kind=wp), allocatable :: gradDescentData(:,:)
+        real(kind=wp) :: mus, mua, hgg, n, reducedmus
+        real(kind=wp) :: tempMus, tempMua, tempHgg, tempN, tempReducedmus
+        real(kind=wp) :: trialMus, trialMua, trialHgg, trialN, trialReducedmus
+        integer :: i, SDF_array_index
+
+
+        integer :: NoVariablesToOptimize
+        type(opticalProp_t) :: trialOptProp
+
+
+        real(kind=wp) :: probability, alpha, k, it
+        real(kind=wp) :: domain(5,2)
+        integer :: indexOfMinError, indexOfMaxRatio, index, ratioCounter
+        real(kind=wp) :: minError, maxRatio
+        real(kind=wp), allocatable :: ratios(:)
+
+        real(kind=wp) :: ranNum !used to temporarily store a random number
+        real(kind=wp) :: leftMin, rightMax, tempMin !sides of the LIPO condition
+
+        integer, allocatable :: seed(:)
+        integer :: sizeRanSeed
+
+
+        !!for the bayesian region
+        integer :: x, y
+        real(kind=wp), allocatable :: trainingData(:,:), temptrainingData(:,:)
+        real(kind=wp), allocatable :: trainingDataError(:,:)
+        real(kind=wp), allocatable :: fittingData(:,:)
+        real(kind=wp) :: bayesianDomain(5,2)
+        real(kind=wp) :: cartDist, bayesianMinDist, observationNoise
+        integer :: sizeTrainingData, sizeFittingData
+
+
+        real(kind=sp), allocatable :: kernelObs(:,:)
+        real(kind=sp), allocatable :: kernelObstoPred(:,:)
+        real(kind=sp), allocatable :: solved(:,:)
+        real(kind=sp), allocatable :: tempKernelObs(:,:)
+        integer :: INFO
+        real(kind=wp), allocatable :: mean(:,:)
+        real(kind=sp), allocatable :: kernelPred(:,:)
+        real(kind=sp), allocatable :: solvedmatmulkernelObstoPred(:,:)
+        real(kind=wp), allocatable :: covariance(:,:)
+        real(kind=wp), allocatable :: std(:,:)
+
+        real(kind=wp), allocatable :: expectedImp(:), upperConf(:)
+        real(kind=wp) :: bestGuess, tune
+        integer :: maxExpectedImpIndx, maxUpperConfIndx
+
+
+        if(state%loadckpt)then
+            call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .false.)
+            open(newunit=j,file=state%ckptfile, access="stream", form="formatted")
+            read(j,"(a)")line
+            pos = scan(line, "=")
+            checkpt_input_file = trim(line(pos+1:))
+
+            read(j,"(a)")line
+            pos = scan(line, "=")
+            read(line(pos+1:),*) nphotons_run
+
+            inquire(j,pos=pos)
+            close(j)
+
+            open(newunit=j,file=state%ckptfile, access="stream", form="unformatted")
+            read(j,pos=pos)jmean
+            close(j)
+
+            call setup(checkpt_input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
+            state%iseed=state%iseed*101
+            state%nphotons = state%nphotons - nphotons_run
+        else
+            call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
+        end if
+
+        !read in the data used in AdaLIPO
+        call get_value(dict, "accuracy", accuracy)
+        call get_value(dict, "maxNumSteps", maxNumSteps)
+        call get_value(dict, "Findmua", findmua)
+        call get_value(dict, "Findmus", findmus)
+        call get_value(dict, "Findg", findg)
+        call get_value(dict, "Findn", findn)
+        call get_value(dict, "ReducedmusGuessing", reducedmusGuessing)
+        call get_value(dict, "inverseLayer", layer)
+        call get_value(dict, "inverseOutputFileName", outputFile)
+
+        !check if the inverse MCRT directory exists
+        call setup_inverseDirectory()
+
+        !setup different random number seed for the 
+        call random_seed(size=sizeRanSeed)
+        allocate(seed(sizeRanSeed))
+        seed = 0
+        seed = state%iseed
+        call random_seed(put=seed)
+        call random_seed(get=seed)
+        !discard first 100 to ensure that we get random numbers
+        do i = 1, 100
+            call random_number(ranNum)
+        end do
+        call random_seed(get=seed)
+
+
+        !check how many variables we will optimize/search for
+        NoVariablesToOptimize = 0
+        if (findmua) then
+            NoVariablesToOptimize = NoVariablesToOptimize + 1
+        end if
+        if (findmus) then
+            NoVariablesToOptimize = NoVariablesToOptimize + 1
+        end if
+        if (findg) then
+            NoVariablesToOptimize = NoVariablesToOptimize + 1
+        end if
+        if (findn) then
+            NoVariablesToOptimize = NoVariablesToOptimize + 1
+        end if
+        if(NoVariablesToOptimize == 0) then
+            print*, "Please select at least one of mus, mua, hgg, n to find with inverse MCRT"
+            return 
+        end if
+
+        !loop through the layers finding the index in the SDF array of the selected layer and its initial optical properties
+        SDF_array_index = -1
+        do i = 1, size(array)
+            if (array(i)%getLayer() == layer) then 
+                !we have found the layer, store the index of this and its optical properties
+                SDF_array_index = i
+                mua = array(i)%getMua()
+                mus = array(i)%getKappa() - mua
+                hgg = array(i)%gethgg()
+                n = array(i)%getN()
+                exit
+            end if
+        end do
+
+        !check that the selected layer is found in the SDF array
+        if (SDF_array_index == -1) then
+            print*, "Selected layer not found in SDF array please choose a layer inside the SDF array"
+            return
+        end if
+
+
+        !set the values for AdaLIPO
+        probability = 1.0_wp
+        alpha = 0.01
+        k = 0.0_wp
+
+        !bounds for AdaLIPO
+        call get_value(dict, "musLower", domain(1,1))
+        call get_value(dict, "musUpper", domain(1,2))
+        call get_value(dict, "muaLower", domain(2,1))
+        call get_value(dict, "muaUpper", domain(2,2))
+        call get_value(dict, "hggLower", domain(3,1))
+        call get_value(dict, "hggUpper", domain(3,2))
+        call get_value(dict, "nLower", domain(4,1))
+        call get_value(dict, "nUpper", domain(4,2))
+        call get_value(dict, "reducedmusLower", domain(5,1))
+        call get_value(dict, "reducedmusUpper", domain(5,2))
+        print*, domain(1,:)
+        print*, domain(2,:)
+        print*, domain(3,:)
+        print*, domain(4,:)
+        print*, domain(5,:)
+
+        !set the initial guesses
+        allocate(gradDescentData(maxNumSteps, 5))
+                
+        !choose random mus, mua, hgg, n
+        call randomOptProp(gradDescentData(1,1), gradDescentData(1,2), gradDescentData(1,3), gradDescentData(1,4), reducedmus, &
+                            mus, mua, hgg, n, findmua, findmus, findg, findn, reducedmusGuessing, domain)
+
+        trialOptProp = mono(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4))
+        temp = array(SDF_array_index)%updateOptProp(trialOptProp)
+
+        !evaluate, by running MCRT
+        call random_seed(get=seed) !store the random seed for optical properties
+        call run_MCRT(input_file, history, packet, dict, & 
+                        distances, image, dects, array, nscatt, start, & 
+                        tev, spectrum)
+        call random_seed(put=seed) !restart the random seed for optical properties
+        error = 0._wp
+        call inverse_evaluate(dects, error)
+        gradDescentData(1,5) = error
+        print*, error
+
+        ! reset the arrays storing data
+        call reset(dects)  
+
+        !store the position of minimum error
+        minError = gradDescentData(1,5)
+        indexOfMinError = 1
+
+        !store the maximum value
+        rightMax = gradDescentData(1,5)
+
+        !allocate the ratio array (it will be of the size maxNumSteps triangular number)
+        allocate(ratios(int(nint(maxNumSteps * (maxNumSteps+1)/2.0_wp))))
+        ratios = 0.0_wp
+        ratioCounter = 1
+        maxRatio = 0.0_wp
+        indexOfMaxRatio = 1
+
+        do i = 2, maxNumSteps
+
+            if (i > 50 .and. mod(i,2) == 1) then
+                !use bayesian on the trust region around the best guess so far
+                
+                print*, "Bayesian"
+                
+                !we have the best, we need to build a list of all the closest 
+                if(allocated(temptrainingData)) deallocate(temptrainingData)
+                allocate(temptrainingData((i-1),5))
+
+                !constants for the Bayesian Optimization
+                bayesianMinDist = 0.2_wp
+                sizeFittingData = 2000
+                observationNoise = 0.001
+                tune = 0.0
+                bestGuess = gradDescentData(indexOfMinError,5)
+
+
+
+                !find the sampled points closest to the current best guess to use as training data for a bayesian model
+                sizeTrainingData = 0               
+                do j = 1, (i-1)
+                    cartDist = sqrt(((gradDescentData(j,1) - gradDescentData(indexOfMinError,1))/(domain(1,2)-domain(1,1)))**2 &
+                                  + ((gradDescentData(j,2) - gradDescentData(indexOfMinError,2))/(domain(2,2)-domain(2,1)))**2 &
+                                  + ((gradDescentData(j,3) - gradDescentData(indexOfMinError,3))/(domain(3,2)-domain(3,1)))**2 &
+                                  + ((gradDescentData(j,4) - gradDescentData(indexOfMinError,4))/(domain(4,2)-domain(4,1)))**2) 
+
+                    
+                    if (cartDist <= bayesianMinDist) then
+                        sizeTrainingData = sizeTrainingData + 1
+
+                        temptrainingData(sizeTrainingData,:) = gradDescentData(j,:)
+                    end if
+                end do
+
+
+                if (sizeTrainingData < 2) then
+                    !choose random mus, mua, hgg, n
+                    call randomOptProp(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4), & 
+                                    reducedmus, mus, mua, hgg, n, findmua, findmus, findg, findn, reducedmusGuessing, domain)                    
+                else
+
+                    if(allocated(trainingData)) deallocate(trainingData)
+                    if(allocated(trainingDataError)) deallocate(trainingDataError)
+                    allocate(trainingData(sizeTrainingData,4))
+                    allocate(trainingDataError(sizeTrainingData,1))
+
+                    trainingData = 0.0_sp
+                    trainingData = temptrainingData(1:sizeTrainingData,1:4)
+                    trainingDataError = 0.0_wp
+                    trainingDataError = temptrainingData(1:sizeTrainingData,5:5)
+
+                    
+                    !define the domain overwhich to sample the bayesian function
+                    bayesianDomain(1,1) = minval(trainingData(:,1)) - (domain(1,2)-domain(1,1))*0.001
+                    bayesianDomain(1,2) = maxval(trainingData(:,1)) + (domain(1,2)-domain(1,1))*0.001
+                    bayesianDomain(2,1) = minval(trainingData(:,2)) - (domain(2,2)-domain(2,1))*0.001
+                    bayesianDomain(2,2) = maxval(trainingData(:,2)) + (domain(2,2)-domain(2,1))*0.001
+                    bayesianDomain(3,1) = minval(trainingData(:,3)) - (domain(3,2)-domain(3,1))*0.001
+                    bayesianDomain(3,2) = maxval(trainingData(:,3)) + (domain(3,2)-domain(3,1))*0.001
+                    bayesianDomain(4,1) = minval(trainingData(:,4)) - (domain(4,2)-domain(4,1))*0.001
+                    bayesianDomain(4,2) = maxval(trainingData(:,4)) + (domain(4,2)-domain(4,1))*0.001
+                    bayesianDomain(5,1) = bayesianDomain(1,1) * (1.0_wp - bayesianDomain(3,2)) ! minMus' = minMus(1-maxHgg)
+                    bayesianDomain(5,2) = bayesianDomain(1,2) * (1.0_wp - bayesianDomain(3,1)) ! maxMus' = maxMus(1-minHgg)
+                  
+                    !create array of data to be fitted to the model
+                    if (allocated(fittingData)) deallocate(fittingData)
+                    allocate(fittingData(sizeFittingData,4))
+                    fittingData = 0.0_wp
+                    do j = 1, sizeFittingData
+                        call randomOptProp(fittingData(j,1), fittingData(j,2), fittingData(j,3), fittingData(j,4), & 
+                                reducedmus, mus, mua, hgg, n, findmua, findmus, findg, findn, reducedmusGuessing, bayesianDomain)
+                    end do 
+                    
+                    !create training data kernel
+                    call produceKernel(trainingData, trainingData, kernelObs)
+                    do x = 1, size(kernelObs, dim=1)
+                        do y = 1, size(kernelObs, dim=2)
+                            if (x==y) kernelObs(x,y) = kernelObs(x, y) + real(observationNoise**2)
+                        end do
+                    end do
+
+
+                    !create training to fitting data kernel
+                    call produceKernel(trainingData, fittingData, kernelObstoPred)
+
+                    !allocate solved as kernelObstoPred for use in sposv
+                    if(allocated(solved)) deallocate(solved)
+                    allocate(solved(size(kernelObstoPred, dim=1), size(kernelObstoPred, dim=2)))
+                    solved = kernelObstoPred
+
+                    !allocate tempKernelObs as kernelObs for use in sposv
+                    if(allocated(tempKernelObs)) deallocate(tempKernelObs)
+                    allocate(tempKernelObs(size(kernelObs, dim=1), size(kernelObs, dim=2)))
+                    tempKernelObs = kernelObs
+
+                    !solve the linear series of equations
+                    call sposv("U", size(tempKernelObs, dim = 1), size(solved, dim = 2), &
+                            tempKernelObs, size(tempKernelObs, dim=2), solved, size(solved, dim=1), INFO)
+
+                    solved = transpose(solved)
+                    mean = matmul(solved, trainingDataError)
+
+                    ! Kernel of predictions to predictions
+                    call produceKernel(fittingData, fittingData, kernelPred)
+
+                    solvedmatmulkernelObstoPred = matmul(solved, kernelObstoPred)
+
+                    !allocate covariance and std vectors
+                    if(allocated(covariance)) deallocate(covariance)
+                    allocate(covariance(size(kernelPred, dim =1), size(kernelPred, dim =2)))
+                    if(allocated(std)) deallocate(std)
+                    allocate(std(size(kernelPred, dim =1), 1))
+
+                    !calculate covariance matrix and standard devaition from sqrt(diag(covariance))
+                    covariance = 0.0_wp
+                    std = 0.0_wp
+                    do x = 1, size(kernelPred, dim =1)
+                        do y = 1, size(kernelPred, dim =2)
+                            covariance(x,y) = kernelPred(x,y) - solvedmatmulkernelObstoPred(x,y)
+
+                            if (x==y) std(x,1) = sqrt(covariance(x,y))
+                        end do
+                    end do
+                    
+                    !calculate expected improvement
+                    if(allocated(expectedImp)) deallocate(expectedImp)
+                    allocate(expectedImp(size(mean, dim=1)))
+                    
+                    do j = 1, size(mean, dim=1)
+                        expectedImp(j) = (mean(j,1)-bestGuess-tune)*(0.5*(1+erf((mean(j,1)-bestGuess-tune)/ &
+                                                                        (sqrt(2.0)*(std(j,1) + 1e-8_wp))))) &
+                                + (std(j,1)+1e-8_wp)*(1/sqrt(TWOPI))*exp(-((mean(j,1)-bestGuess-tune)/(std(j,1) + 1e-8_wp))**2/2)
+                    end do
+
+                    !calculate upper confidence bound
+                    if(allocated(upperConf)) deallocate(upperConf)
+                    allocate(upperConf(size(mean, dim=1)))
+
+                    do j=1, size(mean, dim=1)
+                        upperConf(j) = mean(j,1) + tune*std(j,1)
+                    end do
+
+                    !use the maximum expected improvedment to chose the next spot to evaluate
+                    maxExpectedImpIndx = maxloc(expectedImp, dim = 1)
+                    maxUpperConfIndx = maxloc(upperConf, dim=1)
+                    gradDescentData(i,1) = fittingData(maxUpperConfIndx,1)
+                    gradDescentData(i,2) = fittingData(maxUpperConfIndx,2)
+                    gradDescentData(i,3) = fittingData(maxUpperConfIndx,3)
+                    gradDescentData(i,4) = fittingData(maxUpperConfIndx,4)
+                end if
+
+                
+
+                !update the optical properties
+                trialOptProp = mono(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4))
+                temp = array(SDF_array_index)%updateOptProp(trialOptProp)
+
+            else
+                ranNum = ran2()
+                if( ranNum <= probability) then
+                    !we are in the explore stage
+                    !get the new guesses for the mua, mus, n, and g
+                    
+                    !choose random mus, mua, hgg, n
+                    call randomOptProp(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4), & 
+                                    reducedmus, mus, mua, hgg, n, findmua, findmus, findg, findn, reducedmusGuessing, domain)
+
+                    !update the optical properties
+                    trialOptProp = mono(gradDescentData(i,1), gradDescentData(i,2), gradDescentData(i,3), gradDescentData(i,4))
+                    temp = array(SDF_array_index)%updateOptProp(trialOptProp)
+
+                else
+                    do while(.true.)
+                        !get the new guesses for the mua, mus, n, and g
+                        !choose random mus, mua, hgg, n
+                        call randomOptProp(tempMus, tempMua, tempHgg, tempN, tempReducedmus, &
+                                        mus, mua, hgg, n, findmua, findmus, findg, findn, reducedmusGuessing, domain)
+
+                        !find the minimum of left_Min
+                        leftMin = gradDescentData(1,5) + k * sqrt((tempMus - gradDescentData(1,1))**2 & 
+                                                                + (tempMua - gradDescentData(1,2))**2 & 
+                                                                + (tempHgg - gradDescentData(1,3))**2 & 
+                                                                + (tempN - gradDescentData(1,4))**2)
+                        do j = 2,(i-1)
+                            tempMin = gradDescentData(j,5) + k * sqrt((tempMus - gradDescentData(j,1))**2 &  
+                                                                    + (tempMua - gradDescentData(j,2))**2 & 
+                                                                    + (tempHgg - gradDescentData(j,3))**2 & 
+                                                                    + (tempN - gradDescentData(j,4))**2)
+                            if (tempMin < leftMin) then
+                                leftMin = tempMin
+                            end if
+                        end do
+
+                        !LIPO condition
+                        if (leftMin >= rightMax) then
+
+                            !update gradDescentData
+                            gradDescentData(i,1) = tempMus
+                            gradDescentData(i,2) = tempMua
+                            gradDescentData(i,3) = tempHgg
+                            gradDescentData(i,4) = tempN
+
+                            !update the optical properties
+                            trialOptProp=mono(gradDescentData(i,1),gradDescentData(i,2),gradDescentData(i,3),gradDescentData(i,4))
+                            temp = array(SDF_array_index)%updateOptProp(trialOptProp)
+
+                            !exit while loop
+                            exit
+
+                        end if
+                    end do
+                end if
+            end if
+
+            !evaluate, by running MCRT
+            call random_seed(get=seed) !store the random seed for optical properties
+            call run_MCRT(input_file, history, packet, dict, & 
+                        distances, image, dects, array, nscatt, start, & 
+                        tev, spectrum)
+            call random_seed(put=seed) !restart the random seed for optical properties
+            error = 0._wp
+            call inverse_evaluate(dects, error)
+            gradDescentData(i,5) = error
+
+            ! reset the arrays storing data
+            call reset(dects) 
+
+            print*, " "
+            print*, "Last Guess", i
+            print*, "mus", gradDescentData(i, 1)
+            print*, "mua", gradDescentData(i, 2)
+            print*, "hgg", gradDescentData(i, 3)
+            print*, "n", gradDescentData(i, 4)
+            print*, "mus'", gradDescentData(i, 1)*(1-gradDescentData(i, 3))
+            print*, "error", gradDescentData(i, 5)
+            print*, "k", k
+            print*, " "
+
+            !check if this is a new minimum score
+            if(gradDescentData(i,5) > minError) then
+                minError = gradDescentData(i,5)
+                indexOfMinError = i
+                rightMax = gradDescentData(i,5)
+            end if
+
+            ! find the ratios, and find the new maximum ratio
+            probability = 1.0_wp/log(real(i, kind=wp))
+
+            
+            do j = 1, i-1
+                if (sqrt((gradDescentData(i,1) - gradDescentData(j,1))**2 & 
+                + (gradDescentData(i,2) - gradDescentData(j,2))**2 & 
+                + (gradDescentData(i,3) - gradDescentData(j,3))**2 & 
+                + (gradDescentData(i,4) - gradDescentData(j,4))**2) == 0.0_wp) then
+                    print*, "zero"
+                    ratios(ratioCounter) = -99999._wp
+                    ratioCounter = ratioCounter + 1
+                    cycle
+                end if
+                ratios(ratioCounter) = abs(gradDescentData(i,5) - gradDescentData(j,5))/ & 
+                                sqrt((gradDescentData(i,1) - gradDescentData(j,1))**2 & 
+                                + (gradDescentData(i,2) - gradDescentData(j,2))**2 & 
+                                + (gradDescentData(i,3) - gradDescentData(j,3))**2 & 
+                                + (gradDescentData(i,4) - gradDescentData(j,4))**2)
+                if (ratios(ratioCounter) > maxRatio) then
+                    maxRatio = ratios(ratioCounter)
+                    indexOfMaxRatio = ratioCounter
+                end if
+                ratioCounter = ratioCounter + 1
+            end do
+
+            !update the value of k
+            it = int(ceiling(log(maxRatio)/log(1+alpha)))
+            k = (1+alpha)** it
+
+            print*, " "
+            print*, "Best Guess", indexOfMinError
+            print*, "mus", gradDescentData(indexOfMinError, 1)
+            print*, "mua", gradDescentData(indexOfMinError, 2)
+            print*, "hgg", gradDescentData(indexOfMinError, 3)
+            print*, "n", gradDescentData(indexOfMinError, 4)
+            print*, "mus'", gradDescentData(indexOfMinError, 1)*(1-gradDescentData(indexOfMinError, 3))
+            print*, "error", gradDescentData(indexOfMinError, 5)
+            print*, " "
+            print*, " "
+
+            !check if we have reached an accuracy value less than the target accuracy, if true then break
+            if (abs(minError) < accuracy) then
+                print*, "Below min error threshold"
+
+                numGuesses = i
+                call write_inverse(gradDescentData, outputFile, numGuesses, indexOfMinError)
+                return
+            end if
+
+        end do        
+        
+        !we have finished the gradient descent output the gradDescentData to a file and write the error
+        numGuesses = i - 1
+        call write_inverse(gradDescentData, outputFile, numGuesses, indexOfMinError)
+    end subroutine AdaLIPOwithBayesianOnTrustedRegion_Inverse
 
     subroutine bayesian_inverse_MCRT(input_file)
 
@@ -1671,9 +2226,6 @@ contains
             print*, "Selected layer not found in SDF array please choose a layer inside the SDF array"
             return
         end if
-
-
-        
 
         !bounds for bayesian optimization
         call get_value(dict, "musLower", domain(1,1))
@@ -2318,8 +2870,6 @@ contains
                 end do
             end if
 
-            
-            
             !evaluate, by running MCRT
             call random_seed(get=seed) !store the random seed for optical properties
             call run_MCRT(input_file, history, packet, dict, & 
@@ -2406,9 +2956,6 @@ contains
         !we have finished the gradient descent output the gradDescentData to a file and write the error
         numGuesses = i - 1
         call write_inverse(gradDescentData, outputFile, numGuesses, indexOfMinError)
-
-        
-
     end subroutine inverse_MCRT
 
     subroutine inverse_evaluate(dects, error)
@@ -2437,7 +2984,7 @@ contains
                 total = total / real(state%nphotons, kind=wp)
 
                 !error is defined as average absolute difference between all detectors
-                error = error + abs((total-targetVal)/(targetVal+1e-16_wp))            !relative difference
+                error = error + abs((total-targetVal)/(targetVal+1e-16_wp))             !relative difference
                 !error = error + (log(total+1e-16_wp) - log(targetVal+1e-16_wp))**2     !log difference
                 !error = error + abs(total-targetVal)                                   !absolute difference
 
@@ -2452,9 +2999,6 @@ contains
         if (error < 0.0_wp) then
             error = 0.0_wp
         end if
-
-
-
     end subroutine inverse_evaluate
 
 
