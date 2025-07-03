@@ -1,0 +1,202 @@
+[source]
+name = "circular"
+nphotons = 100000
+direction = "z"
+position = [0.0,0.0,-10.0]
+spectrum_type = "constant"
+wavelength = 500.0
+radius = 3.15
+
+[grid]
+nxg = 250
+nyg = 250
+nzg = 250
+xmax = 25.0
+ymax = 25.0
+zmax = 25.0
+
+[geometry]
+geom_name = "box"
+numOptProp = 1
+BoxDimensions = [50.0,50.0,0.35]
+boundingBox = [50.0,50.0,50.0]
+position = [0.0,0.0,0.0]
+mus = [56.0174]
+mua = [0.61975]
+hgg = [0.0]
+n = [1.6493]
+
+[inverse]
+maxStepSize = 1
+gradStepSize = 0.0005
+accuracy = 0.001
+maxNumSteps = 2000
+Findmus = true
+Findmua = true
+Findg = true
+Findn = false
+ReducedmusGuessing = false
+MueffGuessing = true
+musUpper = 98.5
+musLower = 5.5
+muaUpper = 3.63
+muaLower = 0.0059
+hggUpper = 1.0
+hggLower = 0.0
+nUpper = 5.0
+nLower = 1.0
+reducedmusUpper = 66.0
+reducedmusLower = 52.0
+mueffUpper = 13.0
+mueffLower = 9.0
+layer = 1
+
+
+[[detectors]]
+type="circle"
+ID = "Angle335"
+position=[0.0, -5.034, 9.272]
+direction=[0.0, -0.477, 0.879]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001045779
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle340"
+position=[0.0, -4.207, 9.675]
+direction=[0.0, -0.399, 0.917]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001102229
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle345"
+position=[0.0, -3.348, 10.005]
+direction=[0.0, -0.317, 0.948]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001148107
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle350"
+position=[0.0, -2.463, 10.259]
+direction=[0.0, -0.233, 0.972]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001190414
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle355"
+position=[0.0, -1.559, 10.434]
+direction=[0.0, -0.148, 0.989]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001210217
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle000"
+position=[0.0, -0.644, 10.530]
+direction=[0.0, -0.061, 0.998]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001222308
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle005"
+position=[0.0, 0.276, 10.546]
+direction=[0.0, 0.026, 0.9997]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00121927
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle010"
+position=[0.0, 1.194, 10.482]
+direction=[0.0, 0.113, 0.994]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001213728
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle015"
+position=[0.0, 2.103, 10.338]
+direction=[0.0, 0.199, 0.980]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00119572
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle020"
+position=[0.0, 2.996, 10.116]
+direction=[0.0, 0.284, 0.959]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001163669
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle025"
+position=[0.0, 3.867, 9.816]
+direction=[0.0, 0.367, 0.930]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001120296
+acceptanceAngle = 15.0
+
+
+[output]
+fluence = "fluence.nrrd"
+render_geometry_name = "geom_render.nrrd"
+render_geometry = true
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [200,200,200]
+overwrite = true
+
+[simulation]
+iseed = 32132135
+absorb=true
+load_checkpoint=false
+checkpoint_file="check.ckpt"
+checkpoint_every_n=10000

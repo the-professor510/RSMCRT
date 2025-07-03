@@ -24,14 +24,14 @@ boundingBox = [5.0,5.0,5.0]
 position = [0.0,0.0,0.0]
 mus = [5.0]
 mua = [2.0]
-hgg = [0.4]
+hgg = [0.0]
 n = [1.2]
 
 [inverse]
 maxStepSize = 1
 gradStepSize = 0.0005
 accuracy = 0.001
-maxNumSteps = 500
+maxNumSteps = 2000
 Findmus = true
 Findmua = true
 Findg = true
