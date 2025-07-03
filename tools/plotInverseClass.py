@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.tri as mtri
 import sys
 
 class plotInverseClass:
@@ -28,8 +29,20 @@ class plotInverseClass:
         ax1.scatter(x[bestIndex], y[bestIndex], color = "blue", label = "Best Guess", marker = "x")
         ax1.set_xlabel(xName)
         ax1.set_ylabel(yName)
+        
+        
+        # Plot the postior distribution and some samples
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d", "computed_zorder": False})
+        try:
+            ax.plot_trisurf(x,y, error, antialiased=True)
+            ax.scatter(x[bestIndex], y[bestIndex], error[bestIndex], color = "blue", label = "Best Guess", marker = "x")
+            ax.set_xlabel(xName)
+            ax.set_ylabel(yName)
+        except:
+            print("error: couldn't perform surface plot")
+            
         plt.show()
-    
+        
     #def plot3D(self, x, y, z, error, bestIndex):
         
 
