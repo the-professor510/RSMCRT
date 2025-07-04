@@ -21,8 +21,8 @@ numOptProp = 1
 BoxDimensions = [50.0,50.0,0.35]
 boundingBox = [50.0,50.0,50.0]
 position = [0.0,0.0,0.0]
-mus = [69.145]
-mua = [0.4425]
+mus = [56.0174]
+mua = [0.61975]
 hgg = [0.0]
 n = [1.6493]
 
@@ -37,10 +37,10 @@ Findg = false
 Findn = false
 ReducedmusGuessing = false
 MueffGuessing = false
-musUpper = 73.5
-musLower = 68
-muaUpper = 0.45
-muaLower = 0.40
+musUpper = 58.5
+musLower = 55.5
+muaUpper = 0.63
+muaLower = 0.59
 hggUpper = 1.0
 hggLower = 0.0
 nUpper = 5.0
@@ -51,136 +51,89 @@ mueffUpper = 13.0
 mueffLower = 9.0
 layer = 1
 
+
 [[detectors]]
 type="circle"
-ID = "Angle335"
-position=[0.0, -4.559, 9.514]
-direction=[0.0, -0.432, 0.902]
+ID = "Angle330"
+position=[0.0, -5.275, 9.137]
+direction=[0.0, -0.500, 0.866]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001213511
+inverseTarget = 0.001535165
 acceptanceAngle = 15.0
 
 [[detectors]]
 type="circle"
 ID = "Angle340"
-position=[0.0, -3.712, 9.875]
-direction=[0.0, -0.352, 0.936]
+position=[0.0, -3.608, 9.914]
+direction=[0.0, -0.342, 0.940]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001269132
-acceptanceAngle = 15.0
-
-[[detectors]]
-type="circle"
-ID = "Angle345"
-position=[0.0, -2.837, 10.161]
-direction=[0.0, -0.269, 0.963]
-radius= 4.75
-nbins = 100
-maxval = 4.75
-trackHistory=false
-inverseTarget = 0.001313708
+inverseTarget = 0.001688462
 acceptanceAngle = 15.0
 
 [[detectors]]
 type="circle"
 ID = "Angle350"
-position=[0.0, -1.941, 10.370]
-direction=[0.0, -0.184, 0.983]
+position=[0.0, -1.832, 10.390]
+direction=[0.0, -0.174, 0.985]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001344773
-acceptanceAngle = 15.0
-
-[[detectors]]
-type="circle"
-ID = "Angle355"
-position=[0.0, -1.029, 10.500]
-direction=[0.0, -0.098, 0.995]
-radius= 4.75
-nbins = 100
-maxval = 4.75
-trackHistory=false
-inverseTarget = 0.001365582
+inverseTarget = 0.001784615
 acceptanceAngle = 15.0
 
 [[detectors]]
 type="circle"
 ID = "Angle000"
-position=[0.0, -0.110, 10.549]
-direction=[0.0, -0.010, 1.0]
+position=[0.0, 0.000, 10.550]
+direction=[0.0, 0.000, 1.000]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001371893
-acceptanceAngle = 15.0
-
-[[detectors]]
-type="circle"
-ID = "Angle005"
-position=[0.0, 0.809, 10.519]
-direction=[0.0, 0.077, 0.9971]
-radius= 4.75
-nbins = 100
-maxval = 4.75
-trackHistory=false
-inverseTarget = 0.001362032
+inverseTarget = 0.001824451
 acceptanceAngle = 15.0
 
 [[detectors]]
 type="circle"
 ID = "Angle010"
-position=[0.0, 1.723, 10.408]
-direction=[0.0, 0.163, 0.987]
+position=[0.0, 1.832, 10.390]
+direction=[0.0, 0.174, 0.985]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001353254
-acceptanceAngle = 15.0
-
-[[detectors]]
-type="circle"
-ID = "Angle015"
-position=[0.0, 2.624, 10.219]
-direction=[0.0, 0.249, 0.969]
-radius= 4.75
-nbins = 100
-maxval = 4.75
-trackHistory=false
-inverseTarget = 0.001322978
+inverseTarget = 0.001797527
 acceptanceAngle = 15.0
 
 [[detectors]]
 type="circle"
 ID = "Angle020"
-position=[0.0, 3.504, 9.951]
-direction=[0.0, 0.332, 0.943]
+position=[0.0, 3.608, 9.914]
+direction=[0.0, 0.342, 0.940]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.00128146
+inverseTarget = 0.001693132
 acceptanceAngle = 15.0
 
 [[detectors]]
 type="circle"
-ID = "Angle025"
-position=[0.0, 4.358, 9.608]
-direction=[0.0, 0.413, 0.911]
+ID = "Angle030"
+position=[0.0, 5.275, 9.137]
+direction=[0.0, 0.500, 0.866]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001229882
+inverseTarget = 0.001524451
 acceptanceAngle = 15.0
 
 

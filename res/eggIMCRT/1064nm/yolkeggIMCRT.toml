@@ -4,7 +4,7 @@ nphotons = 100000
 direction = "z"
 position = [0.0,0.0,-10.0]
 spectrum_type = "constant"
-wavelength = 500.0
+wavelength = 1064.0
 radius = 3.15
 
 [grid]
@@ -16,123 +16,125 @@ ymax = 25.0
 zmax = 25.0
 
 [geometry]
-geom_name = "box"
-numOptProp = 1
-BoxDimensions = [50.0,50.0,0.35]
+geom_name = "cuvette"
+numOptProp = 2
+innerCuvetteDimensions = [40.3,10.3,10.3]
+outerCuvetteDimensions = [42.1,12.1,12.1]
 boundingBox = [50.0,50.0,50.0]
-position = [0.0,0.0,0.0]
-mus = [56.0174]
-mua = [0.61975]
-hgg = [0.0]
-n = [1.6493]
+position = [0.0,-0.35,0.0]
+mus = [0.420, 0.00001]
+mua = [0.224, 0.00001]
+hgg = [0.266, 0.0]
+n = [1.33, 1.5788]
 
 [inverse]
 maxStepSize = 1
 gradStepSize = 0.0005
 accuracy = 0.001
-maxNumSteps = 1000
+maxNumSteps = 2000
 Findmus = true
 Findmua = true
-Findg = false
+Findg = true
 Findn = false
-ReducedmusGuessing = false
-musUpper = 58.5
-musLower = 55.5
-muaUpper = 0.63
-muaLower = 0.59
-hggUpper = 1.0
-hggLower = 0.0
+ReducedmusGuessing = true
+MueffGuessing = false
+musUpper = 0.44
+musLower = 0.40
+muaUpper = 0.232
+muaLower = 0.22
+hggUpper = 0.4
+hggLower = 0.1
 nUpper = 5.0
 nLower = 1.0
-reducedmusUpper = 66.0
-reducedmusLower = 52.0
+reducedmusUpper = 0.36
+reducedmusLower = 0.26
+mueffUpper = 13.0
+mueffLower = 9.0
 layer = 1
-
-
-[[detectors]]
-type="circle"
-ID = "Angle330"
-position=[0.0, -5.275, 9.137]
-direction=[0.0, -0.500, 0.866]
-radius= 4.75
-nbins = 100
-maxval = 4.75
-trackHistory=false
-inverseTarget = 0.001045779
-acceptanceAngle = 15.0
-
-[[detectors]]
-type="circle"
-ID = "Angle340"
-position=[0.0, -3.608, 9.914]
-direction=[0.0, -0.342, 0.940]
-radius= 4.75
-nbins = 100
-maxval = 4.75
-trackHistory=false
-inverseTarget = 0.001102229
-acceptanceAngle = 15.0
-
-[[detectors]]
-type="circle"
-ID = "Angle350"
-position=[0.0, -1.832, 10.390]
-direction=[0.0, -0.174, 0.985]
-radius= 4.75
-nbins = 100
-maxval = 4.75
-trackHistory=false
-inverseTarget = 0.001190414
-acceptanceAngle = 15.0
 
 [[detectors]]
 type="circle"
 ID = "Angle000"
-position=[0.0, 0.000, 10.550]
-direction=[0.0, 0.000, 1.000]
+position=[0.0, 0.0, 10.55]
+direction=[0.0, 0.0, 1.0]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001222308
-acceptanceAngle = 15.0
-
-[[detectors]]
-type="circle"
-ID = "Angle010"
-position=[0.0, 1.832, 10.390]
-direction=[0.0, 0.174, 0.985]
-radius= 4.75
-nbins = 100
-maxval = 4.75
-trackHistory=false
-inverseTarget = 0.001213728
+inverseTarget = 0.001351596
 acceptanceAngle = 15.0
 
 [[detectors]]
 type="circle"
 ID = "Angle020"
-position=[0.0, 3.608, 9.914]
-direction=[0.0, 0.342, 0.940]
+position=[0.0, 3.61, 9.91]
+direction=[0.0, 0.342, 0.939]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001163669
+inverseTarget = 0.001405319
 acceptanceAngle = 15.0
 
 [[detectors]]
 type="circle"
-ID = "Angle030"
-position=[0.0, 5.275, 9.137]
-direction=[0.0, 0.500, 0.866]
+ID = "Angle040"
+position=[0.0, 6.78, 8.08]
+direction=[0.0, 0.643, 0.766]
+radius = 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001613032
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle060"
+position=[0.0, 9.14, 5.28]
+direction=[0.0, 0.866, 0.5]
 radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001120296
+inverseTarget = 0.001682979
 acceptanceAngle = 15.0
 
+[[detectors]]
+type="circle"
+ID = "Angle080"
+position=[0.0, 10.39, 1.83]
+direction=[0.0, 0.985, 0.174]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.001690957
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle100"
+position=[0.0, 10.39, -1.83]
+direction=[0.0, 0.985, -0.174]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00175984
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle120"
+position=[0.0, 9.14, -5.28]
+direction=[0.0, 0.866, -0.5]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.002112234
+acceptanceAngle = 15.0
 
 [output]
 fluence = "fluence.nrrd"
