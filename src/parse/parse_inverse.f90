@@ -43,6 +43,23 @@ contains
         real(kind=wp) :: reducedmusUpper, reducedmusLower
         real(kind=wp) :: mueffUpper, mueffLower
 
+        ! Global Optimization Method
+        integer :: optimizationMethod
+
+        !used by AdaLIPO
+        real(kind=wp) :: alpha
+
+        !used by Bayesian optimizatoin
+        real(kind=wp) :: observationNoise
+        integer :: trainDataSize
+        integer :: fittingDataSize
+
+        !used by AdaLIPO with Bayesian Trust Regieme
+        integer :: LIPOtrainingDataSize
+        real(kind=wp) :: bayesianMinDist
+        real(kind=wp) :: tune
+        integer :: numAdaLIPOtoBay
+
         call get_value(table, "inverse", child)
 
         if(associated(child))then
@@ -78,8 +95,15 @@ contains
             call set_value(dict, "MueffGuessing", mueffGuessing)
 
             if (reducedmusGuessing) then
-                if (.not. (findmus .and. findg)) then
-                    call make_error(error, "Must set findmus and findg to be true if using Reducedmus Guessing")
+                if (.not. (findmus .or. findg)) then
+                    call make_error(error, "Must set findmus or findg to be true if using Reducedmus Guessing")
+                    return
+                end if
+            end if
+
+            if (mueffGuessing) then
+                if(.not. (findmus .or. findmua .or. findg)) then
+                    call make_error(error, "Must set findmus, or findmua, of findg to be true if using mueff Guessing")
                     return
                 end if
             end if
@@ -202,6 +226,70 @@ contains
 
             call get_value(child, "inverseFileName", outputFile, "inverse")
             call set_value(dict, "inverseOutputFileName", outputFile)
+
+
+        
+            call get_value(child, "optimizationMethod", optimizationMethod, 3)
+            call set_value(dict, "optimizationMethod", optimizationMethod)           
+
+            call get_value(child, "alpha", alpha, 0.01_wp)
+            call set_value(dict, "alpha", alpha)
+
+            call get_value(child, "observationNoise", observationNoise, 0.01_wp)
+            call set_value(dict, "observationNoise", observationNoise)
+
+            call get_value(child, "trainDataSize", trainDataSize, 50)
+            call set_value(dict, "trainDataSize", trainDataSize)
+
+            call get_value(child, "fittingDataSize", fittingDataSize, 1000)
+            call set_value(dict, "fittingDataSize", fittingDataSize)
+
+            call get_value(child, "LIPOtrainingDataSize", LIPOtrainingDataSize, 50)
+            call set_value(dict, "LIPOtrainingDataSize", LIPOtrainingDataSize)
+
+            call get_value(child, "bayesianMinDist", bayesianMinDist, 0.2_wp)
+            call set_value(dict, "bayesianMinDist", bayesianMinDist)
+
+            call get_value(child, "tune", tune, 0.0_wp)
+            call set_value(dict, "tune", tune)
+
+            call get_value(child, "numAdaLIPOtoBay", numAdaLIPOtoBay, 5)
+            call get_value(dict, "numAdaLIPOtoBay", numAdaLIPOtoBay)
+
+
+            if (alpha <= 0.0) then
+                call make_error(error, "alpha must be larger than 0.0")
+                return
+            end if
+            if (observationNoise <= 0.0) then
+                call make_error(error, "observationNoise must be larger than 0.0")
+                return
+            end if
+            if (trainingDataSize < 0) then
+                call make_error(error, "trainingDataSize must be positive")
+                return
+            end if
+            if (fittingDataSize < 1) then
+                call make_error(error, "fittingDataSize must be greater than 0")
+                return
+            end if
+            if (LIPOtrainingDataSize < 0) then
+                call make_error(error, "LIPOtrainingdataSize must be positive")
+                return
+            end if
+            if (bayesianMinDist <= 0.0) then
+                call make_error(error, "bayesianMinDist must be greater than 0.0")
+                return
+            end if 
+            if (tune < 0.0) then
+                call make_error(error, "tune must be greater than or equal to 0.0")
+                return
+            end if
+            if (numAdaLIPOtoBay < 0) then
+                call make_error(error, "numAdaLIPOtoBay must be greater than or equal to 0")
+                return
+            end if
+
         else
             call make_error(error, "Need inverse table in input param file", -1)
             return

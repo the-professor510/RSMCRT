@@ -75,7 +75,7 @@ contains
         integer :: sizeRanSeed
         real(kind=wp) :: ranNum
 
-        integer :: inverseMethod
+        integer :: optimizationMethod
 
         !used by AdaLIPO_Method
         real(kind=wp) ::  alpha
@@ -206,48 +206,70 @@ contains
 
 
         !set the values for AdaLIPO
-        alpha = 0.01
+        !alpha = 0.01
 
         !set the values for Bayesian
-        observationNoise = 0.01
-        trainingDataSize = 50
-        fittingDataSize = 1000
+        !observationNoise = 0.01
+        !trainingDataSize = 50
+        !fittingDataSize = 1000
 
         !set the values for AdaLIPO with Bayesian Trust Regieme
-        alpha = 0.01
-        observationNoise = 0.01
-        fittingDataSize = 1000
-        LIPOtrainingDataSize = 50
-        bayesianMinDist = 0.2_wp
-        tune = 0.0
-        numAdaLIPOtoBay = (5) + 1 !(user value) + 1 for modulus to work and make sense
+        !alpha = 0.01
+        !observationNoise = 0.01
+        !fittingDataSize = 1000
+        !LIPOtrainingDataSize = 50
+        !bayesianMinDist = 0.2_wp
+        !tune = 0.0
+        !numAdaLIPOtoBay = (5) + 1 
 
 
-        !get inverseMethod from the input file
+        !get optimizationMethod from the dictionary built from the input file
         ! 1 = AdaLIPO only
         ! 2 = Bayesian only
         ! 3 = AdaLIPO with Bayesian trust region
-        inverseMethod = 3
+        call get_value(dict, "optimizationMethod", optimizationMethod)
         
-        if (inverseMethod == 1) then
+        if (optimizationMethod == 1) then
+
+            call get_value(dict, "alpha", alpha)
+
             call AdaLIPO_Method(input_file, history, packet, dict, distances, image, dects, array, nscatt, start, tev, &
                                 spectrum, seed, NoVariablesToOptimize, trialOptProp, SDF_array_index, optimizationData, &
                                 Tmus, Tmua, Thgg, Tn, findmua, findmus, findg, findn, reducedmusGuessing, mueffGuessing, &
                                 domain, outputFile, layer, accuracy, maxNumSteps, alpha)
                                 
-        else if (inverseMethod == 2) then
+        else if (optimizationMethod == 2) then
+
+            call get_value(dict, "observationNoise", observationNoise)
+            call get_value(dict, "trainingDataSize", trainingDataSize)
+            call get_value(dict, "fittingDataSize", fittingDataSize)
+
             call Bayesian_Method(input_file, history, packet, dict, distances, image, dects, array, nscatt, start, tev, &
                                 spectrum, seed, NoVariablesToOptimize, trialOptProp, SDF_array_index, optimizationData, &
                                 Tmus, Tmua, Thgg, Tn, findmua, findmus, findg, findn, reducedmusGuessing, mueffGuessing, &
                                 domain, outputFile, layer, accuracy, maxNumSteps, trainingDataSize, fittingDataSize, &
                                 observationNoise)
 
-        else if (inverseMethod == 3) then
+        else if (optimizationMethod == 3) then
+
+            call get_value(dict, "alpha", alpha)
+            call get_value(dict, "observationNoise", observationNoise)
+            call get_value(dict, "trainingDataSize", trainingDataSize)
+            call get_value(dict, "fittingDataSize", fittingDataSize)
+            call get_value(dict, "LIPOtrainingDataSize", LIPOtrainingDataSize)
+            call get_value(dict, "bayesianMinDist", bayesianMinDist)
+            call get_value(dict, "tune", tune)
+            call get_value(dict, "numAdaLIPOtoBay", numAdaLIPOtoBay)
+            numAdaLIPOtoBay = numAdaLIPOtoBay + 1 !(user value) + 1 for modulus to work and make sense
+
             call AdaLIPO_with_BayesianTrust_Method(input_file, history, packet, dict, distances, image, dects, array, nscatt, &
                                 start, tev, spectrum, seed, NoVariablesToOptimize, trialOptProp, SDF_array_index, &
                                 optimizationData, Tmus, Tmua, Thgg, Tn, findmua, findmus, findg, findn, reducedmusGuessing, &
                                 mueffGuessing, domain, outputFile, layer, accuracy, maxNumSteps, alpha, fittingDataSize, &
                                 observationNoise, LIPOtrainingDataSize, bayesianMinDist, tune, numAdaLIPOtoBay)
+        else 
+            print*, "Error: OptimizationMethod not recognised"
+            return
         end if       
 
     end subroutine inverse_MCRT
