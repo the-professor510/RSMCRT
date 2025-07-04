@@ -30,7 +30,7 @@ module testScatterMod
         real(kind=wp) :: val
         integer :: u
 
-        call test_kernel("scat_test.toml", .false.)
+        call test_kernel("test/scat_test.toml", .false.)
         open(newunit=u,file="nscatt.dat")
         read(u,*)val
         close(u)
@@ -62,7 +62,7 @@ module testScatterMod
         vals(7, :) = [0.469933, 0.469933, 10.28013]
         vals(8, :) = [1.091246, 1.091246, 15.91551]
 
-        call test_kernel("scat_test2.toml", .true.)
+        call test_kernel("test/scat_test2.toml", .true.)
         open(newunit=u,file="positions.dat")
         do i = 1, 8
             read(u,*)pos%x, pos%y, pos%z

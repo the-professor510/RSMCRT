@@ -35,7 +35,7 @@ module testsDetectorMod
         type(circle_dect) :: a
         type(vector) :: pos, dir
         integer :: layer, nbins
-        real(kind=wp) :: radius, maxval, pointSep, weight, targetValue
+        real(kind=wp) :: radius, maxval, pointSep, weight, targetValue, acceptAngle
         logical :: flag
         type(history_stack_t) :: history
         character(len=:), allocatable :: dect_ID
@@ -44,11 +44,12 @@ module testsDetectorMod
         dir = vector(1._wp, 0._wp, 0._wp)
         layer = 1
         radius = 0.5
+        acceptAngle = 90.0
         nbins = 100
         maxval = 100._wp
         dect_ID = "circleTest"
         targetValue = 0._wp
-        a = circle_dect(pos, dir, layer, radius, nbins, .false.,dect_ID,targetValue)
+        a = circle_dect(pos, dir, layer, radius, acceptAngle, nbins, .false.,dect_ID,targetValue)
 
         pos = vector(0._wp, 0._wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)
@@ -136,7 +137,7 @@ module testsDetectorMod
         type(annulus_dect) :: a
         type(vector) :: pos, dir
         integer :: layer, nbins
-        real(kind=wp) :: maxval, pointSep, r1, r2, weight, target_value
+        real(kind=wp) :: maxval, pointSep, r1, r2, weight, target_value, acceptAngle
         logical :: flag
         type(history_stack_t) :: history
         character(len=:), allocatable :: dect_ID
@@ -146,11 +147,12 @@ module testsDetectorMod
         maxval = 100._wp
         r1 = 0.5_wp
         r2 = 1.0_wp
+        acceptAngle = 90.0
         pos = vector(0.5_wp, 0._wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)
         dect_ID = "annulusTest"
         target_value = 1.0_wp
-        a = annulus_dect(pos, dir, layer, r1, r2, nbins, maxval, .false.,dect_ID, target_value)
+        a = annulus_dect(pos, dir, layer, r1, r2, acceptAngle, nbins, maxval, .false.,dect_ID, target_value)
 
         pos = vector(0._wp, 0.75_wp, 0._wp)
         dir = vector(1._wp, 0._wp, 0._wp)
