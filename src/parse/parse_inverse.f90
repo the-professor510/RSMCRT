@@ -265,8 +265,8 @@ contains
                 call make_error(error, "observationNoise must be larger than 0.0")
                 return
             end if
-            if (trainingDataSize < 0) then
-                call make_error(error, "trainingDataSize must be positive")
+            if (trainDataSize < 0) then
+                call make_error(error, "trainDataSize must be positive")
                 return
             end if
             if (fittingDataSize < 1) then
