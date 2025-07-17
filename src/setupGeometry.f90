@@ -219,20 +219,20 @@ contains
                 
         !shell
         opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
-        egg_shell = egg(bottomSphereRad, topSphereRad, SphereSep, opt(1), 2)
+        egg_shell = egg(bottomSphereRad, topSphereRad, SphereSep, opt(1), 1)
         shell = revolution(egg_shell, .0_wp, center = pos)
         !shell = extrude(egg_shell, .2_wp)
 
         !albumen
         opt(2) = mono(mus(2), mua(2), hgg(2), n(2))
-        egg_albumen = egg(bottomSphereRad*(1-ShellThickness), topSphereRad*(1-ShellThickness),&
-                             SphereSep*(1-ShellThickness), opt(2), 3)
+        egg_albumen = egg(bottomSphereRad-ShellThickness, topSphereRad-ShellThickness,&
+                             SphereSep, opt(2), 2)
         albumen = revolution(egg_albumen, .0_wp, center = pos)
         !albumen = extrude(egg_albumen, .2_wp)
 
         !yolk
         opt(3) = mono(mus(3), mua(3), hgg(3), n(3))
-        yolk = sphere(YolkRadius, opt(3), 1, transform=t)
+        yolk = sphere(YolkRadius, opt(3), 3, transform=t)
 
         !bounding box
         opt(4) = mono(0._wp, 0._wp, 0.0_wp, 1.0_wp)
@@ -240,9 +240,9 @@ contains
         
         allocate(array(4))
         
-        array(1) = yolk
+        array(1) = shell
         array(2) = albumen
-        array(3) = shell
+        array(3) = yolk
         array(4) = bbox
 
     end function setup_egg
@@ -424,6 +424,7 @@ contains
 
     function setup_tran_and_jacques() result(array)
     !! setup the sphere test case from tran and jacques paper.
+    !! https://doi.org/10.1117/1.JBO.25.2.025001
 
         use mat_class,         only : invert
         use opticalProperties, only : mono, opticalProp_t

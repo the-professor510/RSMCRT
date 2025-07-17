@@ -24,7 +24,7 @@ position = [0.0,0.0,0.0]
 mus = [56.0174]
 mua = [0.61975]
 hgg = [0.0]
-n = [1.6493]
+n = [1.6425]
 
 [inverse]
 maxStepSize = 1
@@ -36,19 +36,19 @@ Findmua = true
 Findg = false
 Findn = false
 ReducedmusGuessing = false
-MueffGuessing = false
-musUpper = 58.5
-musLower = 55.5
-muaUpper = 0.63
-muaLower = 0.59
+MueffGuessing = true
+musUpper = 100.0
+musLower = 20.0
+muaUpper = 1.6
+muaLower = 0.2
 hggUpper = 1.0
 hggLower = 0.0
 nUpper = 5.0
 nLower = 1.0
 reducedmusUpper = 66.0
 reducedmusLower = 52.0
-mueffUpper = 13.0
-mueffLower = 9.0
+mueffUpper = 10.2
+mueffLower = 8.0
 layer = 1
 
 

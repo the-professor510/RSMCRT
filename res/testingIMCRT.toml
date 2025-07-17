@@ -1,0 +1,540 @@
+[source]
+name = "circular"
+nphotons = 100000
+direction = "z"
+position = [0.0,0.0,-10.0]
+spectrum_type = "constant"
+wavelength = 500.0
+radius = 3.15
+
+[grid]
+nxg = 250
+nyg = 250
+nzg = 250
+xmax = 25.0
+ymax = 25.0
+zmax = 25.0
+
+[geometry]
+geom_name = "box"
+numOptProp = 1
+BoxDimensions = [50.0,50.0,0.35]
+boundingBox = [50.0,50.0,50.0]
+position = [0.0,0.0,0.0]
+mus = [81.4]
+mua = [1.7]
+hgg = [0.667]
+n = [1.6493]
+
+[inverse]
+maxStepSize = 1
+gradStepSize = 0.0005
+accuracy = 0.00001
+maxNumSteps = 1000
+Findmus = true
+Findmua = true
+Findg = true
+Findn = false
+ReducedmusGuessing = true
+MueffGuessing = true
+musUpper = 100.0
+musLower = 40.0
+muaUpper = 1.04
+muaLower = 0.96
+hggUpper = 0.6
+hggLower = 0.0
+nUpper = 5.0
+nLower = 1.0
+reducedmusUpper = 52.0
+reducedmusLower = 49.5
+mueffUpper = 12.6
+mueffLower = 12.2
+layer = 1
+numAdaLIPOtoBay = 2
+
+
+[[detectors]]
+type="circle"
+ID = "Transmitted"
+position=[0.0, 0.0, 1.0]
+direction=[0.0, 0.0, 1.0]
+radius= 100.0
+nbins = 100
+maxval = 100.0
+trackHistory=false
+inverseTarget = 0.009261144039409561
+acceptanceAngle = 88.0
+
+[[detectors]]
+type="circle"
+ID = "Reflected"
+position=[0.0, 0.0, -1.0]
+direction=[0.0, 0.0, -1.0]
+radius= 100.0
+nbins = 100
+maxval = 100.0
+trackHistory=false
+inverseTarget = 0.43149507428181094
+acceptanceAngle = 88.0
+
+[[detectors]]
+type="circle"
+ID = "Angle000"
+position=[0.0, 0.0, 10.55]
+direction=[0.0, 0.0, 1.0]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0006382598937294534
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle005"
+position=[0.0, 0.92, 10.51]
+direction=[0.0, 0.087, 0.996]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0006316613941366707
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle010"
+position=[0.0, 1.83, 10.39]
+direction=[0.0, 0.174, 0.985]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0006258821818207692
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle015"
+position=[0.0, 2.73, 10.19]
+direction=[0.0, 0.259, 0.966]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00061102915983314
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle020"
+position=[0.0, 3.61, 9.91]
+direction=[0.0, 0.342, 0.940]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0005964655547271076
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle025"
+position=[0.0, 4.46, 9.56]
+direction=[0.0, 0.423, 0.906]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0005749064438811347
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle030"
+position=[0.0, 5.28, 9.14]
+direction=[0.0, 0.500, 0.866]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0005513381417337273
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle035"
+position=[0.0, 6.05, 8.64]
+direction=[0.0, 0.574, 0.819]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0005175255193455867
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle040"
+position=[0.0, 6.78, 8.08]
+direction=[0.0, 0.643, 0.766]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00048198233940673107
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle045"
+position=[0.0, 7.46, 7.46]
+direction=[0.0, 0.707, 0.707]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0004376731278989226
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle050"
+position=[0.0, 8.08, 6.78]
+direction=[0.0, 0.766, 0.643]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00039306063312496883
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle055"
+position=[0.0, 8.64, 6.05]
+direction=[0.0, 0.819, 0.574]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00034610671416712035
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle060"
+position=[0.0, 9.14, 5.28]
+direction=[0.0, 0.866, 0.500]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0002946900467506155
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle065"
+position=[0.0, 9.56, 4.46]
+direction=[0.0, 0.906, 0.423]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0002397477540090822
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle070"
+position=[0.0, 9.91, 3.61]
+direction=[0.0, 0.940, 0.342]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00018467850427880702
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle075"
+position=[0.0, 10.19, 2.73]
+direction=[0.0, 0.966, 0.259]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00012889131921602054
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle080"
+position=[0.0, 10.39, 1.83]
+direction=[0.0, 0.985, 0.174]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00011215591624425968
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle085"
+position=[0.0, 10.51, 0.92]
+direction=[0.0, 0.996, 0.087]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00033049626167686513
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle090"
+position=[0.0, 10.55, 0.0]
+direction=[0.0, 1.0, 0.0]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0009697306159215654
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle095"
+position=[0.0, 10.51, -0.92]
+direction=[0.0, 0.996, -0.087]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.0021639478779614104
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle100"
+position=[0.0, 10.39, -1.83]
+direction=[0.0, 0.985, -0.174]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.003971361107047482
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle105"
+position=[0.0, 10.19, -2.73]
+direction=[0.0, 0.966, -0.259]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.006272116644882198
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle110"
+position=[0.0, 9.91, -3.61]
+direction=[0.0, 0.940, -0.342]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.00886574070924835
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle115"
+position=[0.0, 9.56, -4.46]
+direction=[0.0, 0.906, -0.423]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.011568562914643242
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle120"
+position=[0.0, 9.14, -5.28]
+direction=[0.0, 0.866, -0.500]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.014078546100770764
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle125"
+position=[0.0, 8.64, -6.05]
+direction=[0.0, 0.819, -0.574]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.016482693118670996
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle130"
+position=[0.0, 8.08, -6.78]
+direction=[0.0, 0.766, -0.643]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.018653636926962824
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle135"
+position=[0.0, 7.46, -7.46]
+direction=[0.0, 0.707, -0.707]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.020590699070263466
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle140"
+position=[0.0, 6.78, -8.08]
+direction=[0.0, 0.643, -0.766]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.022293510651652425
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle145"
+position=[0.0, 6.05, -8.64]
+direction=[0.0, 0.574, -0.819]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.023796534459094146
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle150"
+position=[0.0, 5.28, -9.14]
+direction=[0.0, 0.500, -0.866]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.025121876758886292
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle155"
+position=[0.0, 4.46, -9.56]
+direction=[0.0, 0.423, -0.906]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.02613932607095251
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle160"
+position=[0.0, 3.61, -9.91]
+direction=[0.0, 0.342, -0.940]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.026986393178897696
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle165"
+position=[0.0, 2.73, -10.19]
+direction=[0.0, 0.259, -0.966]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.027706467834023217
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle170"
+position=[0.0, 1.83, -10.39]
+direction=[0.0, 0.174, -0.985]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.028186317595808412
+acceptanceAngle = 15.0
+
+[[detectors]]
+type="circle"
+ID = "Angle175"
+position=[0.0, 0.92, -10.51]
+direction=[0.0, 0.087, -0.996]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.028480078378267902
+acceptanceAngle = 15.0
+
+
+[[detectors]]
+type="circle"
+ID = "Angle180"
+position=[0.0, -0.0, -10.55]
+direction=[0.0, -0.0, -1.0]
+radius= 4.75
+nbins = 100
+maxval = 4.75
+trackHistory=false
+inverseTarget = 0.02857390689223135
+acceptanceAngle = 15.0
+
+
+[output]
+fluence = "fluence.nrrd"
+render_geometry_name = "geom_render.nrrd"
+render_geometry = true
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [200,200,200]
+overwrite = true
+
+[simulation]
+iseed = 32132135
+absorb=true
+load_checkpoint=false
+checkpoint_file="check.ckpt"
+checkpoint_every_n=10000

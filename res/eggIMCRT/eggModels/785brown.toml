@@ -1,0 +1,50 @@
+[source]
+name = "annulus"
+nphotons = 10000000
+direction = "-y"
+position = [0.0, 50.0, 0.0]
+rotation = [0.0, -1.0, 0.0]
+focalLength = 34.0
+rhi = 15.0
+rlo = 14.0
+annulus_type = "besselAnnulus"
+wavelength = 500.0
+
+[grid]
+nxg = 500
+nyg = 500
+nzg = 500
+xmax = 50.0
+ymax = 50.0
+zmax = 50.0
+
+[geometry]
+geom_name = "egg"
+numOptProp = 3
+boundingBox = [100.0,100.0,100.0]
+position = [0.0,0.0,0.0]
+BottomSphereRadius = 22.3
+TopSphereRadius = 18.0
+SphereSep = 16.0
+ShellThickness = 0.35
+YolkRadius = 14.9
+mus = [31.6, 0.005695, 0.42]
+mua = [1.18, 0.03135, 0.224]
+hgg = [0.0, 0.728, 0.266]
+n = [1.6493, 1.33, 1.33]
+
+[output]
+fluence = "fluence.nrrd"
+render_geometry_name = "geom_render.nrrd"
+render_geometry = true
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [250,250,250]
+overwrite = true
+
+[simulation]
+iseed = 123456789
+absorb=true
+load_checkpoint=false
+checkpoint_file="check.ckpt"
+checkpoint_every_n=10000

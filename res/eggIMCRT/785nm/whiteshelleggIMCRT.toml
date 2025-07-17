@@ -36,19 +36,19 @@ Findmua = true
 Findg = false
 Findn = false
 ReducedmusGuessing = false
-MueffGuessing = false
-musUpper = 73.5
-musLower = 68
-muaUpper = 0.45
-muaLower = 0.40
+MueffGuessing = true
+musUpper = 70.0
+musLower = 27.0
+muaUpper = 1.3
+muaLower = 0.4
 hggUpper = 1.0
 hggLower = 0.0
 nUpper = 5.0
 nLower = 1.0
 reducedmusUpper = 66.0
 reducedmusLower = 52.0
-mueffUpper = 13.0
-mueffLower = 9.0
+mueffUpper = 10.45
+mueffLower = 9.45
 layer = 1
 
 [[detectors]]

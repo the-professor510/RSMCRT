@@ -1,6 +1,6 @@
 [source]
 name = "circular"
-nphotons = 100000
+nphotons = 500000
 direction = "z"
 position = [0.0,0.0,-10.0]
 spectrum_type = "constant"
@@ -24,32 +24,33 @@ position = [0.0,0.0,0.0]
 mus = [56.0174]
 mua = [0.61975]
 hgg = [0.0]
-n = [1.6493]
+n = [1.6425]
 
 [inverse]
 maxStepSize = 1
 gradStepSize = 0.0005
 accuracy = 0.001
-maxNumSteps = 2000
+maxNumSteps = 500
 Findmus = true
 Findmua = true
-Findg = true
+Findg = false
 Findn = false
-ReducedmusGuessing = false
-MueffGuessing = false
-musUpper = 80.0
-musLower = 0.0
-muaUpper = 5.0
-muaLower = 0.00
+ReducedmusGuessing = true
+MueffGuessing = true
+musUpper = 100.0
+musLower = 20.0
+muaUpper = 1.25
+muaLower = 0.7
 hggUpper = 1.0
 hggLower = 0.0
 nUpper = 5.0
 nLower = 1.0
-reducedmusUpper = 66.0
-reducedmusLower = 52.0
-mueffUpper = 13.0
-mueffLower = 9.0
+reducedmusUpper = 51.0
+reducedmusLower = 30.0
+mueffUpper = 10.8
+mueffLower = 10.4
 layer = 1
+numAdaLIPOtoBay = 3
 
 
 [[detectors]]
