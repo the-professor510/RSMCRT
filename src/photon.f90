@@ -149,6 +149,8 @@ module photonMod
                 init_source%emit => circular
             elseif(choice == "slm")then
                 init_source%emit => slm
+            elseif(choice == "circleDect")then
+                init_source%emit => cricleDetectorSource
             else
                 error stop "No such source!"
             end if
@@ -1113,7 +1115,7 @@ module photonMod
             use tomlf,         only : toml_table, get_value
             use sdfHelpers,    only : rotationAlign, translate
             use mat_class,     only : invert
-            use constants,     only : twoPI
+            use constants,     only : TWOPI
             use piecewiseMod
 
             class(photon) :: this
@@ -1130,66 +1132,57 @@ module photonMod
             real(kind=wp) :: xToMove, yToMove, zToMove, stepSize
             logical       :: inX, inY, inZ, triedX, triedY, triedZ
 
-            call get_value(dict, "focalLength", focalLength)
-            call get_value(dict, "focus_type", focus_type)
-            call get_value(dict, "beam_size", beam_size)
+            character(len=:), allocatable :: countStr
+            real(kind=wp) :: rotX, rotY, rotZ, acceptAngle, dectRadius
+            real(kind=wp) :: sint, cost, dirX, dirY, dirZ
 
-            call get_value(dict, "rotation%x", rotationx)
-            call get_value(dict, "rotation%y", rotationy)
-            call get_value(dict, "rotation%z", rotationz)
+            !launch from every point in the circle detector over the full range of angles completely randomly
 
-            if (focus_type == "square") then 
-                this%pos%x = ranu(-beam_size, beam_size)
-                this%pos%y = ranu(-beam_size, beam_size)
-                this%pos%z = 0._wp
 
-            else if(focus_type == "circle")then
-                radius = beam_size * sqrt(ran2())
-                phi = TWOPI * ran2()
-                cosp = cos(phi)
-                sinp = sin(phi)
-                x = radius * cosp
-                y = radius * sinp
-                z = 0._wp ! just inside surface of medium. TODO make this user configurable?
-                pos = vector(x, y, z)
-                this%pos = pos
+            call get_value(dict, "dectCount", countStr)
+            call get_value(dict, "dect"//countStr//"direction%x", rotX)
+            call get_value(dict, "dect"//countStr//"direction%y", rotY)
+            call get_value(dict, "dect"//countStr//"direction%z", rotZ)
+            call get_value(dict, "dect"//countStr//"radius", dectRadius)
+            call get_value(dict, "dect"//countStr//"acceptanceAngle", acceptAngle)        
+            
+            !choose a random position
+            radius = dectRadius * sqrt(ran2())
+            phi = TWOPI * ran2()
+            cosp = cos(phi)
+            sinp = sin(phi)
+            x = radius * cosp
+            y = radius * sinp
+            z = 0._wp ! just inside surface of medium. TODO make this user configurable?
+            pos = vector(x, y, z)
+            this%pos = pos
 
-            else if(focus_type == "gaussian")then
-                ![ref] https://omlc.org/classroom/ece532/class4/example.html
-                radius = beam_size * sqrt(-log(1-ran2()))
-                ! beam_size is the 1/e radius
-                phi = TWOPI * ran2()
-                cosp = cos(phi)
-                sinp = sin(phi)
-                x = radius * cosp
-                y = radius * sinp
-                z = 0._wp ! just inside surface of medium. TODO make this user configurable?
-                pos = vector(x, y, z)
-                this%pos = pos
-            else
-                error stop "No such beam type!"
-            end if 
+            !choose a random evenly distributed angle within 0 and the acceptance angle
+            phi  = ran2()*twoPI
+            cosp = cos(phi)
+            sinp = sin(phi)
+            cost = 1.0_wp - ran2()*(1.0_wp-cos(acceptAngle*TWOPI/360.0_wp))
+            sint = sqrt(1._wp - cost**2)
 
-            targ = vector(0._wp,0._wp,-focalLength)
+            dirX = sint * cosp
+            dirY = sint * sinp
+            dirZ = cost
 
-            dist = length(this%pos - targ)
-
-            dir = (-1._wp)*(this%pos-targ) / dist
-            dir = dir * sign(1._wp, focalLength)
+            dir = vector(dirX, dirY, dirZ)
             dir = dir%magnitude()
 
 
             !set inital vector from which the source points
-            a = vector(0._wp, 0._wp, -1._wp)
+            a = vector(0._wp, 0._wp, 1._wp)
             a = a%magnitude()
             !set vector to rotate to. User defined.
-            b = vector(rotationx, rotationy, rotationz)
+            b = vector(-1.0_wp*rotX, -1.0_wp*rotY, -1.0_wp*rotZ)
             b = b%magnitude()
 
             startPos = photon_origin%pos
             startPos%x = -startPos%x 
             startPos%y = -startPos%y 
-            startPos%z = -startPos%z 
+            startPos%z = -startPos%z             
             
             if (a == b) then 
                 t(:, 1) = [1._wp, 0._wp, 0._wp, 0._wp]

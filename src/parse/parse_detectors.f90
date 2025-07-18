@@ -5,7 +5,7 @@ module parse_detectorsMod
     use vector_class
 
     use tomlf
-    use tomlf_error, only : make_error
+    use tomlf_error
 
     implicit none
 
@@ -14,7 +14,7 @@ module parse_detectorsMod
 
 contains
     
-    subroutine parse_detectors(table, dects, context, error)
+    subroutine parse_detectors(table, dict, dects, context, error)
         !! parse the detectors
 
         use detectors,     only : dect_array, circle_dect, annulus_dect, camera, fibre_dect
@@ -22,6 +22,8 @@ contains
 
         !> Input Toml table
         type(toml_table),               intent(inout) :: table
+        !> Dictonary used to store metadata
+        type(toml_table),               intent(inout) :: dict
         !> Detector array to be filled.
         type(dect_array), allocatable,  intent(out)   :: dects(:)
         !> Context handle for error reporting.
@@ -102,7 +104,7 @@ contains
             call get_value(child, "inverseTarget", targetValue, -1._wp)
             select case(dect_type)
             case("circle")
-                call handle_circle_dect(child, dect_c, c_counter, context, error, dect_ID, targetValue)
+                call handle_circle_dect(child, dict, dect_c, c_counter, context, error, dect_ID, targetValue)
                 if(allocated(error))return
             case("annulus")
                 call handle_annulus_dect(child, dect_a, a_counter, context, error, dect_ID, targetValue)
@@ -185,13 +187,15 @@ contains
 
     end subroutine handle_camera
 
-    subroutine handle_circle_dect(child, dects, counts, context, error, dect_ID, targetValue)
+    subroutine handle_circle_dect(child, dict, dects, counts, context, error, dect_ID, targetValue)
         !! Read in Circle_detector settings and initalise variable
         use detectors,     only : circle_dect
         use sim_state_mod, only : state
 
         !> Detector table
         type(toml_table), pointer,     intent(in)    :: child
+        !> Dictonary used to store metadata
+        type(toml_table),               intent(inout) :: dict
         !> Array ofcircle_dects
         type(circle_dect),             intent(inout) :: dects(:)
         !> Number of circle_dects to create
@@ -209,6 +213,11 @@ contains
         real(kind=wp) :: maxval, radius, acceptAngle
         type(vector)  :: pos, dir
         logical       :: trackHistory
+
+
+
+        character(len=8) :: countStr
+        character(len=:), allocatable :: dectType
 
         pos = get_vector(child, "position", context=context, error=error)
         dir = get_vector(child, "direction", default=vector(0.0, 0.0, -1.0), context=context, error=error)
@@ -231,6 +240,24 @@ contains
 #endif
         dects(counts) = circle_dect(pos, dir, layer, radius, acceptAngle, nbins, trackHistory, dect_ID, targetValue)
         counts = counts + 1
+
+#ifdef escapeFunction
+        !add the detector values to the dictionary
+
+        write(countStr, "(I8)") counts-1
+        dectType = "circle"
+        
+        call set_value(dict, "dect"//countStr//"type", dectType)
+        call set_value(dict, "dect"//countStr//"ID", dect_ID)
+        call set_value(dict, "dect"//countStr//"position%x", pos%x)
+        call set_value(dict, "dect"//countStr//"position%y", pos%y)
+        call set_value(dict, "dect"//countStr//"position%z", pos%z)
+        call set_value(dict, "dect"//countStr//"direction%x", dir%x)
+        call set_value(dict, "dect"//countStr//"direction%y", dir%y)
+        call set_value(dict, "dect"//countStr//"direction%z", dir%z)
+        call set_value(dict, "dect"//countStr//"radius", radius)
+        call set_value(dict, "dect"//countStr//"acceptanceAngle", acceptAngle)
+#endif
 
     end subroutine handle_circle_dect
 

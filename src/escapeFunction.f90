@@ -17,7 +17,7 @@ contains
         use detectors
         use historyStack,  only : history_stack_t
         use inttau2,       only : tauint2
-        use photonMod,     only : photon
+        use photonmod
         use piecewiseMod
         use random,        only : ran2, init_rng
         use sdfs,          only : sdf
@@ -28,9 +28,11 @@ contains
         use writer_mod, only : write_escape
         use kernels, only : setup, finalise, reset_detectors
 
+        use default_MCRTMod, only : run_MCRT
+
         !external deps
         use tev_mod, only : tevipc
-        use tomlf,   only : toml_table, toml_error, get_value
+        use tomlf,   only : toml_table, toml_error, get_value, set_value
 #ifdef _OPENMP
         use omp_lib
 #endif
@@ -60,6 +62,13 @@ contains
         character(len=:), allocatable :: symmetryType
         integer :: indices(3)
         real :: tic, toc
+
+        !temporary while testing adjoint
+        real(kind=wp) :: posX, posY, posZ, dirX, dirY, dirZ, radius, acceptAngle
+        character(len=:), allocatable :: dectType, dectID
+        character(len=8) :: countStr
+        type(vector) :: poss, dirr
+
 
         call cpu_time(tic)
 
@@ -440,13 +449,64 @@ contains
 
             !Go through the base grid and use some form of interpolation to figure out the best match
             call cyl_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+        case("adjoint")
+            !Use the adjoint method to calculate the escape function
+
+            print*, "Adjoint symmetry in cartesian symmetry"
+            print*, "Using the absorption from each detector for the escape function"
+            print*, symmetryType
+
+            do n=1, size(dects)
+
+                write(countStr, "(I8)") n
+
+                call set_value(dict, "dectCount", countStr)
+                call get_value(dict, "dect"//countStr//"type", dectType)
+                call get_value(dict, "dect"//countStr//"ID", dectID)
+
+
+
+                call get_value(dict, "dect"//countStr//"position%x", posX)
+                call get_value(dict, "dect"//countStr//"position%y", posY)
+                call get_value(dict, "dect"//countStr//"position%z", posZ)
+                call get_value(dict, "dect"//countStr//"direction%x", dirX)
+                call get_value(dict, "dect"//countStr//"direction%y", dirY)
+                call get_value(dict, "dect"//countStr//"direction%z", dirZ)
+                call get_value(dict, "dect"//countStr//"radius", radius)
+                call get_value(dict, "dect"//countStr//"acceptanceAngle", acceptAngle)
+
+
+
+                poss = vector(posX, posY, posZ)
+                dirr = vector(-1.0_wp*dirX, -1.0_wp*dirY, -1.0_wp*dirZ)
+                call set_photon(poss, dirr)
+                packet = photon("circleDect")
+                packet%nxp = 1.0_wp 
+                packet%nyp = 0.0_wp 
+                packet%nzp = 0.0_wp 
+                
+
+                print*, " "
+                print*, n, dectType, dectID
+                print*, posX, posY, posZ
+                print*, dirX, dirY, dirZ
+                print*, radius, acceptAngle
+
+
+                call run_MCRT(input_file, history, packet, dict, & 
+                            distances, image, dects, array, nscatt, start, & 
+                            tev, spectrum)
+
+                
+            end do
+
         case default                     
             print*,"Unknown symmetry type"
             stop 1
         end select
                                             
         !store the escape funcitons for each detector
-        call write_escape(dects, dict)
+        !call write_escape(dects, dict)
 
         call finalise(dict, dects, nscatt, start, history)
 

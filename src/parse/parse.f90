@@ -54,7 +54,7 @@ module parse_mod
         call parse_geometry(table, dict, context, error)
         if(allocated(error))return
 
-        call parse_detectors(table, dects, context, error)
+        call parse_detectors(table, dict, dects, context, error)
         if(allocated(error))return
 
         call parse_output(table, error)
