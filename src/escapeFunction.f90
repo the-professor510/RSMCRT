@@ -485,8 +485,8 @@ contains
                 !set the detector type
                 if (dectType == "circle") then
                     packet = photon("circleDect")
-                !else if (dectType == "annulus") then
-                !    packet = photon("annulusDect")
+                else if (dectType == "annulus") then
+                    packet = photon("annulusDect")
                 !else if (dectType == "focus") then
                 !    packet = photon("circleDect")
                 else
