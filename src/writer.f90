@@ -165,7 +165,7 @@ module writer_mod
 
         end subroutine write_inverse
 
-        subroutine write_escape(dects, dict, overwrite)
+        subroutine write_escape(dects, symmetryType, dict, overwrite)
 
             use iarray
             use detectors
@@ -177,6 +177,8 @@ module writer_mod
 
             !> list of detectors
             type(dect_array), intent(in) :: dects(:)
+            !> symmetry type
+            character(len=:), allocatable, intent(in) :: symmetryType
             !> dictionary of metadata
             type(toml_table), optional, intent(INOUT) :: dict
             !> overwrite flag
@@ -192,8 +194,10 @@ module writer_mod
                 filename = trim(fileplace)//"escape/dectID_"//trim(dects(i)%p%ID)//"__escape"//trim(str(i))//".nrrd" 
                 call write_data(escape(i,:,:,:), filename, state, dict, overwrite, dects(i)%p%ID)
 
-                filename = trim(fileplace)//"escape/dectID_"//trim(dects(i)%p%ID)//"__escapeSym"//trim(str(i))//".nrrd" 
-                call write_data(escapeSymmetry(i,:,:,:), filename, state, dict, overwrite, dects(i)%p%ID)
+                if (symmetryType /= "adjoint") then
+                    filename = trim(fileplace)//"escape/dectID_"//trim(dects(i)%p%ID)//"__escapeSym"//trim(str(i))//".nrrd" 
+                    call write_data(escapeSymmetry(i,:,:,:), filename, state, dict, overwrite, dects(i)%p%ID)
+                end if
             end do
         end subroutine write_escape
 

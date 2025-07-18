@@ -24,7 +24,7 @@ contains
         use sdfHelpers,    only : rotationAlign, rotmat
         use sim_state_mod, only : state
         use vector_class
-        use setupMod, only : setup_escapeFunction
+        use setupMod, only : setup_escapeFunction, zarray
         use writer_mod, only : write_escape
         use kernels, only : setup, finalise, reset_detectors
 
@@ -464,40 +464,47 @@ contains
                 call get_value(dict, "dect"//countStr//"type", dectType)
                 call get_value(dict, "dect"//countStr//"ID", dectID)
 
-
-
                 call get_value(dict, "dect"//countStr//"position%x", posX)
                 call get_value(dict, "dect"//countStr//"position%y", posY)
                 call get_value(dict, "dect"//countStr//"position%z", posZ)
                 call get_value(dict, "dect"//countStr//"direction%x", dirX)
                 call get_value(dict, "dect"//countStr//"direction%y", dirY)
                 call get_value(dict, "dect"//countStr//"direction%z", dirZ)
-                call get_value(dict, "dect"//countStr//"radius", radius)
-                call get_value(dict, "dect"//countStr//"acceptanceAngle", acceptAngle)
+            
+                print*, " "
+                print*, n, dectType, dectID
 
-
-
+                !setup the new source type for the nth detector
                 poss = vector(posX, posY, posZ)
                 dirr = vector(-1.0_wp*dirX, -1.0_wp*dirY, -1.0_wp*dirZ)
                 call set_photon(poss, dirr)
-                packet = photon("circleDect")
                 packet%nxp = 1.0_wp 
                 packet%nyp = 0.0_wp 
                 packet%nzp = 0.0_wp 
-                
 
-                print*, " "
-                print*, n, dectType, dectID
-                print*, posX, posY, posZ
-                print*, dirX, dirY, dirZ
-                print*, radius, acceptAngle
+                !set the detector type
+                if (dectType == "circle") then
+                    packet = photon("circleDect")
+                !else if (dectType == "annulus") then
+                !    packet = photon("annulusDect")
+                !else if (dectType == "focus") then
+                !    packet = photon("circleDect")
+                else
+                    print*, "source not implemented, set escape funciton to zero"
+                    escape(n,:,:,:) = 0.0_wp
+                    cycle
+                end if               
+        
+                !zero all arrays
+                call zarray()
 
-
+                !run the adjoint MCRT
                 call run_MCRT(input_file, history, packet, dict, & 
                             distances, image, dects, array, nscatt, start, & 
                             tev, spectrum)
 
-                
+                !store the escape function for nth detector
+                escape(n,:,:,:) = absorb(:,:,:)
             end do
 
         case default                     
@@ -506,7 +513,7 @@ contains
         end select
                                             
         !store the escape funcitons for each detector
-        !call write_escape(dects, dict)
+        call write_escape(dects, symmetryType, dict)
 
         call finalise(dict, dects, nscatt, start, history)
 
