@@ -149,9 +149,9 @@ contains
 
         !> Detector table
         type(toml_table), pointer,     intent(in)    :: child
-        !> Array of cameras
+        !> Array of detectors
         type(camera),                  intent(inout) :: dects(:)
-        !> Number of cameras to create
+        !> Number dectors created
         integer,                       intent(inout) :: counts
         !> Context handle for error reporting.
         type(toml_context),            intent(in)    :: context
@@ -196,9 +196,9 @@ contains
         type(toml_table), pointer,     intent(in)    :: child
         !> Dictonary used to store metadata
         type(toml_table),               intent(inout) :: dict
-        !> Array ofcircle_dects
+        !> Array of dects
         type(circle_dect),             intent(inout) :: dects(:)
-        !> Number of circle_dects to create
+        !> Number dectors created
         integer,                       intent(inout) :: counts
         !> Context handle for error reporting.
         type(toml_context),            intent(in)    :: context
@@ -267,9 +267,9 @@ contains
 
         !> Detector table
         type(toml_table), pointer,     intent(in)    :: child
-        !> Array of fibre_dect
+        !> Array of dectd
         type(fibre_dect),             intent(inout) :: dects(:)
-        !> Number of fibre_dect to create
+        !> Number dectors created
         integer,                       intent(inout) :: counts
         !> Context handle for error reporting.
         type(toml_context),            intent(in)    :: context
@@ -332,11 +332,11 @@ contains
 
         !> Detector Table
         type(toml_table), pointer,     intent(in)    :: child
-        !> Array of annulus_dects
+        !> Dictonary used to store metadata
         type(toml_table),               intent(inout) :: dict
-        !> Array ofcircle_dects
+        !> Array of dects
         type(annulus_dect),            intent(inout) :: dects(:)
-        !> Number of anulluar dects to create
+        !> Number dectors created
         integer,                       intent(inout) :: counts
         !> Context handle for error reporting.
         type(toml_context),            intent(in)    :: context

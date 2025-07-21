@@ -40,6 +40,19 @@ module sim_state_mod
         type(vector) :: symGridDir
         !> rotation of the symGrid around z axis value between 0 and 360 degree rotation
         real(kind=wp) :: symGridRot
+
+        !> matrix to perform rotation around z axis going from sym to normal cart
+        real(kind=wp) :: rotationAroundZOffSym(4,4)
+        !> rotation matrix to align z axis going from sym to normal cart
+        real(kind=wp) :: rotationOffSym(4,4)
+        !> matrix to perform rotation around z axis going from normal cart to sym
+        real(kind=wp) :: rotationOnToSym(4,4)
+        !> rotation matrix to align z axis going from normal cart to sym
+        real(kind=wp) :: rotationAroundZOnSym(4,4)
+        !> translation matrix to shift sym onto cart (+ve) and cart onto sym (-ve)
+        type(vector) :: gridPos
+
+
         !> Boolean to indicate whether to render SDF to voxels or not.
         logical :: render_geom
         !> Boolean to indicate whether to render source emission to voxels or not.

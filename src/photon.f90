@@ -153,6 +153,10 @@ module photonMod
                 init_source%emit => cricleDetectorSource
             elseif(choice == "annulusDect")then
                 init_source%emit => annulusDetectorSource
+            elseif(choice == "escapeCartSymmetry")then
+                init_source%emit => cartesianVoxelSource
+            elseif(choice == "escapeCylSymmetry")then
+                init_source%emit => cylindricalVoxelSource
             else
                 error stop "No such source!"
             end if
@@ -1504,5 +1508,177 @@ module photonMod
             this%zcell = cell(3)
         end subroutine annulusDetectorSource
 
+
+        subroutine cartesianVoxelSource(this, spectrum, dict, seqs)
+            !! isotropic point sources inside symmetry cartesian voxel
+
+            use sim_state_mod, only : state
+            use random,        only : ran2, seq
+            use constants,     only : twoPI
+            use tomlf,         only : toml_table, get_value
+            use piecewiseMod
+
+            class(photon) :: this
+            type(spectrum_t), intent(in) :: spectrum
+            type(toml_table), optional, intent(inout) :: dict
+            type(seq), optional, intent(inout) :: seqs(2)
+
+            integer :: cell(3)
+            real(kind=wp) :: wavelength, tmp
+            real(kind=wp) :: xpos, ypos, zpos
+            integer :: xsymcell, ysymcell, zsymcell
+            type(vector) :: position
+
+            this%pos = photon_origin%pos
+
+            !random direction
+            this%phi  = ran2()*twoPI
+            this%cosp = cos(this%phi)
+            this%sinp = sin(this%phi)
+            this%cost = 2._wp*ran2()-1._wp
+            this%sint = sqrt(1._wp - this%cost**2)
+
+            this%nxp = this%sint * this%cosp
+            this%nyp = this%sint * this%sinp
+            this%nzp = this%cost
+
+            this%phase = 0.0_wp
+            this%tflag  = .false.
+            this%cnts   = 0
+            this%bounces = 0
+            this%layer  = 1
+            this%weight = 1.0_wp
+            ! this%L = 1.0
+
+            call spectrum%p%sample(wavelength, tmp)
+            this%wavelength = wavelength
+
+            this%energy = 1._wp
+            this%fact = TWOPI/(this%wavelength)
+
+            call get_value(dict, "symGridCellx", xsymcell)
+            call get_value(dict, "symGridCelly", ysymcell)
+            call get_value(dict, "symGridCellz", zsymcell)
+
+            !Pic a random point in the voxel
+            xpos = state%symmetryEscapeCartGrid%xmax*((2.0_wp/state%symmetryEscapeCartGrid%nxg)*&
+                                                        (ran2() + (real(xsymcell, kind=wp) - 1.0_wp)) - 1.0_wp)
+            ypos = state%symmetryEscapeCartGrid%ymax*((2.0_wp/state%symmetryEscapeCartGrid%nyg)*&
+                                                        (ran2() + (real(ysymcell, kind=wp) - 1.0_wp)) - 1.0_wp)
+            zpos = state%symmetryEscapeCartGrid%zmax*((2.0_wp/state%symmetryEscapeCartGrid%nzg)*&
+                                                        (ran2() + (real(zsymcell, kind=wp) - 1.0_wp)) - 1.0_wp)
+
+            position = vector(xpos,ypos,zpos)
+
+            !rotate to align x and y axis after z axis alignment
+            position = position .dot. state%rotationAroundZOffSym
+
+            !align z axis
+            position = position .dot. state%rotationOffSym
+
+            !shift
+            position = position + state%gridPos
+
+            photon_origin%pos = position
+            this%pos = photon_origin%pos
+
+            ! Linear Grid 
+            cell = state%grid%get_voxel(this%pos)
+            this%xcell = cell(1)
+            this%ycell = cell(2)
+            this%zcell = cell(3)
+        
+        end subroutine cartesianVoxelSource
+
+        subroutine cylindricalVoxelSource(this, spectrum, dict, seqs)
+            !! isotropic point sources inside symmetry cylindrical voxel
+
+            use sim_state_mod, only : state
+            use random,        only : ran2, seq
+            use constants,     only : twoPI
+            use tomlf,         only : toml_table, get_value
+            use piecewiseMod
+
+            class(photon) :: this
+            type(spectrum_t), intent(in) :: spectrum
+            type(toml_table), optional, intent(inout) :: dict
+            type(seq), optional, intent(inout) :: seqs(2)
+
+            integer :: cell(3)
+            real(kind=wp) :: wavelength, tmp
+            real(kind=wp) :: rad, radLower, radUpper 
+            real(kind=wp) :: theta, thetaLower, thetaUpper
+            real(kind=wp) :: xpos, ypos, zpos
+            integer :: xsymcell, ysymcell, zsymcell
+            type(vector) :: position
+
+            this%pos = photon_origin%pos
+
+            !random direction
+            this%phi  = ran2()*twoPI
+            this%cosp = cos(this%phi)
+            this%sinp = sin(this%phi)
+            this%cost = 2._wp*ran2()-1._wp
+            this%sint = sqrt(1._wp - this%cost**2)
+
+            this%nxp = this%sint * this%cosp
+            this%nyp = this%sint * this%sinp
+            this%nzp = this%cost
+
+            this%phase = 0.0_wp
+            this%tflag  = .false.
+            this%cnts   = 0
+            this%bounces = 0
+            this%layer  = 1
+            this%weight = 1.0_wp
+            ! this%L = 1.0
+
+            call spectrum%p%sample(wavelength, tmp)
+            this%wavelength = wavelength
+
+            this%energy = 1._wp
+            this%fact = TWOPI/(this%wavelength)
+
+            call get_value(dict, "symGridCellx", xsymcell)
+            call get_value(dict, "symGridCelly", ysymcell)
+            call get_value(dict, "symGridCellz", zsymcell)
+
+            !Pic a random point in the voxel
+
+            radLower = ((real(xsymcell, kind = wp)-1.0_wp)/state%symmetryEscapeCylGrid%nrg)*state%symmetryEscapeCylGrid%rmax
+            thetaLower = ((real(ysymcell, kind = wp)-1.0_wp)/state%symmetryEscapeCylGrid%ntg)*state%symmetryEscapeCylGrid%tmax
+
+            radUpper = radLower + (state%symmetryEscapeCylGrid%rmax/state%symmetryEscapeCylGrid%nrg)
+            thetaUpper = thetaLower + (state%symmetryEscapeCylGrid%tmax/state%symmetryEscapeCylGrid%ntg)
+
+
+            rad = sqrt(radLower**2 + (radUpper**2 - radLower**2) * ran2())
+            theta = thetaLower + ran2()*(thetaUpper - thetaLower)
+            zpos = state%symmetryEscapeCylGrid%zmax*((2.0_wp/state%symmetryEscapeCylGrid%nzg)*&
+                                                        (ran2() + (real(zsymcell, kind=wp) - 1.0_wp)) - 1.0_wp)
+
+            xpos = rad*cos(theta)
+            ypos = rad*sin(theta)
+            position = vector(xpos,ypos,zpos)
+
+            !rotate to align x and y axis after z axis alignment
+            position = position .dot. state%rotationAroundZOffSym
+
+            !align z axis
+            position = position .dot. state%rotationOffSym
+
+            !shift
+            position = position + state%gridPos
+
+            photon_origin%pos = position
+            this%pos = photon_origin%pos
+
+            ! Linear Grid 
+            cell = state%grid%get_voxel(this%pos)
+            this%xcell = cell(1)
+            this%ycell = cell(2)
+            this%zcell = cell(3)
+        
+        end subroutine cylindricalVoxelSource
         
 end module photonMod

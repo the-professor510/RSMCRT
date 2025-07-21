@@ -132,29 +132,17 @@ contains
                                                                     state%symmetryEscapeCartGrid%nzg)
             print*, ""
 
-            !allocate the escape symmetry grids
-            allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
-                                    state%symmetryEscapeCartGrid%nyg, & 
-                                    state%symmetryEscapeCartGrid%nzg))
-            escapeSymmetry = 0._wp
+            !setup symmetry grid
+            call setup_cart_symGrid(dects)
 
-            !precompute the rotation vector here
-            !both for going from the shifted from base
-            ! and for going from base to the shifted
-            direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
-
-            rotationOffSym = rotationAlign(direction, state%symGridDir)
-            rotationOnToSym = rotationAlign(state%symGridDir, direction)
-
-            rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
-            rotationAroundZOnSym = rotmat(direction, state%symGridRot)
-
-            gridPos = state%symGridPos
+            packet = photon("escapeCartSymmetry")
 
             !loop through every cell
             do m = 1, state%symmetryEscapeCartGrid%nxg
                 do n = 1, state%symmetryEscapeCartGrid%nyg
                     do o = 1, state%symmetryEscapeCartGrid%nzg
+
+                        call update_sumGridCells_inDict(dict, m, n, o)
 
                         print*, ""
                         print*, "Running ", ((m-1)*state%symmetryEscapeCartGrid%nyg*state%symmetryEscapeCartGrid%nzg + & 
@@ -164,7 +152,7 @@ contains
                                                 state%symmetryEscapeCartGrid%nzg)
 
                         !calculate the escape function
-                        call cart_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
+                        call cart_calc_escape_sym(m,n,o, dects, array,& 
                                                  packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                                  start, tev)
 
@@ -173,7 +161,7 @@ contains
             end do
 
             !Go through the base grid and use some form of interpolation to figure out the best match
-            call cart_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+            call cart_map_escape_sym(dects)
 
         case("prism")
             !prism symmetry, launch from a layer of cells
@@ -183,26 +171,10 @@ contains
                                                                     state%symmetryEscapeCartGrid%nyg)
             print*, ""
 
-            !allocate the escape symmetry grids
-            allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
-                                    state%symmetryEscapeCartGrid%nyg, & 
-                                    state%symmetryEscapeCartGrid%nzg))
-            escapeSymmetry = 0._wp
+            !setup symmetry grid
+            call setup_cart_symGrid(dects)
 
-            !precompute the rotation vector here
-            !both for going from the shifted from base
-            ! and for going from base to the shifted
-            direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
-
-            !state%symGridDir is the normal to plane of the prism
-
-            rotationOffSym = rotationAlign(direction, state%symGridDir)
-            rotationOnToSym = rotationAlign(state%symGridDir, direction)
-
-            rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
-            rotationAroundZOnSym = rotmat(direction, state%symGridRot)
-
-            gridPos = state%symGridPos
+            packet = photon("escapeCartSymmetry")
 
             !get the position of the cell
             indices = state%symmetryEscapeCartGrid%get_voxel(vector(0.0_wp,0.0_wp,0.0_wp))
@@ -210,13 +182,15 @@ contains
             do m = 1, state%symmetryEscapeCartGrid%nxg
                 do n = 1, state%symmetryEscapeCartGrid%nyg
 
+                    call update_sumGridCells_inDict(dict, m, n, indices(3))
+
                     print*, ""
                     print*, "Running ", ((m-1)*state%symmetryEscapeCartGrid%nyg + n - 1), & 
                             " out of ", (state%symmetryEscapeCartGrid%nxg* &
                                         state%symmetryEscapeCartGrid%nyg)
 
                     !calculate the escape function
-                    call cart_calc_escape_sym(m,n,indices(3), rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
+                    call cart_calc_escape_sym(m,n,indices(3), dects, array,& 
                                                 packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                                 start, tev)
                 end do
@@ -228,7 +202,7 @@ contains
             end do
 
             !Go through the base grid and use some form of interpolation to figure out the best match
-            call cart_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+            call cart_map_escape_sym(dects)
 
         case("flipped")
             !flipped symmetry, launch half the cells
@@ -239,26 +213,10 @@ contains
                                                                     (state%symmetryEscapeCartGrid%nzg/2)+1)
             print*, ""
             
-            !allocate the escape symmetry grids
-            allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
-                                    state%symmetryEscapeCartGrid%nyg, & 
-                                    state%symmetryEscapeCartGrid%nzg))
-            escapeSymmetry = 0._wp
+            !setup symmetry grid
+            call setup_cart_symGrid(dects)
 
-            !precompute the rotation vector here
-            !both for going from the shifted from base
-            ! and for going from base to the shifted
-            direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
-
-            !state%symGridDir is the normal pointing off the face to be flipped on
-
-            rotationOffSym = rotationAlign(direction, state%symGridDir)
-            rotationOnToSym = rotationAlign(state%symGridDir, direction)
-
-            rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
-            rotationAroundZOnSym = rotmat(direction, state%symGridRot)
-
-            gridPos = state%symGridPos
+            packet = photon("escapeCartSymmetry")
 
             !get the position of the cell
             indices = state%symmetryEscapeCartGrid%get_voxel(vector(0.0_wp,0.0_wp,0.0_wp))
@@ -267,6 +225,8 @@ contains
                 do n = 1, state%symmetryEscapeCartGrid%nyg
                     do o = 1, (state%symmetryEscapeCartGrid%nzg/2)+1
 
+                        call update_sumGridCells_inDict(dict, m, n, o)
+
                         print*, ""
                         print*, "Running ", ((m-1)*state%symmetryEscapeCartGrid%nyg*((state%symmetryEscapeCartGrid%nzg/2)+1) + & 
                                             (n-1)*((state%symmetryEscapeCartGrid%nzg/2)+1) + o - 1), & 
@@ -274,7 +234,7 @@ contains
                                             state%symmetryEscapeCartGrid%nyg* &
                                             (state%symmetryEscapeCartGrid%nzg/2)+1)
 
-                        call cart_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
+                        call cart_calc_escape_sym(m,n,o, dects, array,& 
                                                     packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                                     start, tev)
                     end do
@@ -291,7 +251,7 @@ contains
             end do
 
             !Go through the base grid and use some form of interpolation to figure out the best match
-            call cart_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+            call cart_map_escape_sym(dects)
 
         case("uniformSlab")
             ! The simmulation is a slab code, light is collected uniformly
@@ -300,37 +260,23 @@ contains
             print*, "Number of Monte Carlo Simmulations to run: ", (state%symmetryEscapeCartGrid%nzg)
             print*, ""
             
-            !allocate the escape symmetry grids
-            allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
-                                    state%symmetryEscapeCartGrid%nyg, & 
-                                    state%symmetryEscapeCartGrid%nzg))
-            escapeSymmetry = 0._wp
+            !setup symmetry grid
+            call setup_cart_symGrid(dects)
 
-            !precompute the rotation vector here
-            !both for going from the shifted from base
-            ! and for going from base to the shifted
-            direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
-
-            !state%symGridDir is the normal pointing off the face to be flipped on
-
-            rotationOffSym = rotationAlign(direction, state%symGridDir)
-            rotationOnToSym = rotationAlign(state%symGridDir, direction)
-
-            rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
-            rotationAroundZOnSym = rotmat(direction, state%symGridRot)
-
-            gridPos = state%symGridPos
+            packet = photon("escapeCartSymmetry")
 
             !get the position of the cell
             indices = state%symmetryEscapeCartGrid%get_voxel(vector(0.0_wp,0.0_wp,0.0_wp))
             !loop through every cell
             do o = 1, state%symmetryEscapeCartGrid%nzg
 
+                call update_sumGridCells_inDict(dict, indices(1), indices(2), o)
+
                 print*, ""
                 print*, "Running ", (o - 1), & 
                         " out of ", (state%symmetryEscapeCartGrid%nzg)
 
-                call cart_calc_escape_sym(indices(1),indices(2),o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
+                call cart_calc_escape_sym(indices(1),indices(2),o, dects, array,& 
                                             packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                             start, tev)
             end do
@@ -343,7 +289,7 @@ contains
             end do
 
             !Go through the base grid and use some form of interpolation to figure out the best match
-            call cart_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+            call cart_map_escape_sym(dects)
 
         case("noneRotational")
             ! Do for all radii, theta and z values
@@ -356,28 +302,17 @@ contains
                                                                     state%symmetryEscapeCylGrid%nzg)
             print*, ""
 
-            allocate(escapeSymmetry(size(dects), state%symmetryEscapeCylGrid%nrg, & 
-                                    state%symmetryEscapeCylGrid%ntg, & 
-                                    state%symmetryEscapeCylGrid%nzg))
-            escapeSymmetry = 0._wp
+            !setup cylindrical symmetry grid
+            call setup_cyl_symGrid(dects)
 
-            !precompute the rotation vector here
-            !both for going from the shifted from base
-            ! and for going from base to the shifted
-            direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
-
-            rotationOffSym = rotationAlign(direction, state%symGridDir)
-            rotationOnToSym = rotationAlign(state%symGridDir, direction)
-
-            rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
-            rotationAroundZOnSym = rotmat(direction, state%symGridRot)
-
-            gridPos = state%symGridPos
+            packet = photon("escapeCylSymmetry")
 
             !loop through every cell
             do m = 1, state%symmetryEscapeCylGrid%nrg
                 do n = 1, state%symmetryEscapeCylGrid%ntg
                     do o = 1, state%symmetryEscapeCylGrid%nzg
+
+                        call update_sumGridCells_inDict(dict, m, n, o)
 
                         print*, ""
                         print*, "Running ", ((m-1)*state%symmetryEscapeCylGrid%ntg*state%symmetryEscapeCylGrid%nzg + & 
@@ -387,7 +322,7 @@ contains
                                             state%symmetryEscapeCylGrid%nzg)
 
                         !calculate the escape function
-                        call cyl_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
+                        call cyl_calc_escape_sym(m,n,o, dects, array,& 
                                                  packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                                  start, tev)
 
@@ -396,7 +331,7 @@ contains
             end do
 
             !Go through the base grid and use some form of interpolation to figure out the best match
-            call cyl_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+            call cyl_map_escape_sym(dects)
 
         case("360rotational")
             ! Do for all radii and z values at one theta value
@@ -408,33 +343,22 @@ contains
                                                                     state%symmetryEscapeCylGrid%nzg)
             print*, ""
 
-            allocate(escapeSymmetry(size(dects), state%symmetryEscapeCylGrid%nrg, & 
-                                    state%symmetryEscapeCylGrid%ntg, & 
-                                    state%symmetryEscapeCylGrid%nzg))
-            escapeSymmetry = 0._wp
+            !setup cylindrical symmetry grid
+            call setup_cyl_symGrid(dects)
 
-            !precompute the rotation vector here
-            !both for going from the shifted from base
-            ! and for going from base to the shifted
-            direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
-
-            rotationOffSym = rotationAlign(direction, state%symGridDir)
-            rotationOnToSym = rotationAlign(state%symGridDir, direction)
-
-            rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
-            rotationAroundZOnSym = rotmat(direction, state%symGridRot)
-
-            gridPos = state%symGridPos
+            packet = photon("escapeCylSymmetry")
 
             n=1
             do m = 1, state%symmetryEscapeCylGrid%nrg
                 do o = 1, state%symmetryEscapeCylGrid%nzg
 
+                    call update_sumGridCells_inDict(dict, m, n, o)
+
                     !calculate the escape function
                     print*, ""
                     print*, "Running ", ((m-1)*state%symmetryEscapeCylGrid%nzg + o - 1), & 
                             " out of ", (state%symmetryEscapeCylGrid%nrg*state%symmetryEscapeCylGrid%nzg)
-                    call cyl_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array,& 
+                    call cyl_calc_escape_sym(m,n,o, dects, array,& 
                                                 packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
                                                 start, tev)
 
@@ -448,7 +372,7 @@ contains
             end do
 
             !Go through the base grid and use some form of interpolation to figure out the best match
-            call cyl_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+            call cyl_map_escape_sym(dects)
         case("adjoint")
             !Use the adjoint method to calculate the escape function
 
@@ -523,7 +447,107 @@ contains
     end subroutine escape_Function
 
 
-    subroutine cart_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array, packet, & 
+
+    subroutine setup_cart_symGrid(dects)
+        use constants, only : wp
+        use iarray
+        use detectors
+        use vector_class
+        use sdfs,       only : sdf
+        use sdfHelpers, only : rotationAlign, rotmat
+        use sim_state_mod
+
+        type(dect_array), allocatable, intent(inout) :: dects(:)
+
+        type(vector) :: direction, gridPos
+        real(kind=wp) :: rotationOnToSym(4,4), rotationOffSym(4,4)
+        real(kind=wp) :: rotationAroundZOnSym(4,4), rotationAroundZOffSym(4,4)
+
+        !allocate the escape symmetry grids
+        allocate(escapeSymmetry(size(dects), state%symmetryEscapeCartGrid%nxg, & 
+                                state%symmetryEscapeCartGrid%nyg, & 
+                                state%symmetryEscapeCartGrid%nzg))
+        escapeSymmetry = 0._wp
+
+        !precompute the rotation vector here
+        !both for going from the shifted from base
+        ! and for going from base to the shifted
+        direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
+
+        rotationOffSym = rotationAlign(direction, state%symGridDir)
+        rotationOnToSym = rotationAlign(state%symGridDir, direction)
+
+        rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
+        rotationAroundZOnSym = rotmat(direction, state%symGridRot)
+
+        gridPos = state%symGridPos
+
+        !store rotation matrices in state
+        state%rotationOffSym = rotationOffSym
+        state%rotationOnToSym = rotationOnToSym
+        state%rotationAroundZOffSym = rotationAroundZOffSym
+        state%rotationAroundZOnSym = rotationAroundZOnSym
+        state%gridPos = gridPos
+
+    end subroutine setup_cart_symGrid
+
+    subroutine setup_cyl_symGrid(dects)
+        use constants, only : wp
+        use iarray
+        use detectors
+        use vector_class
+        use sdfs,       only : sdf
+        use sdfHelpers, only : rotationAlign, rotmat
+        use sim_state_mod
+
+        type(dect_array), allocatable, intent(inout) :: dects(:)
+
+        type(vector) :: direction, gridPos
+        real(kind=wp) :: rotationOnToSym(4,4), rotationOffSym(4,4)
+        real(kind=wp) :: rotationAroundZOnSym(4,4), rotationAroundZOffSym(4,4)
+
+        allocate(escapeSymmetry(size(dects), state%symmetryEscapeCylGrid%nrg, & 
+                                    state%symmetryEscapeCylGrid%ntg, & 
+                                    state%symmetryEscapeCylGrid%nzg))
+        escapeSymmetry = 0._wp
+
+        !precompute the rotation vector here
+        !both for going from the shifted from base
+        ! and for going from base to the shifted
+        direction = vector(0.0_wp, 0.0_wp, 1.0_wp)
+
+        rotationOffSym = rotationAlign(direction, state%symGridDir)
+        rotationOnToSym = rotationAlign(state%symGridDir, direction)
+
+        rotationAroundZOffSym = rotmat(direction, -state%symGridRot)
+        rotationAroundZOnSym = rotmat(direction, state%symGridRot)
+
+        gridPos = state%symGridPos
+
+        state%rotationOffSym = rotationOffSym
+        state%rotationOnToSym = rotationOnToSym
+        state%rotationAroundZOffSym = rotationAroundZOffSym
+        state%rotationAroundZOnSym = rotationAroundZOnSym
+        state%gridPos = gridPos
+
+    end subroutine setup_cyl_symGrid
+
+    subroutine update_sumGridCells_inDict(dict, cellx, celly, cellz)
+        !external deps
+        use tev_mod, only : tevipc
+        use tomlf,   only : toml_table, toml_error, get_value, set_value
+
+        type(toml_table), intent(inout) :: dict
+        integer, intent(in) :: cellx, celly, cellz
+
+        call set_value(dict, "symGridCellx", cellx)
+        call set_value(dict, "symGridCelly", celly)
+        call set_value(dict, "symGridCellz", cellz)
+    end subroutine update_sumGridCells_inDict
+
+
+
+    subroutine cart_calc_escape_sym(m,n,o, dects, array, packet, & 
                                      distances, dict, history, image, input_file, nscatt, spectrum, start, tev)
 
         !Calculate the cartesian symmetry escape function 
@@ -546,12 +570,6 @@ contains
 
         !> indices of symmetryEscapeCartGrid
         integer, intent(in) :: m,n,o
-        !> rotation matrix to unrotate around the z axis
-        real(kind=wp), intent(in) :: rotationAroundZOffSym(4,4)
-        !> rotation matrix to unrotate around the z axis
-        real(kind=wp), intent(in) :: rotationOffSym(4,4)
-        !> rotation matrix to unrotate around the z axis
-        type(vector), intent(in) :: gridPos
         character(len=*), intent(in) :: input_file
         type(history_stack_t)        , intent(inout) :: history
         type(photon)                 , intent(inout) :: packet
@@ -582,15 +600,15 @@ contains
         position = vector(x,y,z)
 
         !rotate to align x and y axis after z axis alignment
-        position = position .dot. rotationAroundZOffSym
+        position = position .dot. state%rotationAroundZOffSym
 
         !align z axis
-        position = position .dot. rotationOffSym
+        position = position .dot. state%rotationOffSym
 
         !shift
-        position = position + gridPos
+        position = position + state%gridPos
 
-        !set the emissin location to the centre of the voxel
+        !set the emission location to the centre of the voxel
         call set_photon(position, vector(0.0_wp,0.0_wp,0.0_wp))
         packet%pos = position
 
@@ -605,6 +623,10 @@ contains
         if (layer == 0) then
             do loopCounter = 1, size(dects)
                 escapeSymmetry(loopCounter, m, n, o) = 0.0_wp
+
+                !temporary while testing
+                !escapeSymmetry(loopCounter, m, n, o) = layer
+                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             end do
             return
         end if
@@ -638,7 +660,7 @@ contains
 
     end subroutine cart_calc_escape_sym
 
-    subroutine cart_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+    subroutine cart_map_escape_sym(dects)
 
         use iarray
         use constants, only : wp
@@ -648,9 +670,6 @@ contains
         use interpolate
 
         type(dect_array), allocatable, intent(inout) :: dects(:)
-        real(kind=wp), intent(in) :: rotationOnToSym(4,4), rotationAroundZOnSym(4,4)
-        !> rotation matrix to unrotate around the z axis
-        type(vector), intent(in) :: gridPos
 
         integer :: i,j,k, m,n,o
         integer :: loopCounter, indx(3)
@@ -676,13 +695,13 @@ contains
                     position = vector(x,y,z) 
 
                     !shift
-                    position = position - gridPos
+                    position = position - state%gridPos
 
                     !rotate, there is none for this geometry
-                    position = position .dot. rotationOnToSym
+                    position = position .dot. state%rotationOnToSym
 
                     !rotate to align x and y axis after z axis alignment
-                    position = position .dot. rotationAroundZOnSym
+                    position = position .dot. state%rotationAroundZOnSym
                     
                     !find the points in symmetry escape that correspond to this point?
                     !this returns the point that is closest to this
@@ -952,7 +971,7 @@ contains
         print*, "Finished Interpolation"
     end subroutine cart_map_escape_sym
 
-    subroutine cyl_calc_escape_sym(m,n,o, rotationAroundZOffSym, rotationOffSym, gridPos, dects, array, packet, & 
+    subroutine cyl_calc_escape_sym(m,n,o, dects, array, packet, & 
                                     distances, dict, history, image, input_file, nscatt, spectrum, start, tev)
 
         !Calculate the cartesian symmetry escape function 
@@ -975,12 +994,6 @@ contains
 
         !> indices of symmetryEscapeCartGrid
         integer, intent(in) :: m,n,o
-        !> rotation matrix to unrotate around the z axis
-        real(kind=wp), intent(in) :: rotationAroundZOffSym(4,4)
-        !> rotation matrix to unrotate around the z axis
-        real(kind=wp), intent(in) :: rotationOffSym(4,4)
-        !> rotation matrix to unrotate around the z axis
-        type(vector), intent(in) :: gridPos
         character(len=*), intent(in) :: input_file
         type(history_stack_t)        , intent(inout) :: history
         type(photon)                 , intent(inout) :: packet
@@ -1014,13 +1027,13 @@ contains
         position = vector(x,y,z)
 
         !rotate to align x and y axis after z axis alignment
-        position = position .dot. rotationAroundZOffSym
+        position = position .dot. state%rotationAroundZOffSym
 
         !align z axis
-        position = position .dot. rotationOffSym
+        position = position .dot. state%rotationOffSym
 
         !shift
-        position = position + gridPos
+        position = position + state%gridPos
 
         !set the emissin location to the centre of the voxel
         call set_photon(position, vector(0.0_wp,0.0_wp,0.0_wp))
@@ -1039,7 +1052,7 @@ contains
                 escapeSymmetry(loopCounter, m, n, o) = 0.0_wp
                 
                 !temporary while testing 
-                !escapeSymmetry(loopCounter, m, n, o) = x + y**2 + z**3
+                !escapeSymmetry(loopCounter, m, n, o) = layer
                 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             end do
             return   
@@ -1076,7 +1089,7 @@ contains
 
     end subroutine cyl_calc_escape_sym
     
-    subroutine cyl_map_escape_sym(dects, rotationOnToSym, rotationAroundZOnSym, gridPos)
+    subroutine cyl_map_escape_sym(dects)
 
         use iarray
         use constants, only : wp, PI, TWOPI
@@ -1086,9 +1099,6 @@ contains
         use interpolate
 
         type(dect_array), allocatable, intent(inout) :: dects(:)
-        real(kind=wp), intent(in) :: rotationOnToSym(4,4), rotationAroundZOnSym(4,4)
-        !> rotation matrix to unrotate around the z axis
-        type(vector), intent(in) :: gridPos
 
         integer :: i,j,k, m,n,o
         integer :: loopCounter, indx(3)
@@ -1118,13 +1128,13 @@ contains
                     position = vector(x,y,z) 
 
                     !shift
-                    position = position - gridPos
+                    position = position - state%gridPos
 
                     !rotate, there is none for this geometry
-                    position = position .dot. rotationOnToSym
+                    position = position .dot. state%rotationOnToSym
 
                     !rotate to align x and y axis after z axis alignment
-                    position = position .dot. rotationAroundZOnSym
+                    position = position .dot. state%rotationAroundZOnSym
 
 
 
