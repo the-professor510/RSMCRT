@@ -55,6 +55,7 @@ contains
         character(len=:), allocatable :: checkpt_input_file
          
         integer :: m, n, o, layer
+        integer :: m1, n1, o1, loopCounter
         real(kind = wp) :: x,y,z, total
         type(vector) :: position, direction, gridPos
         real(kind=wp) :: rotationOnToSym(4,4), rotationOffSym(4,4)
@@ -428,7 +429,36 @@ contains
                             tev, spectrum)
 
                 !store the escape function for nth detector
-                escape(n,:,:,:) = absorb(:,:,:)
+                escape(n,:,:,:) = jmean(:,:,:)
+            end do
+
+            !find where the layer is not part of the egg and set fluence to zero
+            do m1 = 1, state%grid%nxg
+                do n1 = 1, state%grid%nyg
+                    do o1 = 1, state%grid%nzg
+
+                        !get the coords at the centre of the voxel
+                        x = (((real(m1, kind = wp) - 0.5)/state%grid%nxg)*& 
+                            2.0_wp*state%grid%xmax) - state%grid%xmax 
+                        y = (((real(n1, kind = wp) - 0.5)/state%grid%nyg)*& 
+                            2.0_wp*state%grid%ymax) - state%grid%ymax 
+                        z = (((real(o1, kind = wp) - 0.5)/state%grid%nzg)*& 
+                            2.0_wp*state%grid%zmax) - state%grid%zmax 
+
+                        ! get the layer at this position
+                        distances = 0._wp
+                        do loopCounter = 1, size(distances)
+                            distances(loopCounter) = array(loopCounter)%evaluate(vector(x,y,z))
+                        end do
+                        layer=(maxloc(distances,dim=1, mask=(distances<0._wp)))
+
+                        if ((layer == 0) .or. (array(layer)%getkappa() == real(0, kind=wp))) then
+                            do n = 1, size(dects)
+                                escape(n, m1, n1, o1) = 0.0_wp
+                            end do
+                        end if
+                    end do
+                end do 
             end do
 
         case default                     
