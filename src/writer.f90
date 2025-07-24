@@ -20,6 +20,7 @@ module writer_mod
 
     private
     public :: normalise_fluence, write_data, write_detected_photons, checkpoint, write_escape, write_inverse
+    public :: normalise_escape
 
     contains
         subroutine normalise_fluence(grid, array, nphotons)
@@ -50,6 +51,35 @@ module writer_mod
                             (2._sp * ymax / nyg) * (2._sp * zmax / nzg)))
 
         end subroutine normalise_fluence
+
+        subroutine normalise_escape(grid, array, nphotons)
+        !! normalise escape function in the Lucy 1999 way
+
+            use gridMod
+            use constants, only : sp
+
+            !> grid class
+            type(cart_grid), intent(in) :: grid
+            !> array to normalise
+            real(kind=sp),   intent(inout) :: array(:, :, :, :)
+            !> number of photons run
+            integer,         intent(in) :: nphotons
+            
+            real(kind=wp) :: xmax, ymax, zmax
+            integer       :: nxg, nyg, nzg
+
+            nxg = grid%nxg
+            nyg = grid%nyg
+            nzg = grid%nzg
+            xmax = grid%xmax
+            ymax = grid%ymax
+            zmax = grid%zmax
+
+            array = array * ((2._sp*xmax*2._sp*ymax*2._sp*zmax)&
+                            /(nphotons * (2._sp * xmax / nxg) * &
+                            (2._sp * ymax / nyg) * (2._sp * zmax / nzg)))
+        
+        end subroutine normalise_escape
 
 
         subroutine write_detected_photons(dects)

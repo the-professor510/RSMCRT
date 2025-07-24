@@ -25,7 +25,7 @@ contains
         use sim_state_mod, only : state
         use vector_class
         use setupMod, only : setup_escapeFunction, zarray
-        use writer_mod, only : write_escape
+        use writer_mod, only : write_escape, normalise_escape
         use kernels, only : setup, finalise, reset_detectors
 
         use default_MCRTMod, only : run_MCRT
@@ -460,6 +460,12 @@ contains
                     end do
                 end do 
             end do
+
+            !normalise the escape function
+            call normalise_escape(state%grid, escape, state%nphotons)
+
+            !For return of real intensities the ratio between forward and adjoint must be found
+            !This ratio will be different for each different detector
 
         case default                     
             print*,"Unknown symmetry type"
