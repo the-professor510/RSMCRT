@@ -337,6 +337,95 @@ contains
         array(3) = box(vector(bxlength, bylength, bzlength), opt(3), 3)  
     end function setup_cuvette
 
+
+    function setup_multilayer_slab(dict) result(array)
+        !! setup an box
+
+        use opticalProperties, only : opticalProp_t, mono
+        use sdfs,              only : sdf, box
+        use sdfHelpers,        only : translate
+        use vector_class,      only : vector
+        use mat_class,         only : invert
+
+        type(toml_table), intent(inout) :: dict
+        type(sdf), allocatable :: array(:)
+
+        type(opticalProp_t), allocatable :: opt(:)
+        type(vector) :: pos
+        real(kind=wp), allocatable :: mus(:), mua(:), mur(:), hgg(:), n(:), thickness(:)
+        real(kind=wp) :: t(4,4), x, y, z, radius
+        real(kind=wp) :: xlength, ylength, bxlength, bylength, bzlength
+        integer :: numOptProp, i
+        character(4) :: string 
+
+        call get_value(dict, "numOptProp", numOptProp)
+        allocate(mus(numOptProp))
+        allocate(mua(numOptProp))
+        allocate(mur(numOptProp))
+        allocate(hgg(numOptProp))
+        allocate(n(numOptProp))
+        allocate(thickness(numOptProp))
+        mus = 0.0_wp
+        mua = 0.0_wp
+        mur = 0.0_wp
+        hgg = 0.0_wp
+        n = 0.0_wp
+        thickness = 0.0_wp
+        
+        do i = 1, numOptProp
+            write(string,'(I4)') i
+            call get_value(dict, "mua%"//string, mua(i))
+            call get_value(dict, "mus%"//string, mus(i))
+            call get_value(dict, "mur%"//string, mur(i))
+            call get_value(dict, "hgg%"//string, hgg(i))
+            call get_value(dict, "n%"//string, n(i))
+            call get_value(dict, "thickness%"//string, thickness(i))
+        end do
+        
+        !position of the top face of the top box
+        write(string,'(I4)') 1
+        call get_value(dict, "position%"//string, x)
+        write(string,'(I4)') 2
+        call get_value(dict, "position%"//string, y)
+        write(string,'(I4)') 3
+        call get_value(dict, "position%"//string, z)
+
+        !size of the x and y dimensions of the slabs
+        call get_value(dict, "xDimensionSize", xlength)
+        call get_value(dict, "yDimensionSize", ylength)
+
+        !size of the bounding box
+        write(string,'(I4)') 1
+        call get_value(dict, "boundinglength%"//string, bxlength)
+        write(string,'(I4)') 2
+        call get_value(dict, "boundinglength%"//string, bylength)
+        write(string,'(I4)') 3
+        call get_value(dict, "boundinglength%"//string, bzlength)
+
+        
+        allocate(array(numOptProp+1))
+        allocate(opt(numOptProp+1))
+
+        do i = 1,numOptProp
+            !pos is the centre of the box
+            pos = vector(x, y, z + thickness(i)/2)
+            z = z + thickness(i)
+            t = invert(translate(pos))
+
+            print*, " "
+            print*, pos
+            print*, xlength, ylength, thickness(i)
+
+            opt(i) = mono(mus(i), mua(i), hgg(i), n(i))
+            array(i) = box(vector(xlength, ylength, thickness(i)+1e-8_wp), opt(i), i+1, transform=t)
+            !small overlap in z direction to ensure that there is no gaps between the sdfs
+        end do
+        
+        !bounding box
+        opt(numOptProp+1) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
+        array(numOptProp+1) = box(vector(bxlength, bylength, bzlength), opt(numOptProp+1), 1)   
+    end function setup_multilayer_slab
+
     function setup_sphere_scene(dict) result(array)
     !! setup a test scene with user defined spheres
 

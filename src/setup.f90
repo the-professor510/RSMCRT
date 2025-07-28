@@ -57,6 +57,8 @@ module setupMod
                     sdfarray = setup_cuvette(dict)
                 case("exp")
                     sdfarray = setup_exp(dict)
+                case("multilayerSlab")
+                    sdfarray = setup_multilayer_slab(dict)
                 case default
                     error stop "no such routine"
             end select

@@ -35,6 +35,7 @@ contains
         type(toml_array), pointer :: children
         
         real(kind=wp)             :: muaTemp, musTemp, murTemp, hggTemp, nTemp, tempCoord, tempLength, sphereRadius
+        real(kind=wp)             :: thickTemp, xDimensionSize, yDimensionSize
         integer                   :: num_spheres, i, nlen, numOptProp, origin
         character(4) :: string 
 
@@ -331,6 +332,40 @@ contains
                         call set_value(dict, "innerCuvetteDimensions%"//string, tempLength)
                     end do
                 end if
+            end if
+
+            if (state%experiment == "multilayerSlab") then
+
+                !get the thickness of the layers
+                call get_value(child, "thickness", children, requested=.false., origin=origin)
+                if(associated(children))then
+                    nlen = len(children)
+                    if ((nlen == numOptProp)) then
+                        do i = 1, numOptProp
+                            write(string,'(I4)') i
+                            call get_value(children, i, thickTemp)
+                            call set_value(dict, "thickness%"//string, thickTemp)
+                        end do
+                    else
+                        call make_error(error, &
+                            context%report("length of thickness must be equal to numOptProp", origin, &
+                                    "thickness Incorrectly Specified"), -1)
+                        return
+                    end if
+                else
+                    do i = 1, numOptProp
+                        thickTemp = 1.25_wp
+                        write(string,'(I4)') i
+                        call set_value(dict, "thickness%"//string, thickTemp)
+                    end do 
+                end if
+
+                !get the xdimension and ydimension of the slabs 
+                call get_value(child, "xDimensionSize", xDimensionSize, 2._wp)
+                call set_value(dict, "xDimensionSize", xDimensionSize)
+                call get_value(child, "yDimensionSize", yDimensionSize, 2._wp)
+                call set_value(dict, "yDimensionSize", yDimensionSize)
+
             end if
 
         else
