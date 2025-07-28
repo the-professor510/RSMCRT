@@ -450,6 +450,8 @@ module photonMod
             b = vector(rotationx, rotationy, rotationz)
             b = b%magnitude()
 
+
+
             startPos = photon_origin%pos
             startPos%x = -startPos%x 
             startPos%y = -startPos%y 
@@ -482,7 +484,7 @@ module photonMod
             
             t = matmul(t, invert(translate(startPos)))
             ! transform point
-            !this%pos = this%pos .dot. t
+            this%pos = this%pos .dot. t
 
             this%nxp = dir%x
             this%nyp = dir%y
