@@ -95,34 +95,36 @@ module surfaces
         !> Normal vector
         type(vector),  intent(IN) :: N
 
-        real(kind=wp) :: costt, sintt, sint2, cost2, tir, f1, f2
+        real(kind=wp) :: cos_i, sin_i, sin_t, cos_t, tir, f1, f2
 
-        costt = abs(I .dot. N)
-        if(costt<0.0_wp)costt=-1._wp*costt
-        if(costt>1.0_wp)costt=1.0_wp
-        sintt = sqrt(1._wp - costt * costt)
-        sint2 = n1/n2 * sintt
+        cos_i = abs(I .dot. N)
+        if(cos_i<0.0_wp)cos_i=-1._wp*cos_i
+        if(cos_i>1.0_wp)cos_i=1.0_wp
+        sin_i = sqrt(1._wp - cos_i * cos_i)
+        sin_t = n1/n2 * sin_i
 
-        if(sint2 > 1._wp)then
+        if(sin_t > 1._wp)then
             !total internal reflection occurs
             tir = 1.0_wp
             return
 
-        elseif(costt == 1._wp)then
-            !the packet is perpendicular to the surface, and thus transmitted
-            tir = 0._wp
+        elseif(cos_i == 1._wp)then
+            !the packet is perpendicular to the surface
+            tir = ((n1-n2)**2)/((n1+n2)**2)
             return
         else
-            sint2 = (n1/n2)*sintt
-            cost2 = sqrt(1._wp - sint2 * sint2)
-            f1 = abs((n1*costt - n2*cost2) / (n1*costt + n2*cost2))**2
-            f2 = abs((n1*cost2 - n2*costt) / (n1*cost2 + n2*costt))**2
+            sin_t = (n1/n2)*sin_i
+            cos_t = sqrt(1._wp - sin_t * sin_t)
+            f1 = abs((n1*cos_i - n2*cos_t) / (n1*cos_i + n2*cos_t))**2
+            f2 = abs((n1*cos_t - n2*cos_i) / (n1*cos_t + n2*cos_i))**2
             
             tir = 0.5_wp * (f1 + f2)
         end if
         if(ieee_is_nan(tir) .or. tir > 1._wp .or. tir < 0._wp) then
-            print*,'TIR: ', tir, f1, f2, costt,sintt,cost2,sint2
+            print*,'TIR: ', tir, f1, f2, cos_i,sin_i,cos_t,sin_t
             return
         end if
+
+
     end function fresnel
 end module surfaces
