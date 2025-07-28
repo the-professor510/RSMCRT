@@ -1,3 +1,11 @@
+#add parent folder to PATH to allow pandalab_base to be imported
+import os
+import sys
+
+child_dir = os.path.dirname(__file__)
+parent_dir = os.path.abspath(os.path.join(child_dir, '..'))
+sys.path.append(parent_dir)
+
 import numpy as np
 import matplotlib.pyplot as plt
 import plotDetectorsClass
