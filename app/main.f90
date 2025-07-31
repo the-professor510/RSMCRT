@@ -3,6 +3,7 @@ program mcpolar
     use escapeFunctionMod, only : escape_Function
     use default_MCRTMod, only : default_MCRT
     use inverseMCRTMod, only : inverse_MCRT
+    use raman_MCRTMod, only : raman_MCRT
 
     integer :: num_args, i
     character(len=64), allocatable :: args(:)
@@ -22,6 +23,8 @@ program mcpolar
     call escape_Function(trim(args(1)))
 #elif inverseMCRT
     call inverse_MCRT(trim(args(1)))
+#elif raman
+    call raman_MCRT(trim(args(1)))
 #else
     call default_MCRT(trim(args(1)))
 #endif

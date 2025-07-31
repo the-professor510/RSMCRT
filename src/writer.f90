@@ -19,7 +19,7 @@ module writer_mod
     end interface raw_write
 
     private
-    public :: normalise_fluence, write_data, write_detected_photons, checkpoint, write_escape, write_inverse
+    public :: normalise_fluence, write_data, write_detected_photons, checkpoint, write_escape, write_inverse, write_raman
     public :: normalise_escape
 
     contains
@@ -230,6 +230,35 @@ module writer_mod
                 end if
             end do
         end subroutine write_escape
+
+        subroutine write_raman(dects, dict, overwrite)
+
+            use iarray
+            use detectors
+            use constants, only: fileplace, wp
+            use utils, only : str
+            use sim_state_mod, only : state
+            use tomlf,         only : toml_table
+
+
+            !> list of detectors
+            type(dect_array), intent(in) :: dects(:)
+            !> dictionary of metadata
+            type(toml_table), optional, intent(INOUT) :: dict
+            !> overwrite flag
+            logical,          optional, intent(IN)    :: overwrite
+
+            !> filename to save array as
+            character(len=:), allocatable    :: filename
+
+            integer :: i, j, u
+            character(len=:), allocatable :: hdr
+
+            do i = 1, size(dects)
+                filename = trim(fileplace)//"raman/dectID_"//trim(dects(i)%p%ID)//"__escape"//trim(str(i))//".nrrd" 
+                call write_data(escape(i,:,:,:), filename, state, dict, overwrite, dects(i)%p%ID)                
+            end do
+        end subroutine write_raman
 
 
         subroutine write_data(array, filename, state, dict, overwrite, dect_ID)

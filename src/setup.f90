@@ -72,6 +72,7 @@ module setupMod
 
             character(len=256) :: cwd
             logical :: dataExists, jmeanExists, depositExists, detectorsExists, phasorExists, emissionExists, absorbExists
+            logical :: ramanExitsts
 
             !get current working directory
             call get_environment_variable('PWD', cwd)
@@ -89,6 +90,7 @@ module setupMod
             inquire(file=trim(fileplace)//"/deposit/.", exist=depositExists)
             inquire(file=trim(fileplace)//"/detectors/.", exist=detectorsExists)
             inquire(file=trim(fileplace)//"/phasor/.", exist=phasorExists)
+            inquire(file=trim(fileplace)//"/raman/.", exist=ramanExitsts)
 #elif __INTEL_COMPILER
             inquire(directory=trim(fileplace), exist=dataExists)
             inquire(directory=trim(fileplace)//"/jmean", exist=jmeanExists)
@@ -97,6 +99,7 @@ module setupMod
             inquire(directory=trim(fileplace)//"/deposit", exist=depositExists)
             inquire(directory=trim(fileplace)//"/detectors", exist=detectorsExists)
             inquire(directory=trim(fileplace)//"/phasor", exist=phasorExists)
+            inquire(directory=trim(fileplace)//"/raman", exist=ramanExitsts)
 #else 
     dataExists=.true.
     jmeanExists=.true.
@@ -105,6 +108,7 @@ module setupMod
     depositExists=.true.
     detectorsExists=.true.
     phasorExists=.true.
+    ramanExitsts=.true.
     ! error stop "Compiler not supported!"
 #endif
             if(.not. dataExists)then
@@ -115,6 +119,7 @@ module setupMod
                 call create_directory("deposit/", depositExists, "data/", .false.)
                 call create_directory("detectors/", detectorsExists, "data/", .false.)
                 call create_directory("phasor/", phasorExists, "data/", .false.)
+                call create_directory("raman/", ramanExitsts, "data/", .false.)
             else
                 call create_directory("jmean/", jmeanExists, "data/", .true.)
                 call create_directory("emission/", emissionExists, "data/", .true.)
@@ -122,6 +127,7 @@ module setupMod
                 call create_directory("deposit/", depositExists, "data/", .true.)
                 call create_directory("detectors/", detectorsExists, "data/", .true.)
                 call create_directory("phasor/", phasorExists, "data/", .true.)
+                call create_directory("raman/", ramanExitsts, "data/", .true.)
             end if
 
             ! get res dir

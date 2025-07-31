@@ -81,7 +81,7 @@ module photonMod
     type(photon) :: photon_origin
 
     private
-    public :: photon, init_source, set_photon
+    public :: photon, init_source, set_photon, photon_origin
 
     contains
         

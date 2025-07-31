@@ -25,7 +25,7 @@ contains
         use sim_state_mod, only : state
         use vector_class
         use setupMod, only : setup_escapeFunction, zarray
-        use writer_mod, only : write_escape, normalise_escape
+        use writer_mod, only : write_escape, normalise_escape, normalise_fluence
         use kernels, only : setup, finalise, reset_detectors
 
         use default_MCRTMod, only : run_MCRT
@@ -71,6 +71,9 @@ contains
         type(vector) :: poss, dirr
 
 
+        integer :: cell(3), escapePhotons
+
+
         call cpu_time(tic)
 
         !setup the geometry and detectors
@@ -98,12 +101,6 @@ contains
         else
             call setup(input_file, tev, dects, array, packet, spectrum, dict, distances, image, nscatt, start, .true.)
         end if
-
-        !set the packet to be a isotropic source, this is an accepted assumption for either fluorescence or raman
-        packet = photon("point")
-        packet%nxp = 1.0_wp 
-        packet%nyp = 0.0_wp 
-        packet%nzp = 0.0_wp 
 
         ! Symmetries to implemented
         ! none DONE
@@ -453,9 +450,7 @@ contains
                         layer=(maxloc(distances,dim=1, mask=(distances<0._wp)))
 
                         if ((layer == 0) .or. (array(layer)%getkappa() == real(0, kind=wp))) then
-                            do n = 1, size(dects)
-                                escape(n, m1, n1, o1) = 0.0_wp
-                            end do
+                            escape(:, m1, n1, o1) = 0.0_wp
                         end if
                     end do
                 end do 
@@ -467,6 +462,78 @@ contains
             !For return of real intensities the ratio between forward and adjoint must be found
             !This ratio will be different for each different detector
 
+        !case ("ramanMCRT")
+        !    !run forwards MCRT to build the fluence map
+        !    call run_MCRT(input_file, history, packet, dict, & 
+        !                    distances, image, dects, array, nscatt, start, & 
+        !                    tev, spectrum)
+        !
+        !    call normalise_fluence(state%grid, jmeanGLOBAL, state%nphotons)
+        !
+        !    !now loop through every cell and launch nPhotons from each cell
+        !    packet = photon("escapeCartSymmetry")
+        !    escapePhotons = state%nphotons
+        !
+        !    !setup symmetry grid
+        !    call setup_cart_symGrid(dects)
+        !
+        !    !loop through every cell
+        !    do m = 1, state%symmetryEscapeCartGrid%nxg
+        !        do n = 1, state%symmetryEscapeCartGrid%nyg
+        !            do o = 1, state%symmetryEscapeCartGrid%nzg
+        !
+        !                print*, ""
+        !                print*, "Running ", ((m-1)*state%symmetryEscapeCartGrid%nyg*state%symmetryEscapeCartGrid%nzg + & 
+        !                                    (n-1)*state%symmetryEscapeCartGrid%nzg + o - 1), & 
+        !                        " out of ", (state%symmetryEscapeCartGrid%nxg* &
+        !                                        state%symmetryEscapeCartGrid%nyg* & 
+        !                                        state%symmetryEscapeCartGrid%nzg)
+        !
+        !                call update_sumGridCells_inDict(dict, m, n, o)
+        !
+        !                !get the coords at the centre of the voxel
+        !                x = (((real(m, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nxg)*& 
+        !                    2.0_wp*state%symmetryEscapeCartGrid%xmax) - state%symmetryEscapeCartGrid%xmax 
+        !                y = (((real(n, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nyg)*& 
+        !                    2.0_wp*state%symmetryEscapeCartGrid%ymax) - state%symmetryEscapeCartGrid%ymax 
+        !                z = (((real(o, kind = wp) - 0.5)/state%symmetryEscapeCartGrid%nzg)*& 
+        !                    2.0_wp*state%symmetryEscapeCartGrid%zmax) - state%symmetryEscapeCartGrid%zmax 
+        !
+        !                cell = state%grid%get_voxel(vector(x,y,z))
+        !
+        !                state%nphotons = escapePhotons*int(jmeanGLOBAL(cell(1), cell(2), cell(3))/maxval(jmeanGLOBAL))
+        !                state%PhotonWeight = jmeanGLOBAL(cell(1), cell(2), cell(3))*0.000001
+        !
+        !                ! get the layer at this position
+        !                distances = 0._wp
+        !                do loopCounter = 1, size(distances)
+        !                    distances(loopCounter) = array(loopCounter)%evaluate(position)
+        !                end do
+        !                layer=(maxloc(distances,dim=1, mask=(distances<0._wp)))
+        !                if(array(layer)%getkappa() == real(0, kind=wp) .or. state%nphotons == 0) then
+        !                    escapeSymmetry(:, m, n, o) = 0.0_wp
+        !                else
+        !
+        !                    !calculate the escape function
+        !                    call cart_calc_escape_sym(m,n,o, dects, array,& 
+        !                                            packet, distances, dict, history, image, input_file, nscatt, spectrum,& 
+        !                                            start, tev)
+        !                end if
+        !
+        !            end do         
+        !        end do
+        !    end do
+        !
+        !    !Go through the base grid and use some form of interpolation to figure out the best match
+        !    call cart_map_escape_sym(dects)
+        !
+        !    !store the escape funcitons for each detector
+        !    call write_escape(dects, symmetryType, dict)
+        !
+        !    call cpu_time(toc)
+        !    print*,"Time to Run: ",((toc - tic))
+        !
+        !    return            
         case default                     
             print*,"Unknown symmetry type"
             stop 1
