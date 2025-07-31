@@ -28,10 +28,10 @@ TopSphereRadius = 18.0
 SphereSep = 16.0
 ShellThickness = 0.35
 YolkRadius = 14.9
-mus = [0.005695, 0.005695, 0.42]
-mua = [0.03135, 0.03135, 0.224]
-hgg = [0.728, 0.728, 0.266]
-n = [1.33, 1.33, 1.33]
+mus = [52.0, 0.00601, 0.675]
+mua = [0.66, 0.00583, 0.132]
+hgg = [0.0,  0.626,   0.645]
+n = [1.6425, 1.33,    1.33]
 
 [output]
 fluence = "fluence.nrrd"
@@ -43,7 +43,7 @@ render_size = [500,500,500]
 overwrite = true
 
 [simulation]
-iseed = 123456789
+iseed = 12345678
 absorb=true
 load_checkpoint=false
 checkpoint_file="check.ckpt"

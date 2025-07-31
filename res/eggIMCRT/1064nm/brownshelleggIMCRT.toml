@@ -38,8 +38,8 @@ Findn = false
 ReducedmusGuessing = false
 MueffGuessing = true
 musUpper = 100.0
-musLower = 20.0
-muaUpper = 1.6
+musLower = 25.0
+muaUpper = 1.2
 muaLower = 0.2
 hggUpper = 1.0
 hggLower = 0.0
@@ -47,8 +47,8 @@ nUpper = 5.0
 nLower = 1.0
 reducedmusUpper = 66.0
 reducedmusLower = 52.0
-mueffUpper = 10.2
-mueffLower = 8.0
+mueffUpper = 9.6
+mueffLower = 8.2
 layer = 1
 
 

@@ -1,6 +1,6 @@
 [source]
 name = "circular"
-nphotons = 500000
+nphotons = 100000
 direction = "z"
 position = [0.0,0.0,-10.0]
 spectrum_type = "constant"
@@ -38,17 +38,17 @@ Findn = false
 ReducedmusGuessing = true
 MueffGuessing = true
 musUpper = 100.0
-musLower = 20.0
-muaUpper = 1.25
+musLower = 23.0
+muaUpper = 1.6
 muaLower = 0.7
 hggUpper = 1.0
 hggLower = 0.0
 nUpper = 5.0
 nLower = 1.0
 reducedmusUpper = 51.0
-reducedmusLower = 30.0
-mueffUpper = 10.8
-mueffLower = 10.4
+reducedmusLower = 23.0
+mueffUpper = 10.9
+mueffLower = 10.2
 layer = 1
 numAdaLIPOtoBay = 3
 

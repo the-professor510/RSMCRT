@@ -39,16 +39,16 @@ ReducedmusGuessing = false
 MueffGuessing = true
 musUpper = 100.0
 musLower = 20.0
-muaUpper = 1.4
-muaLower = 0.0
+muaUpper = 1.3
+muaLower = 0.2
 hggUpper = 1.0
 hggLower = 0.0
 nUpper = 5.0
 nLower = 1.0
 reducedmusUpper = 66.0
 reducedmusLower = 52.0
-mueffUpper = 9.9
-mueffLower = 8.0
+mueffUpper = 9.7
+mueffLower = 7.8
 layer = 1
 
 

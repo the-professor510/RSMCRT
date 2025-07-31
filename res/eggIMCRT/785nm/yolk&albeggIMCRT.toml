@@ -31,22 +31,22 @@ n = [1.33, 1.5788]
 maxStepSize = 1
 gradStepSize = 0.0005
 accuracy = 0.001
-maxNumSteps = 2000
+maxNumSteps = 1000
 Findmus = true
 Findmua = true
 Findg = true
 Findn = false
 ReducedmusGuessing = true
-musUpper = 0.44
-musLower = 0.40
-muaUpper = 0.232
-muaLower = 0.22
-hggUpper = 0.4
-hggLower = 0.1
-nUpper = 5.0
-nLower = 1.0
-reducedmusUpper = 0.36
-reducedmusLower = 0.26
+musUpper = 0.007
+musLower = 0.0055
+muaUpper = 0.01
+muaLower = 0.004
+hggUpper = 0.65
+hggLower = 0.62
+nUpper = 1.46
+nLower = 1.26
+reducedmusUpper = 0.0025
+reducedmusLower = 0.0020
 layer = 1
 
 [[detectors]]
@@ -58,7 +58,7 @@ radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001637515
+inverseTarget = 0.724663403
 acceptanceAngle = 15.0
 
 [[detectors]]
@@ -70,7 +70,7 @@ radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.001719094
+inverseTarget = 0.003580477
 acceptanceAngle = 15.0
 
 [[detectors]]
@@ -82,7 +82,7 @@ radius = 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.002070991
+inverseTarget = 0.001049755
 acceptanceAngle = 15.0
 
 [[detectors]]
@@ -94,7 +94,7 @@ radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.002128764
+inverseTarget = 0.000466095
 acceptanceAngle = 15.0
 
 [[detectors]]
@@ -106,7 +106,7 @@ radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.002160343
+inverseTarget = 0.000215361
 acceptanceAngle = 15.0
 
 [[detectors]]
@@ -118,7 +118,7 @@ radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.002372705
+inverseTarget = 9.9388E-05
 acceptanceAngle = 15.0
 
 [[detectors]]
@@ -130,7 +130,7 @@ radius= 4.75
 nbins = 100
 maxval = 4.75
 trackHistory=false
-inverseTarget = 0.003149327
+inverseTarget = 0.000172277
 acceptanceAngle = 15.0
 
 [output]

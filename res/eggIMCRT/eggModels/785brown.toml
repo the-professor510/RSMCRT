@@ -1,9 +1,9 @@
 [source]
-name = "annulus"
+name = "pencil"
 nphotons = 10000000
-direction = "-y"
-position = [0.0, 50.0, 0.0]
-rotation = [0.0, -1.0, 0.0]
+direction = "y"
+position = [0.0, -50.0, 0.0]
+rotation = [0.0, 1.0, 0.0]
 focalLength = 34.0
 rhi = 15.0
 rlo = 14.0
@@ -28,10 +28,10 @@ TopSphereRadius = 18.0
 SphereSep = 16.0
 ShellThickness = 0.35
 YolkRadius = 14.9
-mus = [31.6, 0.005695, 0.42]
-mua = [1.18, 0.03135, 0.224]
-hgg = [0.0, 0.728, 0.266]
-n = [1.6493, 1.33, 1.33]
+mus = [35.0, 0.00601, 0.675]
+mua = [1.02, 0.00583, 0.132]
+hgg = [0.0,  0.626,   0.645]
+n = [1.6425, 1.33,    1.33]
 
 [output]
 fluence = "fluence.nrrd"
