@@ -100,7 +100,7 @@ module detectors
     
     !> Detector array
     type :: dect_array
-        class(detector), pointer :: p => null()
+        class(detector), pointer :: p 
     end type dect_array
 
     private
@@ -359,12 +359,19 @@ module detectors
 
         real(kind=wp) :: t 
         real(kind=wp) :: angle
-        real(kind=wp) :: gradient
         real(kind=wp) :: radius
-        real(kind=wp) :: costt, sintt
+        real(kind=wp) :: radVdotdir, thetaVdotdir, zVdotdir
+        type(vector) :: radialVector, thetaVector, zVector
+        type(vector) :: OldPosition, NewPosition
+        type(vector) :: OldDir, NewDir
+        real(kind=wp) :: OldGradient, NewGradient, sumRandZVdotdir
+        real(kind=wp) :: distAlongOptAxis
+
 
         check_hit_fibre = .false.
-        check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*this%frontOffset, & 
+        distAlongOptAxis = this%frontOffset
+        !does the packet hit the front lens
+        check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*distAlongOptAxis, & 
                                             this%f1Aperture, hitpoint%pos, hitpoint%dir, t, hitpoint%value1D)
         if( check_hit_fibre) then
             if(t <= 0.0_wp .or. t > hitpoint%pointSep)check_hit_fibre=.false.
@@ -375,42 +382,111 @@ module detectors
             return
         end if
 
-        costt = this%dir .dot. hitpoint%dir
-        if(costt>1.0_wp)costt=1.0_wp
-        sintt = sqrt(1._wp - costt * costt)
-        gradient = sintt/costt
+
+        OldDir = hitpoint%dir
+        OldPosition = hitpoint%pos + (t*OldDir)
+        zVector = this%dir
+        
+
+        !find the radial vector and theta vector for the front lens
+        radialVector = OldPosition - (this%pos + this%dir*distAlongOptAxis)
+        radialVector = radialVector%magnitude()
+        thetaVector = zVector .cross. radialVector
+        thetaVector = thetaVector%magnitude()
+
+        !find OldDir as a sum of radialVector, thetaVector, and zVector
+        radVdotdir = radialVector .dot. OldDir
+        thetaVdotdir = thetaVector .dot. OldDir
+        zVdotdir = zVector .dot. OldDir
+        sumRandZVdotdir = radVdotdir**2 + zVdotdir**2
+
+        !find the old gradient and use the thin lens approximation to find the new gradient
+        OldGradient = radVdotdir/zVdotdir
         radius = hitpoint%value1D
+        NewGradient = -radius/this%focalLength1 + OldGradient
 
-        ! change gradient as the packet moves through the lens
-        ! use thin lens approximation
-        gradient = -radius/this%focalLength1 + gradient
+        ! use radVdotdir^2 + zVdotdir^2 = C and NewGradient = radVdotdir/zVdotdir 
+        ! to find the new values for radVdotdir and zVdotdir
+        radVdotdir = sqrt((sumRandZVdotdir * NewGradient**2)/(1+NewGradient**2))
+        radVdotdir = sign(radVdotdir, NewGradient)
+        zVdotdir = sqrt((sumRandZVdotdir)/(1+NewGradient**2))
 
-        ! move to the pinhole
-        radius = radius + gradient*this%frontToPinSep
+        !find the new Direction Vector
+        NewDir = radVdotdir*radialVector + thetaVdotdir*thetaVector + zVdotdir*zVector
+        NewPosition = OldPosition
 
-        ! is the packet blocked by the aperture
-        if(radius > this%pinAperture) then
-            check_hit_fibre = .false.
+        !does the packet hit the aperture
+        distAlongOptAxis = this%frontOffset + this%frontToPinSep
+        check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*distAlongOptAxis, & 
+                                            this%pinAperture, NewPosition, NewDir, t, radius)
+        if( check_hit_fibre) then
+            if(t <= 0.0_wp)check_hit_fibre=.false.
+        end if
+        if(.not. check_hit_fibre) then
+            ! The Packet won't pass through the aperture stop following it
             return
         end if
 
-        ! move to the second lens
-        radius = radius + gradient*this%pinToBackSep
 
-        ! does the packet enter the second lens
-        if(radius > this%f2Aperture) then
-            check_hit_fibre = .false.
+
+        !does the packet hit the second lens
+        distAlongOptAxis = this%frontOffset + this%frontToPinSep + this%pinToBackSep
+        check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*distAlongOptAxis, & 
+                                            this%f2Aperture, NewPosition, NewDir, t, radius)
+        if( check_hit_fibre) then
+            if(t <= 0.0_wp)check_hit_fibre=.false.
+        end if
+        if(.not. check_hit_fibre) then
+            ! The packet won't interact with the second lens stop following it
+            return
+        end if         
+        
+        
+        !move the packet from the first lens to the second lens
+        OldDir = NewDir
+        OldPosition = NewPosition + (t*OldDir)
+        
+        !find the radial vector and theta vector for the front lens
+        radialVector = OldPosition - (this%pos + this%dir*distAlongOptAxis)
+        radialVector = radialVector%magnitude()
+        thetaVector = zVector .cross. radialVector
+        thetaVector = thetaVector%magnitude()
+
+        !find OldDir as a sum of radialVector, thetaVector, and zVector
+        radVdotdir = radialVector .dot. OldDir
+        thetaVdotdir = thetaVector .dot. OldDir
+        zVdotdir = zVector .dot. OldDir
+        sumRandZVdotdir = radVdotdir**2 + zVdotdir**2
+
+        !find the old gradient and use the thin lens approximation to find the new gradient
+        OldGradient = radVdotdir/zVdotdir
+        radius = hitpoint%value1D
+        NewGradient = -radius/this%focalLength2 + OldGradient
+
+        ! use radVdotdir^2 + zVdotdir^2 = C and NewGradient = radVdotdir/zVdotdir 
+        ! to find the new values for radVdotdir and zVdotdir
+        radVdotdir = sqrt((sumRandZVdotdir * NewGradient**2)/(1+NewGradient**2))
+        radVdotdir = sign(radVdotdir, NewGradient)
+        zVdotdir = sqrt((sumRandZVdotdir)/(1+NewGradient**2))
+
+        !find the new Direction Vector
+        NewDir = radVdotdir*radialVector + thetaVdotdir*thetaVector + zVdotdir*zVector
+        NewPosition = OldPosition
+
+        !does the packet hit the fibre
+        distAlongOptAxis = this%frontOffset + this%frontToPinSep + this%pinToBackSep + this%backOffset
+        check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*distAlongOptAxis, & 
+                                            (this%coreDiameter/2), NewPosition, NewDir, t, radius)
+        if( check_hit_fibre) then
+            if(t <= 0.0_wp)check_hit_fibre=.false.
+        end if
+        if(.not. check_hit_fibre) then
+            ! The Packet won't pass through the aperture stop following it
             return
         end if
-
-        ! change gradient as the packet moves through the lens
-        gradient = -radius/this%focalLength2 + gradient
-
-        !move to the fibre
-        radius = radius + gradient*this%backOffset
 
         !does the packet enter the fibre?
-        angle = abs(atan(gradient))*360/TWOPI
+        angle = abs(atan(NewGradient))*360/TWOPI
 
         if(angle > this%acceptAngle .or. radius > (this%coreDiameter/2)) then
             check_hit_fibre = .false.

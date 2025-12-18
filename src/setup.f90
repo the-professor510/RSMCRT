@@ -11,7 +11,7 @@ module setupMod
 
     contains
 
-        subroutine setup_simulation(sdfarray, dict)
+        subroutine setup_simulation(sdfarray, dict, ignoreAlloc)
         !! Read in parameters
         !! Setup up various simulation parameters and routines
 
@@ -24,10 +24,18 @@ module setupMod
             type(toml_table), optional, intent(INOUT) :: dict
             !> output array of geometry
             type(sdf), allocatable,     intent(OUT)   :: sdfarray(:)
+            !> included so that ramanMCRT can be multithreaded due to OpenMP not working properly for derived types and [first]private
+            logical, optional, intent(IN) :: ignoreAlloc
+
 
             !allocate and set arrays to 0
-            call alloc_array(settings%grid%nxg, settings%grid%nyg, settings%grid%nzg)
-            call zarray()
+            if(present(ignoreAlloc)) then 
+                !do nothing
+            else
+                call alloc_array(settings%grid%nxg, settings%grid%nyg, settings%grid%nzg)
+                call zarray()
+            end if
+
 
             ! setup geometry using SDFs
             select case(settings%experiment)

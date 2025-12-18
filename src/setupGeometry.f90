@@ -570,19 +570,19 @@ contains
 
         allocate(array(3))
         opt(1) = mono(optprop(1), optprop(2), optprop(5), 1.5_wp)
-        opt(2) = mono(optprop(3), optprop(4), optprop(5), 1.3_wp)
+        opt(2) = mono(optprop(3), optprop(4), optprop(5), 1.33_wp)
 
         a = vector(-8._wp, 0._wp, 0._wp)
         b = vector(8._wp, 0._wp, 0._wp)
         !bottle
-        array(2) = cylinder(a, b, 1.75_wp, opt(1), 2)
+        array(2) = cylinder(a, b, 7.75_wp, opt(1), 2)
         ! contents
-        array(1) = cylinder(a, b, 1.55_wp, opt(2), 1)
+        array(1) = cylinder(a, b, 6.45_wp, opt(2), 1)
 
         ! t = invert(translate(vector(0._wp, 0._wp, -5._wp+1.75_wp)))
         ! slab = box(vector(10._wp, 10._wp, 10._wp), optprop(3), optprop(4), optprop(5), 1.3_wp, 1, transform=t)
         opt(3) = mono(0.0_wp, 0.0_wp, 0.0_wp, n)
-        array(3) = box(vector(20._wp, 20._wp, 20._wp), opt(3), 2)
+        array(3) = box(vector(20._wp, 20._wp, 20._wp), opt(3), 3)
 
     end function setup_exp
 

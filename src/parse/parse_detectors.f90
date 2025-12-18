@@ -53,7 +53,7 @@ contains
             call get_value(child, "type", dect_type, origin=origin)
             call get_value(child, "ID", dect_ID, origin=origin)
             if(.not. allocated(dect_ID)) then
-                !through an error, the user must specify a detector ID
+                !throw an error, the user must specify a detector ID
                 call make_error(error, context%report("Need to specify a detector ID", origin, &
                                               "No detector ID specified"), -1)
                 return
@@ -100,7 +100,7 @@ contains
             call get_value(array, i, child)
             call get_value(child, "type", dect_type)
             call get_value(child, "ID", dect_ID, "none", origin=origin)
-            call get_value(child, "historyFileName", state%historyFilename, "photPos.obj")
+            !call get_value(child, "historyFileName", state%historyFilename, "photPos.obj")
             call get_value(child, "inverseTarget", targetValue, -1._wp)
             select case(dect_type)
             case("circle")
@@ -120,22 +120,22 @@ contains
 
         do i = 1, c_counter-1
             allocate(dects(i)%p, source=dect_c(i))
-            dects(i)%p => dect_c(i)
+            !dects(i)%p => dect_c(i)
         end do
 
         do j = 1, a_counter-1
             allocate(dects(j+i-1)%p, source=dect_a(j))
-            dects(j+i-1)%p => dect_a(j)
+            !dects(j+i-1)%p => dect_a(j)
         end do
 
         do k = 1, f_counter-1
             allocate(dects(j+i+k-2)%p, source=dect_f(k))
-            dects(j+i+k-2)%p => dect_f(k)
+            !dects(j+i+k-2)%p => dect_f(k)
         end do
 
         do l = 1, cam_counter-1
             allocate(dects(j+i+k+l-3)%p, source=dect_cam(l))
-            dects(j+i+l-3)%p => dect_cam(l)
+            !dects(j+i+l-3)%p => dect_cam(l)
         end do
 
         if(.not. allocated(state%historyFilename))state%historyFilename="photPos.obj"
@@ -314,6 +314,32 @@ contains
             call make_error(error, "Track history currently incompatable with OpenMP!", -1)
             return
         end if
+#endif
+#ifdef escapeFunction
+        !add the detector values to the dictionary
+
+        write(countStr, "(I8)") counts
+        dectType = "annulus"
+        
+        call set_value(dict, "dect"//countStr//"type", dectType)
+        call set_value(dict, "dect"//countStr//"ID", dect_ID)
+        call set_value(dict, "dect"//countStr//"position%x", pos%x)
+        call set_value(dict, "dect"//countStr//"position%y", pos%y)
+        call set_value(dict, "dect"//countStr//"position%z", pos%z)
+        call set_value(dict, "dect"//countStr//"direction%x", dir%x)
+        call set_value(dict, "dect"//countStr//"direction%y", dir%y)
+        call set_value(dict, "dect"//countStr//"direction%z", dir%z)
+        call set_value(dict, "dect"//countStr//"focalLength1", focalLength1)
+        call set_value(dict, "dect"//countStr//"focalLength2", focalLength2)
+        call set_value(dict, "dect"//countStr//"f1Aperture", f1Aperture)
+        call set_value(dict, "dect"//countStr//"f2Aperture", f2Aperture)
+        call set_value(dict, "dect"//countStr//"frontOffset", frontOffset)
+        call set_value(dict, "dect"//countStr//"backOffset", backOffset)
+        call set_value(dict, "dect"//countStr//"frontToPinSep", frontToPinSep)
+        call set_value(dict, "dect"//countStr//"pinToBackSep", pinToBackSep)
+        call set_value(dict, "dect"//countStr//"pinAperture", pinAperture)
+        call set_value(dict, "dect"//countStr//"acceptanceAngle", acceptAngle)
+        call set_value(dict, "dect"//countStr//"coreDiameter", coreDiameter)
 #endif
         dects(counts) = fibre_dect(pos, dir, layer, nbins, maxval, trackHistory, focalLength1, & 
                                     focalLength2, f1Aperture, f2Aperture, frontOffset, backOffset, & 

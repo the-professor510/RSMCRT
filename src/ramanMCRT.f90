@@ -105,9 +105,12 @@ contains
         use utils,         only : pbar
         use writer_mod,    only : checkpoint
 
+        use setupMod,      only : setup_simulation
+        use parse_mod,     only : parse_params
+
         !external deps
         use tev_mod, only : tevipc
-        use tomlf,   only : toml_table
+        use tomlf,   only : toml_table, toml_error
 #ifdef _OPENMP
         use omp_lib
 #endif
@@ -127,16 +130,36 @@ contains
         real :: tic, toc
         integer :: numproc, id, j
 
+        real(kind=wp) :: temp
+
+        type(toml_error), allocatable :: error
+
+
 #ifdef _OPENMP
         tic=omp_get_wtime()
         !$omp parallel default(none)& 
-        !$omp& shared(dict, array, numproc, start, bar, jmean, emission, absorb, escape, input_file, phasor, tev, spectrum)& 
-        !$omp& private(id, distances, image, history, seqs)& 
-        !$omp& reduction(+:nscatt) firstprivate(state, packet, dects)
+        !$omp& shared(numproc, start, bar, jmean, emission, absorb, error, dict, escape, input_file, phasor)&
+        !$omp shared(tev, spectrum)&
+        !$omp& private(id, distances, image, history, seqs, temp, dects)& 
+        !$omp& reduction(+:nscatt) firstprivate(state, packet, array)
+        
         numproc = omp_get_num_threads()
         id = omp_get_thread_num()
         if(numproc > state%nphotons .and. id == 0)print*,"Warning, simulation may be underministic due to low photon count!"
         if(state%trackHistory)history = history_stack_t(state%historyFilename, id)
+
+        !does this fix the error, yes. Fortran cannot set array to first private perfectly due to the setting of the function evaluate not working
+        call setup_simulation(array, dict, .true.)
+        
+        !$OMP critical
+        if (allocated(dects))deallocate(dects)
+        call parse_params("res/"//trim(input_file), packet, dects, spectrum, dict, error)
+        if(allocated(error))then
+            print*,error%message
+            stop 1
+        end if
+        !$omp end critical
+
 #elif MPI
     !nothing
 #else
@@ -190,6 +213,13 @@ contains
 #ifdef _OPENMP
         !$OMP end parallel
         toc=omp_get_wtime()
+
+        !if (allocated(dects))deallocate(dects)
+        !call parse_params("res/"//trim(input_file), packet, dects, spectrum, dict, error)
+        !if(allocated(error))then
+        !    print*,error%message
+        !    stop 1
+        !end if
 #else
         call cpu_time(toc)
 #endif
@@ -210,6 +240,7 @@ contains
         use inttau2,       only : tauint2
         use photonMod,     only : photon
         use piecewiseMod
+        use opticalProperties
         use random,        only : ran2, seq
         use sdfs,          only : sdf
         use sim_state_mod, only : state
@@ -233,8 +264,16 @@ contains
         type(seq),                     intent(inout) :: seqs(2)
         type(spectrum_t),              intent(inout) :: spectrum
 
-        real(kind=wp)   :: ran, total
+        real(kind=wp)   :: ran, total, ramanChance
         integer         :: i
+
+        real(kind=wp)   :: ramanLocx, ramanLocy, ramanLocz, temp
+        logical         :: underWentRaman
+        type(opticalProp_t) :: oldnormalOptProp, oldtumorOptProp
+        type(opticalProp_t) :: newnormalOptProp, newtumorOptProp
+
+        underWentRaman = .false.
+        ramanChance = 0.0011493390034_wp
 
         ! Release photon from source
         call packet%emit(spectrum, dict, seqs)
@@ -264,40 +303,46 @@ contains
 
             if(ran < array(packet%layer)%getAlbedo()) then !interacts with tissue
                 ran = ran2()
-                if (ran< 0.01) then !raman scatters
-                    ! launch a new particle with the same weight as the current photon, 
-                    ! in an isotropic direction. Record if it hits a detector in escape(:,:,:,:) 
 
-                    !zero detectors
+                
+                
+                if (ran < ramanChance .and. .not. underWentRaman) then 
+                    ! Raman scattering
+
+                    !store the location of the raman scattering
+                    underWentRaman = .true.
+                    ramanLocx = packet%xcell
+                    ramanLocy = packet%ycell
+                    ramanLocz = packet%zcell
+
+                    !zero detectors for tracking which detectors the Raman photon may have hit
                     call reset_detectors(dects)
 
-                    !propagate the Raman source
-#ifdef survivalBias
-                    call survivalBiasRaman(id, history, packet, dict, distances, image, dects, array,& 
-                                        nscatt, seqs, spectrum)
-#else
-                    call noBiasRaman(id, history, packet, dict, distances, image, dects, array,& 
-                                        nscatt, seqs, spectrum)
-#endif
+                    !                              ***********************
+                    !update the optical properties **** REQUIRES WORK ****
+                    !                              ***********************
+                    !oldnormalOptProp = array(3)%getOptProp()
+                    !oldtumorOptProp = array(5)%getOptProp()
+                    !
+                    !newnormalOptProp = mono(66.7_wp, 0.06_wp, 0.88_wp, 1.33_wp)
+                    !newtumorOptProp = mono(227.5_wp, 0.12_wp, 0.96_wp, 1.36_wp)
+                    !
+                    !temp = array(3)%updateOptProp(newnormalOptProp)
+                    !temp = array(5)%updateOptProp(newtumorOptProp)
 
+                    !scatter the photon packet isotropically
+                    call packet%scatter(0.0_wp, 0.0_wp)                   
 
-                    !we now need to loop through detectors and add it to the escape function but atomic                    
-                    do i = 1, size(dects)
-                        
-                        total = 0._wp
-                        call dects(i)%p%total_dect(total)
+                else
+                    !normal scattering
+                    call packet%scatter(array(packet%layer)%gethgg(), &
+                                    array(packet%layer)%getg2())
 
-                        !$omp atomic
-                        escape(i, packet%xcell, packet%ycell, packet%zcell)=escape(i, packet%xcell, packet%ycell, packet%zcell)&
-                                                                            + total
-                    end do
-                    
                 end if
 
-                call packet%scatter(array(packet%layer)%gethgg(), &
-                                    array(packet%layer)%getg2())
                 nscatt = nscatt + 1
                 packet%step = packet%step + 1
+
             else
                 packet%tflag = .true.
                 !record the fluence and absorption
@@ -307,6 +352,26 @@ contains
             ! Find next scattering location
             call tauint2(state%grid, packet, array, dects, history)
         end do
+
+        !store the location of the raman scattering if it was raman scattered
+        if (underWentRaman) then
+            !we now need to loop through detectors and add it to the escape function but atomic
+            do i = 1, size(dects)
+                
+                total = 0._wp
+                call dects(i)%p%total_dect(total)
+
+                !$omp atomic
+                escape(i, ramanLocx, ramanLocy, ramanLocz)=escape(i, ramanLocx, ramanLocy, ramanLocz)&
+                                                                    + total
+            end do
+
+            !                              ***********************
+            !reset the optical properties  **** REQUIRES WORK ****
+            !                              ***********************
+            !temp = array(3)%updateOptProp(oldnormalOptProp)
+            !temp = array(5)%updateOptProp(oldtumorOptProp)
+        end if
 
     end subroutine noBiasPropagation
 
@@ -324,6 +389,7 @@ contains
         use inttau2,       only : tauint2
         use photonMod,     only : photon
         use piecewiseMod
+        use opticalProperties
         use random,        only : ran2, seq
         use sdfs,          only : sdf
         use sim_state_mod, only : state
@@ -345,8 +411,16 @@ contains
         type(seq),                     intent(inout) :: seqs(2)
         type(spectrum_t),              intent(inout) :: spectrum
 
-        real(kind=wp)   :: ran, weight_absorb, total
+        real(kind=wp)   :: ran, weight_absorb, total, ramanChance
         integer         :: i
+
+        real(kind=wp)   :: ramanLocx, ramanLocy, ramanLocz, temp
+        logical         :: underWentRaman
+        type(opticalProp_t) :: oldnormalOptProp, oldtumorOptProp
+        type(opticalProp_t) :: newnormalOptProp, newtumorOptProp
+
+        ramanChance = 0.0011493390034_wp
+        underWentRaman = .false.
 
         ! Release photon from point source
         call packet%emit(spectrum, dict, seqs)
@@ -372,6 +446,7 @@ contains
 
         do while(.not. packet%tflag)
             if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
+
             ran = ran2()
 
             !Reduce the packet weight
@@ -395,44 +470,66 @@ contains
             end if
 
             ran = ran2()
-            if (ran< 0.01) then !raman scatters
-                ! launch a new particle with the same weight as the current photon, 
-                ! in an isotropic direction. Record if it hits a detector in escape(:,:,:,:) 
+            
+            if (ran < ramanChance .and. .not. underWentRaman) then 
+                ! Raman scattering
 
-                !zero detectors
+                !store the location of the raman scattering
+                underWentRaman = .true.
+                ramanLocx = packet%xcell
+                ramanLocy = packet%ycell
+                ramanLocz = packet%zcell
+
+                !zero detectors for tracking which detectors the Raman photon may have hit
                 call reset_detectors(dects)
-
-                !propagate the Raman source
-#ifdef survivalBias
-                call survivalBiasRaman(id, history, packet, dict, distances, image, dects, array,& 
-                                    nscatt, seqs, spectrum)
-#else
-                call noBiasRaman(id, history, packet, dict, distances, image, dects, array,& 
-                                    nscatt, seqs, spectrum)
-#endif
-
                 
-                !we now need to loop through detectors and add it to the escape function but atomic                    
-                do i = 1, size(dects)
-                    
-                    total = 0._wp
-                    call dects(i)%p%total_dect(total)
 
-                    !$omp atomic
-                    escape(i, packet%xcell, packet%ycell, packet%zcell)=escape(i, packet%xcell, packet%ycell, packet%zcell)&
-                                                                        + total
-                end do
-                
+                !                              ***********************
+                !update the optical properties **** REQUIRES WORK ****
+                !                              ***********************
+                !oldnormalOptProp = array(3)%getOptProp()
+                !oldtumorOptProp = array(5)%getOptProp()
+                !
+                !newnormalOptProp = mono(66.7_wp, 0.06_wp, 0.88_wp, 1.33_wp)
+                !newtumorOptProp = mono(227.5_wp, 0.12_wp, 0.96_wp, 1.36_wp)
+                !
+                !temp = array(3)%updateOptProp(newnormalOptProp)
+                !temp = array(5)%updateOptProp(newtumorOptProp)
+
+                !scatter the photon packet isotropically
+                call packet%scatter(0.0_wp, 0.0_wp)                   
+
+            else
+                ! scatter the particle
+                call packet%scatter(array(packet%layer)%gethgg(), array(packet%layer)%getg2())
             end if
 
-            ! scatter the particle
-            call packet%scatter(array(packet%layer)%gethgg(), array(packet%layer)%getg2())
             nscatt = nscatt + 1
             packet%step = packet%step + 1
 
             ! Find next scattering location
             call tauint2(state%grid, packet, array, dects, history)
         end do
+
+        !store the location of the raman scattering if it was raman scattered
+        if (underWentRaman) then
+            !we now need to loop through detectors and add it to the escape function but atomic
+            do i = 1, size(dects)
+                
+                total = 0._wp
+                call dects(i)%p%total_dect(total)
+
+                !$omp atomic
+                escape(i, ramanLocx, ramanLocy, ramanLocz)=escape(i, ramanLocx, ramanLocy, ramanLocz)&
+                                                                    + total
+            end do
+
+            !                              ***********************
+            !reset the optical properties  **** REQUIRES WORK ****
+            !                              ***********************
+            !temp = array(3)%updateOptProp(oldnormalOptProp)
+            !temp = array(5)%updateOptProp(oldtumorOptProp)
+        end if
     end subroutine survivalBiasPropagation
 
 
@@ -487,280 +584,5 @@ contains
         absorb(celli, cellj, cellk) = absorb(celli, cellj, cellk) + weightAbsorbed
         jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + weightAbsorbed/mua
     end subroutine recordWeight
-
-
-
-
-
-
-
-
-
-        !Full weight reduction
-    subroutine noBiasRaman(id, history, packet, dict, distances, image, dects, array,& 
-                                nscatt, seqs, spectrum)
-
-        !Shared data
-        use iarray
-        use constants, only : wp
-
-        !subroutines
-        use detectors,     only : dect_array
-        use historyStack,  only : history_stack_t
-        use inttau2,       only : tauint2
-        use photonMod,     only : photon, photon_origin, set_photon
-        use piecewiseMod
-        use random,        only : ran2, seq
-        use sdfs,          only : sdf
-        use sim_state_mod, only : state
-        use vec4_class,    only : vec4
-        use vector_class
-
-        !external deps
-        use tomlf,   only : toml_table
-        
-        integer,                       intent(inout) :: id
-        type(history_stack_t),         intent(inout) :: history
-        type(photon),                  intent(inout) :: packet
-        type(toml_table),              intent(inout) :: dict
-        real(kind=wp),    allocatable, intent(inout) :: distances(:), image(:,:,:)
-        type(dect_array), allocatable, intent(inout) :: dects(:)
-        type(sdf),        allocatable, intent(inout) :: array(:)
-        real(kind=wp),                 intent(inout) :: nscatt
-        type(seq),                     intent(inout) :: seqs(2)
-        type(spectrum_t),              intent(inout) :: spectrum
-
-        real(kind=wp)   :: ran
-        integer         :: i
-
-        type(vector) :: sourcePoss, sourceDir, packetPos
-        real(kind = wp) :: packetDirx, packetDiry, packetDirz, weight
-        integer :: cell(3), layer
-
-
-        !record the current source position and packet position and direction
-        sourcePoss = photon_origin%pos
-        sourceDir = vector(photon_origin%nxp, photon_origin%nyp, photon_origin%nzp)
-        packetPos = packet%pos
-        packetDirx = packet%nxp
-        packetDiry = packet%nyp
-        packetDirz = packet%nzp
-        weight = packet%weight
-        layer = packet%layer
-
-        !Set photon to be a point source at current packet position
-        call set_photon(packet%pos, vector(1.0_wp,0.0,0.0))
-        packet = photon("point")
-        packet%nxp = 1.0_wp
-        packet%nyp = 0.0_wp
-        packet%nzp = 0.0_wp
-        packet%weight = weight
-
-        !emit photon from point source
-        call packet%emit(spectrum, dict, seqs)
-
-        if(state%render_source)call recordEmissionLocation(packet)
-
-        
-
-        do while (packet%xcell < 1 .or. packet%xcell > state%grid%nxg .or. &
-                    packet%ycell < 1 .or. packet%ycell > state%grid%nyg .or. &
-                    packet%zcell < 1 .or. packet%zcell > state%grid%nzg)
-            call packet%emit(spectrum, dict, seqs)
-        end do
-
-        
-        packet%step = 0
-        packet%id = id
-        distances = 0._wp
-        do i = 1, size(distances)
-            distances(i) = array(i)%evaluate(packet%pos)
-        end do
-        packet%layer=(maxloc(distances,dim=1, mask=(distances<0._wp)))
-        
-        if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
-
-        ! Find scattering location
-        call tauint2(state%grid, packet, array, dects, history)
-
-        do while(.not. packet%tflag)
-            if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
-            ran = ran2()
-
-            if(ran < array(packet%layer)%getAlbedo()) then !interacts with tissue
-                ran = ran2()
-                
-                call packet%scatter(array(packet%layer)%gethgg(), &
-                                    array(packet%layer)%getg2())
-                nscatt = nscatt + 1
-                packet%step = packet%step + 1
-            else
-                packet%tflag = .true.
-                exit
-            end if
-
-            ! Find next scattering location
-            call tauint2(state%grid, packet, array, dects, history)
-        end do
-
-
-        
-        !reset the photon source and packet position
-        call set_photon(sourcePoss, sourceDir)
-        packet = photon(state%source)
-        packet%pos = packetPos
-        packet%nxp = packetDirx
-        packet%nyp = packetDiry
-        packet%nzp = packetDirz
-        packet%weight = weight
-        packet%layer = layer
-
-        ! update cells 
-        cell = state%grid%get_voxel(packet%pos)
-        packet%xcell = cell(1)
-        packet%ycell = cell(2)
-        packet%zcell = cell(3)
-
-    end subroutine noBiasRaman
-
-
-
-    !Partial weight reduction with survival biasing as a variance reduction technique
-    subroutine survivalBiasRaman(id, history, packet, dict, distances, image, dects, array,& 
-                                        nscatt, seqs, spectrum)
-
-        !Shared data
-        use iarray
-        use constants, only : wp, CHANCE, THRESHOLD
-
-        !subroutines
-        use detectors,     only : dect_array
-        use historyStack,  only : history_stack_t
-        use inttau2,       only : tauint2
-        use photonMod,     only : photon, photon_origin, set_photon
-        use piecewiseMod
-        use random,        only : ran2, seq
-        use sdfs,          only : sdf
-        use sim_state_mod, only : state
-        use vec4_class,    only : vec4
-        use vector_class
-
-        !external deps
-        use tomlf,   only : toml_table
-        
-        integer,                       intent(inout) :: id
-        type(history_stack_t),         intent(inout) :: history
-        type(photon),                  intent(inout) :: packet
-        type(toml_table),              intent(inout) :: dict
-        real(kind=wp),    allocatable, intent(inout) :: distances(:), image(:,:,:)
-        type(dect_array), allocatable, intent(inout) :: dects(:)
-        type(sdf),        allocatable, intent(inout) :: array(:)
-        real(kind=wp),                 intent(inout) :: nscatt
-        type(seq),                     intent(inout) :: seqs(2)
-        type(spectrum_t),              intent(inout) :: spectrum
-
-        real(kind=wp)   :: ran, weight_absorb
-        integer         :: i
-
-        type(vector) :: sourcePoss, sourceDir, packetPos
-        real(kind = wp) :: packetDirx, packetDiry, packetDirz, weight
-        integer :: cell(3), layer
-
-
-        !record the current source position and packet position and direction
-        sourcePoss = photon_origin%pos
-        sourceDir = vector(photon_origin%nxp, photon_origin%nyp, photon_origin%nzp)
-        packetPos = packet%pos
-        packetDirx = packet%nxp
-        packetDiry = packet%nyp
-        packetDirz = packet%nzp
-        weight = packet%weight
-        layer = packet%layer
-
-        !Set photon to be a point source at current packet position
-        call set_photon(packet%pos, vector(1.0_wp,0.0,0.0))
-        packet = photon("point")
-        packet%nxp = 1.0_wp
-        packet%nyp = 0.0_wp
-        packet%nzp = 0.0_wp
-        packet%weight = weight
-
-        ! Release photon from point source
-        call packet%emit(spectrum, dict, seqs)
-
-        if(state%render_source)call recordEmissionLocation(packet)
-
-        do while (packet%xcell < 1 .or. packet%xcell > state%grid%nxg .or. &
-                    packet%ycell < 1 .or. packet%ycell > state%grid%nyg .or. &
-                    packet%zcell < 1 .or. packet%zcell > state%grid%nzg)
-            call packet%emit(spectrum, dict, seqs)
-        end do
-
-        if(state%render_source)call recordEmissionLocation(packet)
-        packet%step = 0
-        packet%id = id
-        distances = 0._wp
-        do i = 1, size(distances)
-            distances(i) = array(i)%evaluate(packet%pos)
-        end do
-        packet%layer=maxloc(distances,dim=1, mask=(distances<0._wp))
-        
-        if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
-        ! Find scattering location
-        call tauint2(state%grid, packet, array, dects, history)
-
-        do while(.not. packet%tflag)
-            if(state%trackHistory)call history%push(vec4(packet%pos, packet%step))
-            ran = ran2()
-
-            !Reduce the packet weight
-            weight_absorb = packet%weight * (1._wp - array(packet%layer)%getAlbedo())
-            packet%weight = packet%weight - weight_absorb
-        
-            !record the fluence and absorption
-            call recordWeight(packet, weight_absorb, array(packet%layer)%getMua())
-
-            ! is the packet weight below a threshold
-            if(packet%weight < THRESHOLD)then
-                !yes, then put through roulette
-                if(ran < CHANCE)then
-                    ! survive, continue emission with higher weight
-                    packet%weight = packet%weight / CHANCE
-                else
-                    !doesn't survive, don't re-emit
-                    packet%tflag = .true.
-                    exit
-                end if
-            end if
-
-
-
-            ! scatter the particle
-            call packet%scatter(array(packet%layer)%gethgg(), array(packet%layer)%getg2())
-            nscatt = nscatt + 1
-            packet%step = packet%step + 1
-
-            ! Find next scattering location
-            call tauint2(state%grid, packet, array, dects, history)
-        end do
-
-        
-        !reset the photon source and packet position
-        call set_photon(sourcePoss, sourceDir)
-        packet = photon(state%source)
-        packet%pos = packetPos
-        packet%nxp = packetDirx
-        packet%nyp = packetDiry
-        packet%nzp = packetDirz
-        packet%weight = weight
-        packet%layer = layer
-
-        ! update cells 
-        cell = state%grid%get_voxel(packet%pos)
-        packet%xcell = cell(1)
-        packet%ycell = cell(2)
-        packet%zcell = cell(3)
-    end subroutine survivalBiasRaman
-
 
 end module raman_MCRTMod

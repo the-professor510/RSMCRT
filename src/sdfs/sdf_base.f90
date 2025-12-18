@@ -34,6 +34,7 @@ module sdf_baseMod
             procedure :: getAlbedo
             procedure :: getMua, gethgg, getG2, getN, getLayer
             procedure :: updateOptProp
+            procedure :: getOptProp
             procedure :: evaluate => sdf_evaluate
             procedure, private :: sdf_assign
             generic :: assignment(=) => sdf_assign
@@ -254,9 +255,20 @@ module sdf_baseMod
         type(opticalProp_t), intent(in) :: newOptProps
         integer :: res
 
+        
         this%value%optProps = newOptProps
         res = 0
     end function updateOptProp
+
+    function getOptProp(this) result(res)
+        
+        class(sdf) :: this
+        !> Optical property of the SDF
+        type(opticalProp_t) :: res
+
+        res = this%value%optProps
+
+    end function getOptProp
 
     function getAlbedo(this) result(res)
         !! Return albedo for the current SDF.
