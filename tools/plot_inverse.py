@@ -63,23 +63,25 @@ for i in range(len(fileNames)):
 
     plt.show()
     #"""
-
     readInverse.plot1D(mus, error, bestGuessIndx, "mus")
     readInverse.plot1D(mua, error, bestGuessIndx, "mua")
-    readInverse.plot1D(np.sqrt(3*mua*(mua+mus*(1-hgg))), error, bestGuessIndx, "mueff diffusion approximation")
-    #readInverse.plot1D(hgg, error, bestGuessIndx, "hgg")
+    readInverse.plot1D(hgg, error, bestGuessIndx, "hgg")
     #readInverse.plot1D(n, error, bestGuessIndx, "n")
-    #readInverse.plot1D(mus*(1-hgg), error, bestGuessIndx, "mus'")
+    readInverse.plot1D(mus*(1-hgg), error, bestGuessIndx, "mus'")
+    readInverse.plot1D(np.sqrt(3*mua*(mua+mus*(1-hgg))), error, bestGuessIndx, "mueff diffusion approximation")
 
+    readInverse.plot2D(mus, hgg, error, bestGuessIndx, xName = "mus", yName="hgg")
     readInverse.plot2D(mus*(1-hgg), mua, error, bestGuessIndx, xName = "mus'", yName="mua")
     #readInverse.plot2D(mus, mua, error, bestGuessIndx, xName = "mus", yName="mua")
-    #readInverse.plot2D(mus, hgg, error, bestGuessIndx, xName = "mus", yName="hgg")
     #readInverse.plot2D(mus, n, error, bestGuessIndx, xName = "mus", yName="n")
 
     #readInverse.plot2D(mua, hgg, error, bestGuessIndx, xName = "mua", yName="hgg")
     #readInverse.plot2D(mua, n, error, bestGuessIndx, xName = "mua", yName="n")
 
     #readInverse.plot2D(hgg, n, error, bestGuessIndx, xName = "hgg", yName="n")
+    
+    
+    
 
 """
 musList = np.array(musList)

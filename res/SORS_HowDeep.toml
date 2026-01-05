@@ -1,6 +1,6 @@
 [source]
 name = "circular"
-nphotons = 10000000
+nphotons = 100000000
 direction = "z"
 position = [0.0,0.0,-25.0]
 rotation = [0.0,0.0,0.0]
@@ -29,137 +29,134 @@ n = [1.0]
 
 
 [symmetry]
-symmetryType = "360rotational"
-escapenphotons = 100000
-GridSize = [50,500,100]
-maxValues = [50.0, 360.0, 24.0]
+symmetryType = "adjoint"
+escapenphotons = 10000000
+GridSize = [50,360,100]
+maxValues = [24.0, 360.0, 24.0]
 position = [0.0,0.0,0.0]
-direction = [0.0,0.0,1.0]
+direction = [0.0,1.0,0.0]
 rotation = 0.0
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "0.5mm"
-position=[0.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.25
-acceptanceAngle = 12.7
+radius1 = 0.0
+radius2 = 1.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "1.5mm"
-position=[1.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius= 0.5
-acceptanceAngle = 12.7
+radius1 = 1.0
+radius2 = 2.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "2.5mm"
-position=[2.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.5
-acceptanceAngle = 12.7
+radius1 = 2.0
+radius2 = 3.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "3.5mm"
-position=[3.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.5
-acceptanceAngle = 12.7
+radius1 = 3.0
+radius2 = 4.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "4.5mm"
-position=[4.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.5
-acceptanceAngle = 12.7
+radius1 = 4.0
+radius2 = 5.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "5.5mm"
-position=[5.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.5
-acceptanceAngle = 12.7
+radius1 = 5.0
+radius2 = 6.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "6.5mm"
-position=[6.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.5
-acceptanceAngle = 12.7
+radius1 = 6.0
+radius2 = 7.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "7.5mm"
-position=[7.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.5
-acceptanceAngle = 12.7
+radius1 = 7.0
+radius2 = 8.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 	
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "8.5mm"
-position=[8.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.5
-acceptanceAngle = 12.7
+radius1 = 8.0
+radius2 = 9.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "9.5mm"
-position=[9.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.5
-acceptanceAngle = 12.7
+radius1 = 9.0
+radius2 = 10.0
 nbins=100
 maxval = 100.0
 trackHistory=false
 
 [[detectors]]
-type="circle"
+type="annulus"
 ID = "10.5mm"
-position=[10.5, 0.0, -24.00001]
+position=[0.0, 0.0, -24.00001]
 direction=[0.0, 0.0, -1.0]
-radius = 0.5
-acceptanceAngle = 12.7
+radius1 = 10.0
+radius2 = 11.0
 nbins=100
 maxval = 100.0
 trackHistory=false
-
-
-
 
 
 [output]

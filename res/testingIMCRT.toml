@@ -21,10 +21,14 @@ numOptProp = 1
 BoxDimensions = [50.0,50.0,0.35]
 boundingBox = [50.0,50.0,50.0]
 position = [0.0,0.0,0.0]
-mus = [81.4]
+mus = [0.0]
 mua = [1.7]
 hgg = [0.667]
-n = [1.6493]
+n = [1.0]
+
+[symmetry]
+symmetryType = "adjoint"
+escapenphotons = 100000
 
 [inverse]
 maxStepSize = 1
@@ -520,7 +524,7 @@ nbins = 100
 maxval = 4.75
 trackHistory=false
 inverseTarget = 0.02857390689223135
-acceptanceAngle = 15.0
+acceptanceAngle = 90.0
 
 
 [output]

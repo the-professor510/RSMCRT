@@ -1,17 +1,20 @@
 @buildmp
-option build --compiler gfortran-10 --profile debug --flag "-fopenmp"
+option build --compiler gfortran --profile debug --flag "-fopenmp"
 
 @buildintel
 option build --compiler ifort
 
 @runmp
-option run sMCRT --compiler gfortran-10 --flag "-fopenmp -O2 -march=native -fmax-stack-var-size=1000000"
+option run sMCRT --compiler gfortran --flag "-fopenmp -O2 -march=native -fmax-stack-var-size=1000000"
 
 @debug
-option run sMCRT --compiler gfortran-10 --flag "-O2 -march=native -mavx -g -fbacktrace -fcheck=all -ffpe-trap=invalid,overflow,underflow,denormal"
+option run sMCRT --compiler gfortran --flag "-O2 -march=native -mavx -g -fbacktrace -fcheck=all -ffpe-trap=invalid,overflow,underflow,denormal"
 
 @debugmp
-option run --compiler gfortran-10 --flag "-o test.o -fopenmp -mcmodel=medium -O2 -march=native -mavx -Wall -g -fbacktrace -fcheck=all "
+option run --compiler gfortran --flag "-fopenmp -mcmodel=medium -O2 -march=native -mavx -Wall -g -fbacktrace -fcheck=all -ffpe-trap=invalid,overflow,underflow,denormal"
+
+@debugprofiler
+option run --compiler nvfortran --flag "-fopenmp -mcmodel=medium -O2 -march=native -mavx -Wall -g -fbacktrace -fcheck=all -pg"
 
 @test
 option test --compiler gfortran-10 --flag "-O0 -fPIE -fprofile-arcs -ftest-coverage --coverage"
@@ -25,7 +28,7 @@ option test --compiler ifort
 
 
 @runnv
-option run sMCRT --compiler nvfortran --flag "-Mbackslash -Minform=inform -C -g -Mbackslash -Mbounds -Mchkstk -traceback"
+option run sMCRT --compiler nvfortran --flag "-Mbackslash -Minform=inform -C -g -Mbackslash -Mbounds -Mchkstk -traceback -pg"
 
 @runifort
 option run sMCRT --compiler ifort --profile release --flag "-qopenmp"

@@ -30,13 +30,8 @@ n = [1.0]
 
 
 [symmetry]
-symmetryType = "360rotational"
+symmetryType = "adjoint"
 escapenphotons = 1000000
-GridSize = [50,500,100]
-maxValues = [50.0, 360.0, 24.0]
-position = [0.0,0.0,0.0]
-direction = [0.0,0.0,1.0]
-rotation = 0.0
 
 [[detectors]]
 type="circle"

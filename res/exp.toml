@@ -1,11 +1,13 @@
 [source]
 name = "annulus"
-nphotons = 1000000
-direction = "x"
-beta = 10.0
-radius = 0.5
-rhi = 0.8
-annulus_type="gaussian"
+nphotons = 10000000
+position = [0.0, 0.0, -10.0]
+rotation = [0.0,0.0,1.0]
+focalLength = 10.0
+rhi = 1.2
+rlo = 1.0
+spectrum_type = "constant"
+wavelength = 500.0
 
 [grid]
 nxg = 200
@@ -25,9 +27,12 @@ hgg = 0.9
 
 [output]
 fluence = "fluence.nrrd"
-render = "geom_render.nrrd"
-render_geom = true
-overwrite=true
+render_geometry_name = "geom_render.nrrd"
+render_geometry = true
+render_source_name = "source_render.nrrd"
+render_source = true
+render_size = [200,200,200]
+overwrite = true
 
 [simulation]
 iseed = 123456789
