@@ -65,7 +65,9 @@ class read_nrrd_class:
                      '"n%   2"', '"mua%   3"', '"mus%   3"', '"mur%   3"', '"hgg%   3"', '"n%   3"', 
                      '"position%   1"', '"position%   2"', '"position%   3"', '"boundinglength%   1"',
                      '"boundinglength%   2"', '"boundinglength%   3"', '"BoxDimensions%   1"', 
-                     '"BoxDimensions%   2"', '"BoxDimensions%   3"']:
+                     '"BoxDimensions%   2"', '"BoxDimensions%   3"', 'YolkRadius', 
+                     'BottomSphereRadius', 'TopSphereRadius', 'SphereSep', 'ShellThickness',
+                     '"rotation%x"', '"rotation%y"', '"rotation%z"']:
             return float(value)
         else:
             print(f"Error not implemented {key}")

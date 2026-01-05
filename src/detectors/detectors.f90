@@ -34,8 +34,6 @@ module detectors
         real(kind=wp) :: f1Aperture
         !> radius/size of the back lens
         real(kind=wp) :: f2Aperture
-        !> distance between the detector plane and the front lens
-        real(kind=wp) :: frontOffset
         !> distance between the fibre plane and the back lens
         real(kind=wp) :: backOffset
         !> distance between front lens and a pinhole in between the front and back lens
@@ -271,7 +269,7 @@ module detectors
     end function check_hit_annulus
 
     function init_fibre_dect(pos, dir, layer, nbins, maxval, trackHistory, & 
-        focalLength1, focalLength2, f1Aperture, f2Aperture, frontOffset, backOffset, & 
+        focalLength1, focalLength2, f1Aperture, f2Aperture, backOffset, & 
         frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter, dect_ID, targetValue) result(out)
         !! Initialise fibre detector
         
@@ -295,8 +293,6 @@ module detectors
         real(kind=wp), intent(in) :: f1Aperture
         !> radius/size of the back lens
         real(kind=wp), intent(in) :: f2Aperture
-        !> distance between the detector plane and the front lens
-        real(kind=wp), intent(in) :: frontOffset
         !> distance between the fibre plance and the back lens
         real(kind=wp), intent(in) :: backOffset
         !> distance between front lens and a pinhole in between the front and back lens
@@ -325,7 +321,6 @@ module detectors
         out%focalLength2 = focalLength2
         out%f1Aperture = f1Aperture
         out%f2Aperture = f2Aperture
-        out%frontOffset = frontOffset
         out%backOffset = backOffset
         out%frontToPinSep = frontToPinSep
         out%pinToBackSep = pinToBackSep
@@ -369,7 +364,7 @@ module detectors
 
 
         check_hit_fibre = .false.
-        distAlongOptAxis = this%frontOffset
+        distAlongOptAxis = 0.0_wp
         !does the packet hit the front lens
         check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*distAlongOptAxis, & 
                                             this%f1Aperture, hitpoint%pos, hitpoint%dir, t, hitpoint%value1D)
@@ -416,7 +411,7 @@ module detectors
         NewPosition = OldPosition
 
         !does the packet hit the aperture
-        distAlongOptAxis = this%frontOffset + this%frontToPinSep
+        distAlongOptAxis = this%frontToPinSep
         check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*distAlongOptAxis, & 
                                             this%pinAperture, NewPosition, NewDir, t, radius)
         if( check_hit_fibre) then
@@ -430,7 +425,7 @@ module detectors
 
 
         !does the packet hit the second lens
-        distAlongOptAxis = this%frontOffset + this%frontToPinSep + this%pinToBackSep
+        distAlongOptAxis = this%frontToPinSep + this%pinToBackSep
         check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*distAlongOptAxis, & 
                                             this%f2Aperture, NewPosition, NewDir, t, radius)
         if( check_hit_fibre) then
@@ -474,7 +469,7 @@ module detectors
         NewPosition = OldPosition
 
         !does the packet hit the fibre
-        distAlongOptAxis = this%frontOffset + this%frontToPinSep + this%pinToBackSep + this%backOffset
+        distAlongOptAxis = this%frontToPinSep + this%pinToBackSep + this%backOffset
         check_hit_fibre = intersectCircle(this%dir, this%pos + this%dir*distAlongOptAxis, & 
                                             (this%coreDiameter/2), NewPosition, NewDir, t, radius)
         if( check_hit_fibre) then

@@ -286,7 +286,7 @@ contains
         logical       :: trackHistory
 
         real(kind=wp) :: focalLength1, focalLength2, f1Aperture, f2Aperture
-        real(kind=wp) :: frontOffset, backOffset, frontToPinSep, pinToBackSep
+        real(kind=wp) :: backOffset, frontToPinSep, pinToBackSep
         real(kind=wp) :: pinAperture, acceptAngle, coreDiameter
 
         pos = get_vector(child, "position", context=context, error=error)
@@ -296,7 +296,6 @@ contains
         call get_value(child, "focalLength2", focalLength2, 1.0_wp)
         call get_value(child, "f1Aperture", f1Aperture, 1.0_wp)
         call get_value(child, "f2Aperture", f2Aperture, 1.0_wp)
-        call get_value(child, "frontOffset", frontOffset, 0.0_wp)
         call get_value(child, "backOffset", backOffset, focalLength2)
         call get_value(child, "frontToPinSep", frontToPinSep, focalLength1)
         call get_value(child, "pinToBackSep", pinToBackSep, focalLength2)
@@ -333,7 +332,6 @@ contains
         call set_value(dict, "dect"//countStr//"focalLength2", focalLength2)
         call set_value(dict, "dect"//countStr//"f1Aperture", f1Aperture)
         call set_value(dict, "dect"//countStr//"f2Aperture", f2Aperture)
-        call set_value(dict, "dect"//countStr//"frontOffset", frontOffset)
         call set_value(dict, "dect"//countStr//"backOffset", backOffset)
         call set_value(dict, "dect"//countStr//"frontToPinSep", frontToPinSep)
         call set_value(dict, "dect"//countStr//"pinToBackSep", pinToBackSep)
@@ -342,7 +340,7 @@ contains
         call set_value(dict, "dect"//countStr//"coreDiameter", coreDiameter)
 #endif
         dects(counts) = fibre_dect(pos, dir, layer, nbins, maxval, trackHistory, focalLength1, & 
-                                    focalLength2, f1Aperture, f2Aperture, frontOffset, backOffset, & 
+                                    focalLength2, f1Aperture, f2Aperture, backOffset, & 
                                     frontToPinSep, pinToBackSep, pinAperture, acceptAngle, coreDiameter, & 
                                     dect_ID, targetValue)
         counts = counts + 1

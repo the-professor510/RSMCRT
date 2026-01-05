@@ -129,7 +129,6 @@ module writer_mod
                         write(u)  x%focalLength2
                         write(u)  x%f1Aperture
                         write(u)  x%f2Aperture
-                        write(u)  x%frontOffset
                         write(u)  x%backOffset
                         write(u)  x%frontToPinSep
                         write(u)  x%pinToBackSep

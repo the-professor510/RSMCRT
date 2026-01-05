@@ -64,27 +64,26 @@ class plotDetectorsClass:
                 focalLength2 = data[n+8]
                 f1Aperture = data[n+9]
                 f2Aperture = data[n+10]
-                frontOffset = data[n+11]
-                backOffset = data[n+12]
-                frontToPinSep = data[n+13]
-                pinToBackSep = data[n+14]
-                pinAperture = data[n+15]
-                acceptAngle = data[n+16]
-                coreDiameter = data[n+17]
+                backOffset = data[n+11]
+                frontToPinSep = data[n+12]
+                pinToBackSep = data[n+13]
+                pinAperture = data[n+14]
+                acceptAngle = data[n+15]
+                coreDiameter = data[n+16]
                 
-                numBins = (len(data) - (n+18))/2
+                numBins = (len(data) - (n+17))/2
                 
                 radius = []
                 count = []
                 
-                for i in range(n+18, len(data), 2):
+                for i in range(n+17, len(data), 2):
                     radius.append(data[i])
                     count.append(data[i+1])
                     
                 
                 return radius, count, dectID, nPackets, numBins, pos, dir, "Fibre", \
                     [focalLength1, focalLength2, f1Aperture, f2Aperture, \
-                        frontOffset, backOffset, frontToPinSep, pinToBackSep, \
+                        backOffset, frontToPinSep, pinToBackSep, \
                         pinAperture, acceptAngle, coreDiameter] 
                     
             case 3:     #Detector Type of Annulus

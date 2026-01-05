@@ -255,7 +255,7 @@ module geometry
         real(kind=wp), intent(in) :: radius
         !> Distance from l0 to the intersection point
         real(kind=wp), intent(inout) :: t
-        !> 
+        !> Radius of intersection
         real(kind=wp), intent(inout) :: d2
         type(vector) :: v, p
 

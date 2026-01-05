@@ -15,7 +15,7 @@ aperture = []
 focalLength = 2.0
 
 for j in range(1,11):
-    folderName = "RSMCRT/data/detectors/"
+    folderName = "data/detectors/"
     filename = folderName + "detector_" + str(j) + ".dat"
 
     readDetectors = plotDetectorsClass.plotDetectorsClass()

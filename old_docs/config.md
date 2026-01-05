@@ -51,14 +51,14 @@ This table defines the parameters for the light source used in the simulation it
 
 | Parameter | Type | Options | Default | Notes |
 |:---------:|:----:|:-------:|:-------:|:-----:|
-| geom_name | string | sphere, box, egg, exp | sphere | Name of experiment for metadata |
-| numOptProp | integer | - | 1 | Size of optical property arrays, for egg and box scene must be of size 1, for egg scene must be of size 3 |
+| geom_name | string | sphere, box, egg, exp, cuvette, multilayerslab | sphere | Name of experiment for metadata |
+| numOptProp | integer | - | 1 | Size of optical property arrays, for sphere and box scene must be of size 1, for egg scene must be of size 3 |
 | mua | float array size numOptProp | - | 0.0 | Absorption Coefficient |
 | mus | float array size numOptProp | - | 1.0 | Scattering Coefficient |
 | mur | float array size numOptProp | - | 0.0 | Raman Coefficient |
 | hgg | float array size numOptProp | - | 0.0 | Henyey-Greenstein Coefficient |
 | n | float array size numOptProp | - | 0.0 | Refractive Index | 
-| position | float array size 3 | - | [0.0, 0.0, 0.0] | Position of the sphere, box, and egg | 
+| position | float array size 3 | - | [0.0, 0.0, 0.0] | Central position of the sphere, box, cuvette, and egg. Position of the top face of the top slab for multilayerslab | 
 | boundingBox | float array size 3 | - | [2.0, 2.0, 2.0] | Dimensions of bounding box with optical properties of a vacuum | 
 | sphereRadius | float | - | 1.0 | Radius of Sphere | 
 | BoxDimensions | float array size 3 | - | [1.0, 1.0, 1.0] | Dimensions of box | 
@@ -81,7 +81,7 @@ This table defines the parameters for the light source used in the simulation it
 | Parameter | Type | Options | Default | Notes |
 |:---------:|:----:|:-------:|:-------:|:-----:|
 | type | string | annulus, circle, fibre, camera | - | - |
-| position | float array size 3 | - | NO DEFAULT! | Central position of detector |
+| position | float array size 3 | - | NO DEFAULT! | Central position of detector, for fibre detector this is the position of the 1st lens |
 | direction | float array size 3 | - | [0.0, 0.0, -1.0] | Propagation direction of accepted rays |
 | radius | float | - | 1.0 | Radius of circular detector |
 | radius1 | float | - | - | Inner radius of annular detector |
@@ -90,7 +90,6 @@ This table defines the parameters for the light source used in the simulation it
 | focalLength2 | float | - | 1.0 | Back lens focal length in a 4f system fibre collection system |
 | f1Aperture | float | - | 1.0 | Front lens radius in a 4f system fibre collection system |
 | f2Aperture | float | - | 1.0 | Back lens radius in a 4f system fibre collection system |
-| frontOffset | float | - | 0.0 | distance between position and the front lens in a 4f system fibre collection system |
 | backOffset | float | - | focalLenght2 | distance between fibre and back lens in a 4f system fibre collection system |
 | frontToPinSep | float | - | focalLength1 | distance between front lens and a pinhole aperture in a 4f system fibre collection system |
 | pinToBackSep | float | - | focalLength2 | distance between back lens and a pinhole aperture in a 4f system fibre collection system |

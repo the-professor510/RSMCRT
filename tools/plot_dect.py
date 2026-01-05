@@ -3,7 +3,7 @@ import plotDetectorsClass
 
 
 folderName = "../RSMCRT/data/detectors/"
-for i in range(1, 15):
+for i in range(1, 3):
     filename = folderName + "detector_" + str(i) + ".dat"
 
     readDetectors = plotDetectorsClass.plotDetectorsClass()
