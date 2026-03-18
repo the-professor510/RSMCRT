@@ -110,7 +110,7 @@ contains
                 call handle_annulus_dect(child, dict, dect_a, a_counter, context, error, dect_ID, targetValue)
                 if(allocated(error))return
             case("fibre")
-                call handle_fibre_collection_dect(child, dect_f, f_counter, context, error, dect_ID, targetValue)
+                call handle_fibre_collection_dect(child, dict, dect_f, f_counter, context, error, dect_ID, targetValue)
                 if(allocated(error))return
             case("camera")
                 call handle_camera(child, dect_cam, cam_counter, context, error, dect_ID, targetValue)
@@ -260,13 +260,15 @@ contains
 
     end subroutine handle_circle_dect
 
-    subroutine handle_fibre_collection_dect(child, dects, counts, context, error, dect_ID, targetValue)
+    subroutine handle_fibre_collection_dect(child, dict, dects, counts, context, error, dect_ID, targetValue)
         !! Read in handle_fibre_collection_dector settings and initalise variable
         use detectors,     only : fibre_dect
         use sim_state_mod, only : state
 
         !> Detector table
         type(toml_table), pointer,     intent(in)    :: child
+        !> Dictonary used to store metadata
+        type(toml_table),               intent(inout) :: dict
         !> Array of dectd
         type(fibre_dect),             intent(inout) :: dects(:)
         !> Number dectors created
@@ -284,6 +286,9 @@ contains
         real(kind=wp) :: maxval
         type(vector)  :: pos, dir
         logical       :: trackHistory
+
+        character(len=8) :: countStr
+        character(len=:), allocatable :: dectType
 
         real(kind=wp) :: focalLength1, focalLength2, f1Aperture, f2Aperture
         real(kind=wp) :: backOffset, frontToPinSep, pinToBackSep
@@ -318,7 +323,7 @@ contains
         !add the detector values to the dictionary
 
         write(countStr, "(I8)") counts
-        dectType = "annulus"
+        dectType = "fibre"
         
         call set_value(dict, "dect"//countStr//"type", dectType)
         call set_value(dict, "dect"//countStr//"ID", dect_ID)

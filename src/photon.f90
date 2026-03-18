@@ -1532,7 +1532,7 @@ module photonMod
             use sdfHelpers,    only : rotationAlign, translate
             use mat_class,     only : invert
             use constants,     only : TWOPI
-            use geometry, only : intersectCircle
+            use geometry,      only : intersectCircle
             use piecewiseMod
 
             class(photon) :: this
@@ -1585,9 +1585,10 @@ module photonMod
             opticalAxis = vector(0.0_wp, 0.0_wp, 1.0_wp)
             opticalAxis = opticalAxis%magnitude()
 
-            intersectLocaction = vector(0.0_wp, 0.0_wp, 0.0_wp)
+            
             do while(.true.)
                 !choose a random position
+                intersectLocaction = vector(0.0_wp, 0.0_wp, 0.0_wp)
                 radius = coreDiameter * sqrt(ran2())
                 
                 !choose a random evenly distributed angle within 0 and the acceptance angle
@@ -1609,31 +1610,32 @@ module photonMod
                 dir = vector(dirX, dirY, dirZ)
                 dir = dir%magnitude()
 
-                !print*, dir
-                !print*, this%pos
-
                 !does this hit the back lens?
                 intersectLocaction = intersectLocaction + opticalAxis*backOffset
                 check_hit = .false.
                 check_hit = intersectCircle(opticalAxis, intersectLocaction, f2Aperture, &
                                             this%pos, dir, distToIntersect, radiusOfIntersect)
                 
+                !print*, " "
+                !print*, backOffset
+                !print*, check_hit
+                !print*, intersectLocaction
+                !print*, this%pos
+                !print*, this%pos + (distToIntersect*dir)
+                !print*, distToIntersect
+                !print*, radiusOfIntersect
+
                 if (check_hit) then
                     if(distToIntersect <= 0.0_wp) check_hit=.false.
                 end if
                 if (.not. check_hit)then
                     ! The packet will not be collected by the lens, launch a new photon
-                    continue
+                    cycle
                 end if
 
                 !move the packet from the lens to 
                 this%pos = this%pos + (distToIntersect*dir)
                 zVector = opticalAxis
-
-                !print*, " "
-                !print*, dir
-                !print*, intersectLocaction
-                !print*, this%pos
 
                 !find the radial vector and theta vector for the back lens
                 radialVector = this%pos - intersectLocaction
@@ -1661,11 +1663,6 @@ module photonMod
                 dir = radVdotdir*radialVector + thetaVdotdir*thetaVector + zVdotdir*zVector
                 dir = dir%magnitude()
 
-                !print*, " "
-                !print*, dir
-                !print*, intersectLocaction
-                !print*, this%pos
-
                 !does the packet hit the aperture
                 intersectLocaction = intersectLocaction + opticalAxis*pinToBackSep
                 check_hit = intersectCircle(opticalAxis, intersectLocaction, pinAperture, &
@@ -1676,7 +1673,7 @@ module photonMod
                 end if
                 if (.not. check_hit)then
                     ! The packet will not be collected by the lens, launch a new photon
-                    continue
+                    cycle
                 end if
 
                 !does the packet hit the front lens
@@ -1688,7 +1685,7 @@ module photonMod
                 end if
                 if (.not. check_hit)then
                     ! The packet will not be collected by the lens, launch a new photon
-                    continue
+                    cycle
                 end if
 
                 !move the packet to the lens
@@ -1724,9 +1721,6 @@ module photonMod
                 this%pos%z = 0.0_wp
                 exit
             end do
-
-            !print*, this%pos
-            !print*, dir
 
             !set inital vector from which the source points
             a = vector(0._wp, 0._wp, 1._wp)
