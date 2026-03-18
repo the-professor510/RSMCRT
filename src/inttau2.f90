@@ -56,6 +56,10 @@ module inttau2
         eps = 1e-8_wp
         !get random tau
         tau = -log(ran2())
+
+        !fixed length, to be 1/mu or MFP only for SORS - How Deep
+        !tau = 1.0
+
         taurun = 0._wp
         dtot = 0._wp
         do while (taurun <= tau)

@@ -264,7 +264,7 @@ contains
         type(seq),                     intent(inout) :: seqs(2)
         type(spectrum_t),              intent(inout) :: spectrum
 
-        real(kind=wp)   :: ran, total, ramanChance
+        real(kind=wp)   :: ran, total, ramanChance, stepSize
         integer         :: i
 
         real(kind=wp)   :: ramanLocx, ramanLocy, ramanLocz, temp
@@ -273,7 +273,11 @@ contains
         type(opticalProp_t) :: newnormalOptProp, newtumorOptProp
 
         underWentRaman = .false.
-        ramanChance = 0.0011493390034_wp
+        !Needs work, implement some check for the default raman chance for each material
+        !currently set up to match the bad SORS How Deep paper
+        stepSize = 1.0_wp
+        ramanChance = 1.0_wp - 10**(-0.00023_wp*stepSize)
+        ramanChance = 1.0e-6_wp
 
         ! Release photon from source
         call packet%emit(spectrum, dict, seqs)
@@ -321,6 +325,10 @@ contains
                     !                              ***********************
                     !update the optical properties **** REQUIRES WORK ****
                     !                              ***********************
+                    ! 16/03/26 Must Implement some method to allow the switching of optical
+                    ! properties between Raman photons and excitation photons. Ideally, this method
+                    ! also allows for a range of properties depending on Raman wavelength. 
+                    !
                     !oldnormalOptProp = array(3)%getOptProp()
                     !oldtumorOptProp = array(5)%getOptProp()
                     !
@@ -411,7 +419,7 @@ contains
         type(seq),                     intent(inout) :: seqs(2)
         type(spectrum_t),              intent(inout) :: spectrum
 
-        real(kind=wp)   :: ran, weight_absorb, total, ramanChance
+        real(kind=wp)   :: ran, weight_absorb, total, ramanChance, stepSize
         integer         :: i
 
         real(kind=wp)   :: ramanLocx, ramanLocy, ramanLocz, temp
@@ -419,8 +427,14 @@ contains
         type(opticalProp_t) :: oldnormalOptProp, oldtumorOptProp
         type(opticalProp_t) :: newnormalOptProp, newtumorOptProp
 
-        ramanChance = 0.0011493390034_wp
+
         underWentRaman = .false.
+        !Needs work, implement some check for the default raman chance for each material
+        !currently set up to match the bad SORS How Deep paper
+        stepSize = 1.0_wp
+        ramanChance = 1.0_wp - 10**(-0.00023_wp*stepSize)
+        ramanChance = 1.0e-6_wp
+        
 
         ! Release photon from point source
         call packet%emit(spectrum, dict, seqs)
