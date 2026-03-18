@@ -49,7 +49,7 @@ contains
 
         if(associated(child))then
             !symmetry, used to reduce the computation time of the escape function
-            call get_value(child, "symmetryType", symmetryType, "none")
+            call get_value(child, "symmetryType", symmetryType, "adjoint")
             call set_value(dict, "symmetryType", symmetryType)
 
             call get_value(child, "escapenphotons", escapenphotons, 100000)
@@ -148,30 +148,32 @@ contains
             end if
         else 
             !set the symmetry type to none, and set the other variables to their default values
-            symmetryType = "none"
+            symmetryType = "adjoint"
             call set_value(dict, "symmetryType", symmetryType)
 
             !set default number of photons to run
             state%nphotons = 100000
 
-            !set default size of symmetry grid
-            nxrg = 10
-            nytg = 10
-            nzg = 10
-
-            !set max values of symmetry grid
-            xrmax = 1.0
-            ytmax = 1.0
-            zmax = 1.0
-
-            !set default position of symmetry grid
-            state%symGridPos = pos
-
-            !set default direction of the symmetry grid
-            state%symGridDir = dir
-
-            !define the default escape cart grid
-            state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
+            !NOT NEEDED NOW THAT CHANGED DEFAULT TYPE TO ADJOINT
+            !
+            !!set default size of symmetry grid
+            !nxrg = 10
+            !nytg = 10
+            !nzg = 10
+            !
+            !!set max values of symmetry grid
+            !xrmax = 1.0
+            !ytmax = 1.0
+            !zmax = 1.0
+            !
+            !!set default position of symmetry grid
+            !state%symGridPos = pos
+            !
+            !!set default direction of the symmetry grid
+            !state%symGridDir = dir
+            !
+            !!define the default escape cart grid
+            !state%symmetryEscapeCartGrid = init_grid_cart(nxrg, nytg, nzg, xrmax, ytmax, zmax)
         end if
     end subroutine parse_symmetry
 

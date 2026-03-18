@@ -287,16 +287,17 @@ subroutine finalise(dict, dects, nscatt, start, history)
         call set_value(dict, "source", state%source)
         call set_value(dict, "experiment", state%experiment)
 
-
+#ifdef escapeFunction
+        !don't write out the fluence or the absorption data
+#else
         call normalise_fluence(state%grid, jmeanGLOBAL, state%nphotons)
         call write_data(jmeanGLOBAL, trim(fileplace)//"jmean/"//state%outfile, state, dict)
 
-        call normalise_fluence(state%grid, emissionGLOBAL, state%nphotons)
-        call write_data(emissionGLOBAL, trim(fileplace)//"emission/"//state%rendersourcefile, state, dict)
-
         call normalise_fluence(state%grid, absorbGLOBAL, state%nphotons)
         call write_data(absorbGLOBAL, trim(fileplace)//"absorb/"//"absorb.nrrd", state, dict)
-
+#endif
+        call normalise_fluence(state%grid, emissionGLOBAL, state%nphotons)
+        call write_data(emissionGLOBAL, trim(fileplace)//"emission/"//state%rendersourcefile, state, dict)
         ! if(state%absorb)call write_data(absorbGLOBAL, trim(fileplace)//"deposit/"//state%outfile_absorb, state, dict)
         !INTENSITY
         ! call write_data(abs(phasorGLOBAL)**2, trim(fileplace)//"phasor/"//state%outfile, state, dict)    
