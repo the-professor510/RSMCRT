@@ -288,21 +288,30 @@ subroutine finalise(dict, dects, nscatt, start, history)
         call set_value(dict, "experiment", state%experiment)
 
 #ifdef escapeFunction
-        !don't write out the fluence or the absorption data
+        !don't write out the fluence or absorption data
+        !writeout edited emission file
+        call normalise_fluence(state%grid, emissionGLOBAL, state%nphotons)
+        call write_data(emissionGLOBAL, trim(fileplace)//"emission/escape_"//state%rendersourcefile, state, dict)
 #else
         call normalise_fluence(state%grid, jmeanGLOBAL, state%nphotons)
         call write_data(jmeanGLOBAL, trim(fileplace)//"jmean/"//state%outfile, state, dict)
 
         call normalise_fluence(state%grid, absorbGLOBAL, state%nphotons)
         call write_data(absorbGLOBAL, trim(fileplace)//"absorb/"//"absorb.nrrd", state, dict)
-#endif
+
         call normalise_fluence(state%grid, emissionGLOBAL, state%nphotons)
         call write_data(emissionGLOBAL, trim(fileplace)//"emission/"//state%rendersourcefile, state, dict)
+#endif
+        
         ! if(state%absorb)call write_data(absorbGLOBAL, trim(fileplace)//"deposit/"//state%outfile_absorb, state, dict)
         !INTENSITY
         ! call write_data(abs(phasorGLOBAL)**2, trim(fileplace)//"phasor/"//state%outfile, state, dict)    
     end if
 
+
+#ifdef escapeFunction
+    !don't write out detector data
+#else
     !write out detected photons
     if(size(dects) > 0)then
         call write_detected_photons(dects)
@@ -314,6 +323,7 @@ subroutine finalise(dict, dects, nscatt, start, history)
             if(state%trackHistory)call history%finish()
         end block
     end if
+#endif
 
     time_taken = get_time() - start
     call print_time(time_taken, 4)

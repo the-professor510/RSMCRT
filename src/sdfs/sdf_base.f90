@@ -32,7 +32,7 @@ module sdf_baseMod
         contains
             procedure :: getKappa
             procedure :: getAlbedo
-            procedure :: getMua, gethgg, getG2, getN, getLayer
+            procedure :: getMua, gethgg, getG2, getN, getLayer, getMus, getMur
             procedure :: updateOptProp
             procedure :: getOptProp
             procedure :: evaluate => sdf_evaluate
@@ -207,6 +207,24 @@ module sdf_baseMod
         res = this%value%optProps%value%mua
 
     end function getMua
+
+    function getMur(this) result(res)
+        !! Return \(\mu_r\) for the current SDF.
+        class(sdf) :: this
+        real(kind=wp) :: res
+
+        res = this%value%optProps%value%mur
+
+    end function getMur
+
+    function getMus(this) result(res)
+        !! Return \(\mu_a\) for the current SDF.
+        class(sdf) :: this
+        real(kind=wp) :: res
+
+        res = this%value%optProps%value%mus
+
+    end function getMus
 
     function gethgg(this) result(res)
         !! Return g-factor for the current SDF.

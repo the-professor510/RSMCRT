@@ -336,7 +336,7 @@ contains
 
 
         integer :: i, j
-        real(kind=wp) :: mus, mua, hgg, n, reducedmus, mueff !Current guess values
+        real(kind=wp) :: mus, mua, mur, hgg, n, reducedmus, mueff !Current guess values
         real(kind=wp) :: temp !temp variable for changing the optical properties of the simulation
         real(kind=wp) :: error
         integer :: numGuesses
@@ -350,13 +350,15 @@ contains
         real(kind=wp) :: ranNum !used to temporarily store a random number
         real(kind=wp) :: leftMin, rightMax, tempMin !sides of the LIPO condition
 
+        !set mur=0 as Raman Scattering is not considered in this model
+        mur=0.0_wp
 
         !choose random mus, mua, hgg, n
         call randomOptProp(optimizationData(1,1), optimizationData(1,2), optimizationData(1,3), optimizationData(1,4), & 
                             reducedmus, mueff, Tmus, Tmua, Thgg, Tn, &
                             findmua, findmus, findg, findn, reducedmusGuessing, mueffGuessing, domain)
 
-        trialOptProp = mono(optimizationData(1,1), optimizationData(1,2), optimizationData(1,3), optimizationData(1,4))
+        trialOptProp = mono(optimizationData(1,1), optimizationData(1,2), mur, optimizationData(1,3), optimizationData(1,4))
         temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
         !evaluate, by running MCRT
@@ -407,7 +409,7 @@ contains
                 optimizationData(i,4) = n
 
                 !update the optical properties
-                trialOptProp = mono(optimizationData(i,1), optimizationData(i,2), optimizationData(i,3), optimizationData(i,4))
+                trialOptProp = mono(optimizationData(i,1), optimizationData(i,2), mur, optimizationData(i,3), optimizationData(i,4))
                 temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
             else
@@ -444,8 +446,8 @@ contains
                         optimizationData(i,4) = n
 
                         !update the optical properties
-                        trialOptProp=mono(optimizationData(i,1), optimizationData(i,2), optimizationData(i,3),&
-                                            optimizationData(i,4))
+                        trialOptProp=mono(optimizationData(i,1), optimizationData(i,2), mur,&
+                                            optimizationData(i,3), optimizationData(i,4))
                         temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
                         !exit while loop
@@ -612,7 +614,7 @@ contains
 
 
         integer :: i, j
-        real(kind=wp) :: mus, mua, hgg, n, reducedmus, mueff !Current guess values
+        real(kind=wp) :: mus, mua, mur, hgg, n, reducedmus, mueff !Current guess values
         real(kind=wp) :: temp !temp variable for changing the optical properties of the simulation
         real(kind=wp) :: error
         integer :: numGuesses
@@ -639,8 +641,8 @@ contains
         real(kind=wp) :: bestGuess, minError
         integer :: maxExpectedImpIndx, indexOfMinError
 
-
-
+        !set mur=0 as Raman Scattering is not considered in this model
+        mur=0.0_wp
 
         !fill optimizationData with the training data
         count = 0
@@ -653,7 +655,7 @@ contains
             optimizationData(i,3) = hgg
             optimizationData(i,4) = n
             
-            trialOptProp = mono(optimizationData(i,1), optimizationData(i,2), optimizationData(i,3), optimizationData(i,4))
+            trialOptProp = mono(optimizationData(i,1), optimizationData(i,2), mur, optimizationData(i,3), optimizationData(i,4))
             temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
             !evaluate, by running MCRT
@@ -831,7 +833,7 @@ contains
             optimizationData(i,3) = hgg
             optimizationData(i,4) = n
 
-            trialOptProp = mono(optimizationData(i,1), optimizationData(i,2), optimizationData(i,3), optimizationData(i,4))
+            trialOptProp = mono(optimizationData(i,1), optimizationData(i,2), mur, optimizationData(i,3), optimizationData(i,4))
             temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
             !evaluate maximum of acquisition function, by running MCRT
@@ -958,7 +960,7 @@ contains
 
 
         integer :: i, j
-        real(kind=wp) :: mus, mua, hgg, n, reducedmus, mueff !Current guess values
+        real(kind=wp) :: mus, mua, mur, hgg, n, reducedmus, mueff !Current guess values
         real(kind=wp) :: temp !temp variable for changing the optical properties of the simulation
         real(kind=wp) :: error
         integer :: numGuesses
@@ -999,14 +1001,15 @@ contains
         real(kind=wp), allocatable :: upperConf(:)
         integer :: maxUpperConfIndx
 
-
+        !set mur=0 as Raman Scattering is not considered in this model
+        mur=0.0_wp
 
         !choose random mus, mua, hgg, n
         call randomOptProp(optimizationData(1,1), optimizationData(1,2), optimizationData(1,3), optimizationData(1,4), & 
                             reducedmus, mueff, Tmus, Tmua, Thgg, Tn, &
                             findmua, findmus, findg, findn, reducedmusGuessing, mueffGuessing, domain)
 
-        trialOptProp = mono(optimizationData(1,1), optimizationData(1,2), optimizationData(1,3), optimizationData(1,4))
+        trialOptProp = mono(optimizationData(1,1), optimizationData(1,2), mur, optimizationData(1,3), optimizationData(1,4))
         temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
         !evaluate, by running MCRT
@@ -1201,7 +1204,7 @@ contains
                 optimizationData(i,4) = n
 
                 !update the optical properties
-                trialOptProp = mono(optimizationData(i,1), optimizationData(i,2), optimizationData(i,3), optimizationData(i,4))
+                trialOptProp = mono(optimizationData(i,1), optimizationData(i,2), mur, optimizationData(i,3), optimizationData(i,4))
                 temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
             else
@@ -1221,7 +1224,7 @@ contains
                     optimizationData(i,4) = n
 
                     !update the optical properties
-                    trialOptProp=mono(optimizationData(i,1),optimizationData(i,2),optimizationData(i,3),optimizationData(i,4))
+                    trialOptProp=mono(optimizationData(i,1),optimizationData(i,2),mur,optimizationData(i,3),optimizationData(i,4))
                     temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
                 else
@@ -1258,8 +1261,8 @@ contains
                             optimizationData(i,4) = n
 
                             !update the optical properties
-                            trialOptProp=mono(optimizationData(i,1),optimizationData(i,2),optimizationData(i,3),&
-                                                optimizationData(i,4))
+                            trialOptProp=mono(optimizationData(i,1),optimizationData(i,2),mur,&
+                                                optimizationData(i,3),optimizationData(i,4))
                             temp = array(SDF_array_index)%updateOptProp(trialOptProp)
 
                             !exit while loop

@@ -10,6 +10,8 @@ module opticalProperties
         real(kind=wp) :: mus
         !> absoprtion coeff. \[cm^{-1}\]    
         real(kind=wp) :: mua
+        !> raman coeff. \[cm^{-1}\]
+        real(kind=wp) :: mur
         !> g factor
         real(kind=wp) :: hgg
         !> g factor squared
@@ -104,12 +106,13 @@ module opticalProperties
 
     end subroutine update_opticalProp_t
 
-    type(mono) function init_mono(mus, mua, hgg, n) result(res)
+    type(mono) function init_mono(mus, mua, mur, hgg, n) result(res)
 
-        real(kind=wp), intent(in) :: mus, mua, hgg, n
+        real(kind=wp), intent(in) :: mus, mua, mur, hgg, n
 
         res%mus = mus
         res%mua = mua
+        res%mur = mur
 
         res%kappa = mus + mua
         if(res%mua < 1e-9_wp)then          

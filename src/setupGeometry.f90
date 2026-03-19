@@ -63,10 +63,10 @@ contains
         pos = vector(x, y, z)
         t = invert(translate(pos))
 
-        opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
+        opt(1) = mono(mus(1), mua(1), mur(1), hgg(1), n(1))
         array(1) = sphere(radius, opt(1), 1, transform=t)
 
-        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
+        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
         array(2) = box(vector(xlength, ylength, zlength), opt(2), 2)   
     end function setup_sphere
 
@@ -138,11 +138,11 @@ contains
         t = invert(translate(pos))
 
         !interior box
-        opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
+        opt(1) = mono(mus(1), mua(1), mur(1), hgg(1), n(1))
         array(1) = box(vector(ixlength, iylength, izlength), opt(1), 1, transform=t)
 
         !bounding box
-        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
+        opt(2) = mono(0.0_wp, 0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
         array(2) = box(vector(bxlength, bylength, bzlength), opt(2), 2)   
     end function setup_box
 
@@ -218,24 +218,24 @@ contains
         t = invert(translate(pos))
                 
         !shell
-        opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
+        opt(1) = mono(mus(1), mua(1), mur(1), hgg(1), n(1))
         egg_shell = egg(bottomSphereRad, topSphereRad, SphereSep, opt(1), 1)
         shell = revolution(egg_shell, .0_wp, center = pos)
         !shell = extrude(egg_shell, .2_wp)
 
         !albumen
-        opt(2) = mono(mus(2), mua(2), hgg(2), n(2))
+        opt(2) = mono(mus(2), mua(2), mur(2), hgg(2), n(2))
         egg_albumen = egg(bottomSphereRad-ShellThickness, topSphereRad-ShellThickness,&
                              SphereSep, opt(2), 2)
         albumen = revolution(egg_albumen, .0_wp, center = pos)
         !albumen = extrude(egg_albumen, .2_wp)
 
         !yolk
-        opt(3) = mono(mus(3), mua(3), hgg(3), n(3))
+        opt(3) = mono(mus(3), mua(3), mur(3), hgg(3), n(3))
         yolk = sphere(YolkRadius, opt(3), 3, transform=t)
 
         !bounding box
-        opt(4) = mono(0._wp, 0._wp, 0.0_wp, 1.0_wp)
+        opt(4) = mono(0._wp, 0._wp, 0.0_wp, 0.0_wp, 1.0_wp)
         bbox = box(vector(bxlength, bylength, bzlength), opt(4), 4) 
         
         allocate(array(4))
@@ -261,7 +261,7 @@ contains
 
         type(opticalProp_t) :: opt(3)
         type(vector) :: pos
-        real(kind=wp), allocatable :: mus(:), mua(:), hgg(:), n(:)
+        real(kind=wp), allocatable :: mus(:), mua(:), mur(:), hgg(:), n(:)
         real(kind=wp) :: t(4,4), x, y, z, radius
         real(kind=wp) :: ixlength, iylength, izlength
         real(kind=wp) :: cxlength, cylength, czlength 
@@ -272,10 +272,12 @@ contains
         call get_value(dict, "numOptProp", numOptProp)
         allocate(mus(numOptProp))
         allocate(mua(numOptProp))
+        allocate(mur(numOptProp))
         allocate(hgg(numOptProp))
         allocate(n(numOptProp))
         mus = 0.0_wp
         mua = 0.0_wp
+        mur = 0.0_wp
         hgg = 0.0_wp
         n = 0.0_wp
         
@@ -283,6 +285,7 @@ contains
             write(string,'(I4)') i
             call get_value(dict, "mua%"//string, mua(i))
             call get_value(dict, "mus%"//string, mus(i))
+            call get_value(dict, "mur%"//string, mur(i))
             call get_value(dict, "hgg%"//string, hgg(i))
             call get_value(dict, "n%"//string, n(i))
         end do
@@ -325,15 +328,15 @@ contains
         print*, vector(bxlength, bylength, bzlength)
 
         !interior box filled with the cuvette contents
-        opt(1) = mono(mus(1), mua(1), hgg(1), n(1))
+        opt(1) = mono(mus(1), mua(1), mur(1), hgg(1), n(1))
         array(1) = box(vector(ixlength, iylength, izlength), opt(1), 1, transform=t)
 
         !cuvette box, assumed to be a solid cuvette all of the same material completely surrounding the medium
-        opt(2) = mono(mus(2), mua(2), hgg(2), n(2))
+        opt(2) = mono(mus(2), mua(2), mur(2), hgg(2), n(2))
         array(2) = box(vector(cxlength, cylength, czlength), opt(2), 2, transform=t)  
         
         !bounding box
-        opt(3) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
+        opt(3) = mono(0.0_wp, 0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
         array(3) = box(vector(bxlength, bylength, bzlength), opt(3), 3)  
     end function setup_cuvette
 
@@ -416,14 +419,14 @@ contains
             print*, pos
             print*, xlength, ylength, thickness(i)
 
-            opt(i) = mono(mus(i), mua(i), hgg(i), n(i))
-            array(i) = box(vector(xlength, ylength, thickness(i)+1e-8_wp), opt(i), i+1, transform=t)
+            opt(i) = mono(mus(i), mua(i), mur(i), hgg(i), n(i))
+            array(i) = box(vector(xlength, ylength, thickness(i)+1e-8_wp), opt(i), i, transform=t)
             !small overlap in z direction to ensure that there is no gaps between the sdfs
         end do
         
         !bounding box
-        opt(numOptProp+1) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
-        array(numOptProp+1) = box(vector(bxlength, bylength, bzlength), opt(numOptProp+1), 1)   
+        opt(numOptProp+1) = mono(0.0_wp, 0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
+        array(numOptProp+1) = box(vector(bxlength, bylength, bzlength), opt(numOptProp+1), numOptProp+1)   
     end function setup_multilayer_slab
 
     function setup_sphere_scene(dict) result(array)
@@ -440,7 +443,7 @@ contains
         type(sdf), allocatable :: array(:)
         
         integer :: num_spheres, i
-        real(kind=wp) :: t(4,4), mus, mua, hgg, n, radius
+        real(kind=wp) :: t(4,4), mus, mua, mur, hgg, n, radius
         type(vector) :: pos
         type(opticalProp_t) :: opt(2)
 
@@ -449,18 +452,20 @@ contains
 
         mus = 1e-17_wp
         mua = 1e-17_wp
+        mur = 0.0_wp
         hgg = 0.0_wp
         n   = 1.0_wp
 
-        opt(2) = mono(mus, mua, hgg, n)
+        opt(2) = mono(mus, mua, mur, hgg, n)
 
         array(num_spheres+1) = box(vector(2._wp, 2._wp, 2._wp), opt(2), num_spheres+1)
         
         mus = 0.0_wp!ranu(1._wp, 50._wp)
         mua = 0.0_wp!ranu(0.01_wp, 1._wp)
+        mur = 0.0_wp
         hgg = 0.9_wp
         n = 1.37_wp
-        opt(1) = mono(mus, mua, hgg, n)
+        opt(1) = mono(mus, mua, mur, hgg, n)
         do i = 1, num_spheres
             radius = ranu(0.001_wp, 0.25_wp)
             pos = vector(ranu(-1._wp+radius, 1._wp-radius), ranu(-1._wp+radius, 1._wp-radius),&
@@ -487,7 +492,7 @@ contains
         type(opticalProp_t) :: opt(2)
 
         type(vector)  :: a, b
-        real(kind=wp) :: hgg, mus, mua, n
+        real(kind=wp) :: hgg, mus, mua, mur, n
         integer       :: layer
         logical       :: fexists
 
@@ -495,12 +500,13 @@ contains
 
         mus = 10._wp
         mua = .1_wp
+        mur = 0.0_wp
         hgg = 0.9_wp
         n = 1.5_wp
         layer = 1
 
-        opt(1) = mono(0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
-        opt(2) = mono(mus, mua, hgg, n)
+        opt(1) = mono(0.0_wp, 0.0_wp, 0.0_wp, 0.0_wp, 1.0_wp)
+        opt(2) = mono(mus,    mua,    mur,    hgg,    n)
 
         inquire(file="res/svg.f90", exist=fexists)
         if(.not. fexists)error stop "need to generate svg.f90 and place in res/"
@@ -524,18 +530,18 @@ contains
         type(sdf), allocatable :: array(:)
         type(opticalProp_t) :: opt(3)
 
-        real(kind=wp) :: mus, mua, n, hgg, t(4, 4)
+        real(kind=wp) :: mus, mua, mur, n, hgg, t(4, 4)
         type(vector)  :: a
         
         allocate(array(3))
-        mus = 0._wp; mua = 1.e-17_wp; hgg = 0._wp; n = 1._wp;
-        opt(1) = mono(mus, mua, hgg, n)
+        mus = 0._wp; mua = 1.e-17_wp; mur=0.0_wp; hgg = 0._wp; n = 1._wp;
+        opt(1) = mono(mus, mua, mur, hgg, n)
         array(2) = box(vector(2._wp, 2._wp, 2._wp), opt(1), 2)
-        opt(2) = mono(mus, 10000000._wp, hgg, n)
+        opt(2) = mono(mus, 10000000._wp, mur, hgg, n)
         array(3) = box(vector(2.01_wp, 2.01_wp, 2.01_wp), opt(2), 3)
 
-        mus = 0._wp; mua = 1.e-17_wp; hgg = 0._wp; n = 1.33_wp;
-        opt(3) = mono(mus, mua, hgg, n)
+        mus = 0._wp; mua = 1.e-17_wp; mur=0.0_wp; hgg = 0._wp; n = 1.33_wp;
+        opt(3) = mono(mus, mua, mur, hgg, n)
         a = vector(.0_wp, 0._wp, 0._wp)
         t = invert(translate(a))
         array(1) = sphere(0.5_wp, opt(3), 1, transform=t)
@@ -569,8 +575,8 @@ contains
         n = 1._wp
 
         allocate(array(3))
-        opt(1) = mono(optprop(1), optprop(2), optprop(5), 1.5_wp)
-        opt(2) = mono(optprop(3), optprop(4), optprop(5), 1.33_wp)
+        opt(1) = mono(optprop(1), optprop(2), 0.0_wp, optprop(5), 1.5_wp)
+        opt(2) = mono(optprop(3), optprop(4), 0.0_wp, optprop(5), 1.33_wp)
 
         a = vector(-8._wp, 0._wp, 0._wp)
         b = vector(8._wp, 0._wp, 0._wp)
@@ -581,7 +587,7 @@ contains
 
         ! t = invert(translate(vector(0._wp, 0._wp, -5._wp+1.75_wp)))
         ! slab = box(vector(10._wp, 10._wp, 10._wp), optprop(3), optprop(4), optprop(5), 1.3_wp, 1, transform=t)
-        opt(3) = mono(0.0_wp, 0.0_wp, 0.0_wp, n)
+        opt(3) = mono(0.0_wp, 0.0_wp, 0.0_wp, 0.0_wp, n)
         array(3) = box(vector(20._wp, 20._wp, 20._wp), opt(3), 3)
 
     end function setup_exp
@@ -597,7 +603,7 @@ contains
         type(sdf), allocatable :: array(:)
 
         type(opticalProp_t) :: opt(2)
-        real(kind=wp) :: mus, mua, hgg, n, tau
+        real(kind=wp) :: mus, mua, mur, hgg, n, tau
 
         call get_value(dict, "tau", tau)
         allocate(array(2))
@@ -605,11 +611,12 @@ contains
         hgg = 0.0_wp
         mua = 0.00_wp
         mus = tau
+        mur = 0.0_wp 
 
-        opt(1) = mono(mus, mua, hgg, n)
+        opt(1) = mono(mus, mua, mur, hgg, n)
         array(1) = sphere(1._wp, opt(1), 1)
 
-        opt(2) = mono(0.0_wp, mua, hgg, n)
+        opt(2) = mono(0.0_wp, mua, mur, hgg, n)
         array(2) = box(vector(2._wp, 2._wp, 2._wp), opt(2), 2)
 
     end function setup_scat_test
@@ -625,7 +632,7 @@ contains
         type(sdf), allocatable :: array(:)
 
         type(opticalProp_t) :: opt
-        real(kind=wp) :: mus, mua, hgg, n, tau
+        real(kind=wp) :: mus, mua, mur, hgg, n, tau
         character(4) :: string 
 
         allocate(array(1))
@@ -637,8 +644,9 @@ contains
         hgg = hgg
         mua = 1e-17_wp
         mus = tau
+        mur = 0.0_wp
 
-        opt = mono(mus, mua, hgg, n)
+        opt = mono(mus, mua, mur, hgg, n)
         array(1) = box(vector(200._wp, 200._wp, 200._wp), opt, 2)
 
     end function setup_scat_test2
@@ -658,19 +666,20 @@ contains
         
         type(opticalProp_t), save :: opt(2)
         type(vector)        :: a, b
-        real(kind=wp)       :: t(4, 4), mus, mua, hgg, n
+        real(kind=wp)       :: t(4, 4), mus, mua, mur, hgg, n
         integer             :: layer
 
         allocate(array(2), cnta(10))
 
         mus = 10._wp
         mua = 0.16_wp
+        mur = 0.0_wp
         hgg = 0.0_wp
         n = 2.65_wp
         layer = 1
 
-        opt(1) = mono(mus, mua, hgg, n)
-        opt(2) = mono(0._wp, 0._wp, 0._wp, 1.0_wp)
+        opt(1) = mono(mus, mua, mur, hgg, n)
+        opt(2) = mono(0._wp, 0._wp, 0._wp, 0._wp, 1.0_wp)
 
         ! x
         ! |
@@ -742,8 +751,8 @@ contains
         integer, allocatable :: edges(:, :)
         integer :: io, edge_cnt, tmp1, tmp2, u, node_cnt, i
         real(kind=wp) :: x, y, z, radius, res, maxx, maxy, maxz
-        real(kind=wp) :: musv, muav, gv, nv
-        real(kind=wp) :: musd, muad, gd, nd
+        real(kind=wp) :: musv, muav, murv, gv, nv
+        real(kind=wp) :: musd, muad, murd, gd, nd
         type(vector) :: a, b
 
         type(opticalProp_t) :: opt(2)
@@ -751,16 +760,18 @@ contains
         !MCmatlab: an open-source, user-friendly, MATLAB-integrated three-dimensional Monte Carlo light transport solver with heat diffusion and tissue damage
         muav = 231._wp
         musv = 94._wp
+        murv = 0._wp
         gv = 0.9_wp
         nv = 1.37_wp
 
         muad = 0.458_wp
         musd = 357._wp
+        murd = 0._wp
         gd = 0.9_wp
         nd = 1.37_wp
 
-        opt(1) = mono(musv, muav, gv, nv)
-        opt(2) = mono(musd, muad, gd, nd)
+        opt(1) = mono(musv, muav, murv, gv, nv)
+        opt(2) = mono(musd, muad, murd, gd, nd)
 
         !get number of edges
         open(newunit=u, file="res/edges.dat", iostat=io)

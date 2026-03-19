@@ -137,6 +137,7 @@ contains
                 end do 
             end if
 
+            !import the mur/check for the presence of mur for usage further in the program
             call get_value(child, "mur", children, requested=.false., origin=origin)
             if(associated(children))then
                 nlen = len(children)
@@ -154,7 +155,7 @@ contains
                 end if
             else
                 do i = 1, numOptProp
-                    murTemp = 0.0_wp
+                    murTemp = 1.0_wp
                     write(string,'(I4)') i
                     call set_value(dict, "mur%"//string, murTemp)
                 end do 

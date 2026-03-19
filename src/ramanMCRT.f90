@@ -264,7 +264,7 @@ contains
         type(seq),                     intent(inout) :: seqs(2)
         type(spectrum_t),              intent(inout) :: spectrum
 
-        real(kind=wp)   :: ran, total, ramanChance, stepSize
+        real(kind=wp)   :: ran, total, ramanChance
         integer         :: i
 
         real(kind=wp)   :: ramanLocx, ramanLocy, ramanLocz, temp
@@ -273,11 +273,7 @@ contains
         type(opticalProp_t) :: newnormalOptProp, newtumorOptProp
 
         underWentRaman = .false.
-        !Needs work, implement some check for the default raman chance for each material
-        !currently set up to match the bad SORS How Deep paper
-        stepSize = 1.0_wp
-        ramanChance = 1.0_wp - 10**(-0.00023_wp*stepSize)
-        ramanChance = 1.0e-6_wp
+        ramanChance = 1.0_wp
 
         ! Release photon from source
         call packet%emit(spectrum, dict, seqs)
@@ -309,7 +305,7 @@ contains
                 ran = ran2()
 
                 
-                
+                ramanChance = array(packet%layer)%getMur()/array(packet%layer)%getMus()
                 if (ran < ramanChance .and. .not. underWentRaman) then 
                     ! Raman scattering
 
@@ -419,7 +415,7 @@ contains
         type(seq),                     intent(inout) :: seqs(2)
         type(spectrum_t),              intent(inout) :: spectrum
 
-        real(kind=wp)   :: ran, weight_absorb, total, ramanChance, stepSize
+        real(kind=wp)   :: ran, weight_absorb, total, ramanChance
         integer         :: i
 
         real(kind=wp)   :: ramanLocx, ramanLocy, ramanLocz, temp
@@ -429,11 +425,7 @@ contains
 
 
         underWentRaman = .false.
-        !Needs work, implement some check for the default raman chance for each material
-        !currently set up to match the bad SORS How Deep paper
-        stepSize = 1.0_wp
-        ramanChance = 1.0_wp - 10**(-0.00023_wp*stepSize)
-        ramanChance = 1.0e-6_wp
+        ramanChance = 1.0
         
 
         ! Release photon from point source
@@ -484,7 +476,8 @@ contains
             end if
 
             ran = ran2()
-            
+
+            ramanChance = array(packet%layer)%getMur()/array(packet%layer)%getMus()
             if (ran < ramanChance .and. .not. underWentRaman) then 
                 ! Raman scattering
 
