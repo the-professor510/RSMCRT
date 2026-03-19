@@ -62,7 +62,6 @@ contains
         real(kind=wp) :: rotationAroundZOnSym(4,4), rotationAroundZOffSym(4,4)
         character(len=:), allocatable :: symmetryType
         integer :: indices(3)
-        real :: tic, toc
 
         !temporary while testing adjoint
         real(kind=wp) :: posX, posY, posZ, dirX, dirY, dirZ, radius, acceptAngle
@@ -73,8 +72,6 @@ contains
 
         integer :: cell(3), escapePhotons
 
-
-        call cpu_time(tic)
 
         !setup the geometry and detectors
         if(state%loadckpt)then
@@ -471,9 +468,6 @@ contains
         call write_escape(dects, symmetryType, dict)
 
         call finalise(dict, dects, nscatt, start, history)
-
-        call cpu_time(toc)
-        print*,"Time to Run: ",((toc - tic))
 
     end subroutine escape_Function
 
