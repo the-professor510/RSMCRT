@@ -104,8 +104,8 @@ module testsSDFMod
         type(vector) :: pos
         type(sdf) :: array(2)
 
-        opt(1) = mono(0._wp, 0._wp, 0._wp, 0._wp)
-        opt(2) = mono(1._wp, 2._wp, 3._wp, 4._wp)
+        opt(1) = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
+        opt(2) = mono(1._wp, 2._wp, 0.0_wp, 3._wp, 4._wp)
 
         sph = sphere(1.0_wp, opt(1), 1)
         bbox = box(vector(1.0_wp, 1.0_wp, 1.0_wp), opt(2), 2)
@@ -133,7 +133,7 @@ module testsSDFMod
         type(opticalProp_t) :: opt
         type(vector) :: pos, N
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
 
         sph = sphere(1.0_wp, opt, 1)
 
@@ -177,7 +177,7 @@ module testsSDFMod
         type(opticalProp_t) :: opt
         type(sdf) :: base
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
 
         sph = sphere(1.0_wp, opt, 1)
         base = sph
@@ -200,7 +200,7 @@ module testsSDFMod
 
         allocate(array(2))
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         sph1 = sphere(.25_wp, opt, 1)
         
         bbox = box(vector(1.0, 1.0, 1.0), opt,1)
@@ -241,7 +241,7 @@ module testsSDFMod
 
         allocate(array(2))
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
 
         sph1 = sphere(.25_wp, opt, 1)
         
@@ -274,7 +274,7 @@ module testsSDFMod
         type(vector) :: pos
         real(kind=wp) :: val
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         
         bbox = box(vector(1.0, 1.0, 1.0), opt,1)
         bendy = bend(bbox, k=10.0_wp)
@@ -683,7 +683,7 @@ module testsSDFMod
         type(opticalProp_t) :: opt
         type(vector) :: pos
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         sph = sphere(1.0_wp, opt, 1)
 
         pos = vector(0._wp, 0._wp, 0._wp)
@@ -728,7 +728,7 @@ module testsSDFMod
         type(opticalProp_t) :: opt
         type(vector) :: pos
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         bbox = box(vector(2.0_wp, 2.0_wp, 2.0_wp), opt, 1)
 
         pos = vector(0._wp, 0._wp, 0._wp)
@@ -773,7 +773,7 @@ module testsSDFMod
         type(opticalProp_t) :: opt
         type(vector) :: pos, a, b
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         a = vector(0._wp, 0._wp, -1._wp)
         b = vector(0._wp, 0._wp, 1._wp)
         cyl = cylinder(a, b, 1._wp, opt, 1)
@@ -820,7 +820,7 @@ module testsSDFMod
         type(opticalProp_t) :: opt
         type(vector) :: pos
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         tor = torus(0.5_wp, 1.0_wp, opt, 1)
 
         pos = vector(0._wp, 0._wp, 0._wp)
@@ -843,7 +843,7 @@ module testsSDFMod
 
         a = vector(-1._wp, 0., 0._wp)
         b = vector(1._wp, 0., 0._wp)
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         seg = segment(a, b, opt, 1)
 
         pos = vector(0._wp, 0._wp, 0._wp)
@@ -885,7 +885,7 @@ module testsSDFMod
         h1 = 1.0_wp
         ! length
         h2 = 5.0_wp
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         tri = triprism(h1, h2, opt, 1)
 
         pos = vector(0.0_wp, 0._wp, 5._wp)
@@ -913,7 +913,7 @@ module testsSDFMod
         b = vector(1.0_wp, 0.0_wp, 0.0_wp)
         ! radius
         r = 1.0_wp
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         cap = capsule(a, b, r, opt, 1)
 
         pos = vector(0.0_wp, 0._wp, 0._wp)
@@ -940,7 +940,7 @@ module testsSDFMod
 
         ! normal to plane
         a = vector(0.0_wp, 0.0_wp, 1.0_wp)
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         plan = plane(a, opt, 1)
 
         pos = vector(0.0_wp, 0._wp, 0._wp)
@@ -979,7 +979,7 @@ module testsSDFMod
         ra = 5.0_wp
         ! radius of tip
         rb = 0.0_wp
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         a = vector(0.0, 0.0, 0.0)
         b = vector(0.0, 0.0, 1.0)
         con = cone(a, b, ra, rb, opt, 1)
@@ -1003,7 +1003,7 @@ module testsSDFMod
         type(vector) :: pos
         real(kind=wp) :: r1, r2, h
 
-        opt = mono(0._wp, 0._wp, 0._wp, 0._wp)
+        opt = mono(0._wp, 0._wp, 0.0_wp, 0._wp, 0._wp)
         ! makes a Moss egg. https://www.shadertoy.com/view/WsjfRt
         ! R1 controls "fatness" of the egg. Actually controls the base circle radius.
         ! R2 contorls the pointiness of the egg. Actually controls radius of top circle.

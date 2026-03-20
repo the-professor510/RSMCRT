@@ -46,14 +46,15 @@ module testsOpticalPropMod
 
         type(mono) :: optProp
         type(error_type), allocatable, intent(out) :: error
-        real(kind=wp) :: mus, mua, hgg, n, wave
+        real(kind=wp) :: mus, mua, mur, hgg, n, wave
 
         mus = 10.0_wp
         mua = 0.1_wp
+        mur = 0.0_wp
         hgg = 0.9_wp
         n = 1.35_wp
 
-        optProp = mono(mus, mua, hgg, n)
+        optProp = mono(mus, mua, mur, hgg, n)
 
         call optProp%update(wave)
 
